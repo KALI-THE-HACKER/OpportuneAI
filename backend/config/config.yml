@@ -1,0 +1,10 @@
+scraper_config:
+  job_title: "Software Engineer Intern"
+  locations:
+    - India
+  job_type:
+    - INTERNSHIP
+  experience_level:
+    - INTERNSHIP
+  limit: 20
+  headless: true

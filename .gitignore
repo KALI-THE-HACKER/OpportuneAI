@@ -1,0 +1,6 @@
+.env
+wellfound.md
+test.py
+.vscode
+venv
+__pycache__
