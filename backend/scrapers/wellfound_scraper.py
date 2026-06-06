@@ -137,11 +137,16 @@ def _parse_jobs_from_markdown(
         if "remote" in line.lower():
             current_remote = line.strip()
 
-        exp_match = re.search(r"\d+\s*years?\s*of\s*exp|\d+years?\s*of\s*exp", line, re.IGNORECASE)
+        exp_match = re.search(
+            r"\d+\s*years?\s*of\s*exp|\d+years?\s*of\s*exp", line, re.IGNORECASE
+        )
         if exp_match:
             current_experience = exp_match.group(0)
 
-        if any(keyword in line.lower() for keyword in ["full-time", "part-time", "contract", "internship"]):
+        if any(
+            keyword in line.lower()
+            for keyword in ["full-time", "part-time", "contract", "internship"]
+        ):
             current_employment_type = line.strip()
 
         for text, href in matches:

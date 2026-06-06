@@ -2,7 +2,14 @@ import logging
 from linkedin_jobs_scraper import LinkedinScraper
 from linkedin_jobs_scraper.events import Events, EventData
 from linkedin_jobs_scraper.query import Query, QueryOptions, QueryFilters
-from linkedin_jobs_scraper.filters import RelevanceFilters, TimeFilters, TypeFilters, ExperienceLevelFilters, OnSiteOrRemoteFilters, IndustryFilters
+from linkedin_jobs_scraper.filters import (
+    RelevanceFilters,
+    TimeFilters,
+    TypeFilters,
+    ExperienceLevelFilters,
+    OnSiteOrRemoteFilters,
+    IndustryFilters,
+)
 from typing import List, Dict, Any
 
 logger = logging.getLogger(__name__)
@@ -14,7 +21,7 @@ def scrape_linkedin_jobs(
     job_type: List[TypeFilters] | None = None,
     experience_level: List[ExperienceLevelFilters] | None = None,
     limit: int = 20,
-    headless: bool = True
+    headless: bool = True,
 ) -> Dict[str, Any]:
     """
     Scrape LinkedIn job listings and return the data.
@@ -47,7 +54,7 @@ def scrape_linkedin_jobs(
             "location": data.location,
             "date_posted": data.date,
             "link": data.link,
-            "description": data.description
+            "description": data.description,
         }
         jobs_data.append(job_info)
         logger.info(f"✓ Scraped: {data.title} at {data.company}")
@@ -67,7 +74,7 @@ def scrape_linkedin_jobs(
         chrome_binary_location=None,
         headless=headless,
         max_workers=1,
-        slow_mo=2
+        slow_mo=2,
     )
 
     # Register event handlers
@@ -90,39 +97,35 @@ def scrape_linkedin_jobs(
                 on_site_or_remote=[
                     OnSiteOrRemoteFilters.REMOTE,
                     OnSiteOrRemoteFilters.HYBRID,
-                    OnSiteOrRemoteFilters.ON_SITE
+                    OnSiteOrRemoteFilters.ON_SITE,
                 ],
                 experience=experience_level,
                 industry=[
                     IndustryFilters.SOFTWARE_DEVELOPMENT,
                     IndustryFilters.IT_SERVICES,
-                    IndustryFilters.TECHNOLOGY_INTERNET
-                ]
-            )
-        )
+                    IndustryFilters.TECHNOLOGY_INTERNET,
+                ],
+            ),
+        ),
     )
 
     # Run scraper
     scraper.run([query])
 
     # Return results
-    return {
-        "jobs": jobs_data,
-        "total_jobs": len(jobs_data),
-        "errors": errors
-    }
+    return {"jobs": jobs_data, "total_jobs": len(jobs_data), "errors": errors}
 
 
 if __name__ == "__main__":
     # Configure logging to output progress to terminal when run directly
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+    )
 
     # Example usage when run directly
     result = scrape_linkedin_jobs(
-        job_title="Software Engineer Intern",
-        locations=["India"],
-        limit=20
+        job_title="Software Engineer Intern", locations=["India"], limit=20
     )
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print(f"Found {result['total_jobs']} jobs")
-    print("="*50)
+    print("=" * 50)

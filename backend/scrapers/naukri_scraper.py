@@ -28,6 +28,7 @@ DELAY_BETWEEN_PAGES = 2  # seconds
 # URL helpers
 # ------------------------------------------------------------------
 
+
 def _build_search_url(role: str, location: Optional[str] = None, page: int = 1) -> str:
     """Build Naukri search URL.
     Examples:
@@ -43,9 +44,11 @@ def _build_search_url(role: str, location: Optional[str] = None, page: int = 1) 
         url += f"-{page}"
     return url
 
+
 # ------------------------------------------------------------------
 # HTML parsing (works on rendered DOM — Playwright or saved file)
 # ------------------------------------------------------------------
+
 
 def _extract_job_from_card(card: Tag) -> dict | None:
     """Pull title, company, location, link, date, salary, experience from a single card."""
@@ -100,6 +103,7 @@ def _extract_job_from_card(card: Tag) -> dict | None:
         "description": "",
     }
 
+
 def _parse_jobs_from_html(html: str) -> list[dict]:
     """Extract job listings from a fully-rendered Naukri page."""
     soup = BeautifulSoup(html, "html.parser")
@@ -134,9 +138,11 @@ def _parse_jobs_from_html(html: str) -> list[dict]:
             logger.debug("Failed to parse a Naukri card: %s", exc)
     return jobs
 
+
 # ------------------------------------------------------------------
 # JSON parsing (intercepted jobapi response)
 # ------------------------------------------------------------------
+
 
 def _parse_jobs_from_api(data: dict) -> list[dict]:
     """Parse the JSON payload returned by Naukri's internal jobapi."""
@@ -177,9 +183,11 @@ def _parse_jobs_from_api(data: dict) -> list[dict]:
             logger.debug("Failed to parse Naukri API item: %s", exc)
     return jobs
 
+
 # ------------------------------------------------------------------
 # Live mode — undetected-chromedriver (uses your real Chrome)
 # ------------------------------------------------------------------
+
 
 def _scrape_live(role: str, location: Optional[str], headless: bool) -> list[dict]:
     """Open Naukri in real Chrome via undetected-chromedriver."""
@@ -198,6 +206,7 @@ def _scrape_live(role: str, location: Optional[str], headless: bool) -> list[dic
     # Fix SSL cert issue on macOS
     try:
         import certifi
+
         os.environ.setdefault("SSL_CERT_FILE", certifi.where())
     except ImportError:
         pass
@@ -255,9 +264,11 @@ def _scrape_live(role: str, location: Optional[str], headless: bool) -> list[dic
 
     return all_jobs
 
+
 # ------------------------------------------------------------------
 # Offline fallback — parse a saved HTML file
 # ------------------------------------------------------------------
+
 
 def _scrape_from_file(path: str) -> list[dict]:
     """Parse a locally-saved Naukri HTML file."""
@@ -269,9 +280,11 @@ def _scrape_from_file(path: str) -> list[dict]:
     with open(path, encoding="utf-8", errors="replace") as fh:
         return _parse_jobs_from_html(fh.read())
 
+
 # ------------------------------------------------------------------
 # Public API
 # ------------------------------------------------------------------
+
 
 def scrape_naukri_jobs(
     job_title: str,
