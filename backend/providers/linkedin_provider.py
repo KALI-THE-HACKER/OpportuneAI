@@ -1,3 +1,4 @@
+import logging
 from providers.base import BaseProvider
 from providers.models.raw_jobs_data import RawJobData
 from scrapers.linkedin_scraper import scrape_linkedin_jobs
@@ -7,8 +8,10 @@ from utils.linkedin_utils import extract_external_id, format_job_url
 from pathlib import Path
 import yaml
 
+logger = logging.getLogger(__name__)
 
-def _convert_filter_strings(filter_list: list[str]) -> list:
+
+def _convert_filter_strings(filter_list: list[str], filter_class) -> list:
     """
     Convert string representations of filters to actual filter enum values.
     Supports TypeFilters and ExperienceLevelFilters.
@@ -18,15 +21,12 @@ def _convert_filter_strings(filter_list: list[str]) -> list:
 
     converted = []
     for filter_str in filter_list:
-        # Try TypeFilters first
-        if hasattr(TypeFilters, filter_str):
-            converted.append(getattr(TypeFilters, filter_str))
-        # Try ExperienceLevelFilters
-        elif hasattr(ExperienceLevelFilters, filter_str):
-            converted.append(getattr(ExperienceLevelFilters, filter_str))
+        if hasattr(filter_class, filter_str):
+            converted.append(getattr(filter_class, filter_str))
         else:
-            # If filter not found, skip or warn
-            print(f"Warning: Filter '{filter_str}' not recognized")
+            logger.warning(
+                f"Warning: Filter '{filter_str}' not recognized in {filter_class.__name__}"
+            )
 
     return converted
 
@@ -37,7 +37,7 @@ async def scrape_jobs():
     """
 
     # Get path to config.yml
-    CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.yml"
+    CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "config.yml"
 
     # Load YAML configuration
     with open(CONFIG_PATH, "r") as file:
@@ -47,9 +47,9 @@ async def scrape_jobs():
     scraper_config = config.get("scraper_config", {})
 
     # Convert filter strings to enums
-    job_type = _convert_filter_strings(scraper_config.get("job_type", []))
+    job_type = _convert_filter_strings(scraper_config.get("job_type", []), TypeFilters)
     experience_level = _convert_filter_strings(
-        scraper_config.get("experience_level", [])
+        scraper_config.get("experience_level", []), ExperienceLevelFilters
     )
 
     # Call scrape_linkedin_jobs with config values
@@ -69,6 +69,7 @@ class LinkedInProvider(BaseProvider):
     LinkedInProvider is responsible for fetching job listings from LinkedIn, normalizing the data, and returning it in a structured format.
     It uses the scrape_jobs function to get raw job data and then processes it into RawJobData objects.
     """
+
     async def fetch_jobs(self) -> list[RawJobData]:
         raw_jobs_data = await scrape_jobs()
 
@@ -78,16 +79,19 @@ class LinkedInProvider(BaseProvider):
         return [
             RawJobData(
                 source="linkedin",
-                external_id=extract_external_id(job.link),
-                title=job.title,
-                company=job.company,
-                date_posted=job.date_posted,
-                location=job.location,
-                link=format_job_url(job.link),
+                external_id=extract_external_id(job.get("link", "")),
+                title=job.get("title", ""),
+                company=job.get("company", ""),
+                date_posted=job.get("date_posted"),
+                location=job.get("location"),
+                link=format_job_url(job.get("link", "")),
                 content_hash=compute_content_hash(
-                    job.title, job.company, job.date, job.location
+                    job.get("title", ""),
+                    job.get("company", ""),
+                    job.get("date_posted", ""),
+                    job.get("location", ""),
                 ),
-                raw_payload=job.description,
+                raw_payload=job.get("description"),
             )
             for job in jobs
         ]

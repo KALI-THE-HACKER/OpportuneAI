@@ -1,15 +1,18 @@
+import logging
 from linkedin_jobs_scraper import LinkedinScraper
 from linkedin_jobs_scraper.events import Events, EventData
 from linkedin_jobs_scraper.query import Query, QueryOptions, QueryFilters
 from linkedin_jobs_scraper.filters import RelevanceFilters, TimeFilters, TypeFilters, ExperienceLevelFilters, OnSiteOrRemoteFilters, IndustryFilters
 from typing import List, Dict, Any
 
+logger = logging.getLogger(__name__)
+
 
 def scrape_linkedin_jobs(
     job_title: str = "Software Engineer Intern",
     locations: List[str] | None = None,
-    job_type: List[str] | None = None,
-    experience_level: List[str] | None = None,
+    job_type: List[TypeFilters] | None = None,
+    experience_level: List[ExperienceLevelFilters] | None = None,
     limit: int = 20,
     headless: bool = True
 ) -> Dict[str, Any]:
@@ -47,16 +50,16 @@ def scrape_linkedin_jobs(
             "description": data.description
         }
         jobs_data.append(job_info)
-        print(f"✓ Scraped: {data.title} at {data.company}")
+        logger.info(f"✓ Scraped: {data.title} at {data.company}")
 
     def on_error(error):
         """Callback when an error occurs"""
-        print(f"✗ Error: {error}")
+        logger.error(f"✗ Error: {error}")
         errors.append(str(error))
 
     def on_end():
         """Callback when scraping is complete"""
-        print(f"✓ Scraping complete. Found {len(jobs_data)} jobs")
+        logger.info(f"✓ Scraping complete. Found {len(jobs_data)} jobs")
 
     # Initialize scraper
     scraper = LinkedinScraper(
@@ -103,10 +106,17 @@ def scrape_linkedin_jobs(
     scraper.run([query])
 
     # Return results
-    return jobs_data
+    return {
+        "jobs": jobs_data,
+        "total_jobs": len(jobs_data),
+        "errors": errors
+    }
 
 
 if __name__ == "__main__":
+    # Configure logging to output progress to terminal when run directly
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
     # Example usage when run directly
     result = scrape_linkedin_jobs(
         job_title="Software Engineer Intern",

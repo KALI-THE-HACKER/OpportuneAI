@@ -13,7 +13,7 @@ async def scrape_jobs():
     """
     This is a wrapper function that reads configuration from config.yml and calls the actual Wellfound scraper with the appropriate parameters.
     """
-    CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.yml"
+    CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "config.yml"
 
     with open(CONFIG_PATH, "r") as file:
         config = yaml.safe_load(file)

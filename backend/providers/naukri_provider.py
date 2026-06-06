@@ -19,7 +19,7 @@ def extract_naukri_job_id(url: str) -> str:
 
 class NaukriProvider(BaseProvider):
     async def fetch_jobs(self) -> list[RawJobData]:
-        config_path = Path(__file__).resolve().parent.parent / "config.yml"
+        config_path = Path(__file__).resolve().parent.parent / "config" / "config.yml"
 
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
