@@ -14,6 +14,8 @@ redis
 rq
 langchain
 langchain-google-genai
+langchain-openrouter
+
 
 #DEV DEPENDENCIES
 ruff
