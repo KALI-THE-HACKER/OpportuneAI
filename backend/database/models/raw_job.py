@@ -1,11 +1,12 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 from enum import StrEnum
 
 from sqlalchemy import JSON, DateTime, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.base import Base
+from database.models.processed_job import ProcessedJob
 
 
 class ProcessingStatus(StrEnum):
@@ -38,4 +39,11 @@ class RawJob(Base):
         default=ProcessingStatus.PENDING,
         server_default=ProcessingStatus.PENDING,
         index=True,
+    )
+
+    processed_job: Mapped[Optional["ProcessedJob"]] = relationship(
+        "ProcessedJob",
+        back_populates="raw_job",
+        uselist=False,
+        cascade="all, delete-orphan",
     )

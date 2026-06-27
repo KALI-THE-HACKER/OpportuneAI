@@ -15,7 +15,7 @@ def anyio_backend():
 
 
 @pytest.mark.anyio
-async def test_save_many_and_get_existing_hashes():
+async def test_save_many_and_get_existing_hashes(dispose_db_engine):
     async with AsyncSessionLocal() as db:
         repo = RawJobRepository(db)
 
