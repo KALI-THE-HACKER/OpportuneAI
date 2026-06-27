@@ -1,6 +1,6 @@
-from config.settings import settings
 from langchain_core.messages import BaseMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
+from ai.pools.llm_pool import get_pool
+
 from pydantic import BaseModel
 from typing import TypeVar
 
@@ -13,18 +13,16 @@ class GeminiLLM(BaseLLM):
     """Gemini implementation of the application's LLM interface."""
 
     def __init__(self) -> None:
-        self._llm = ChatGoogleGenerativeAI(
-            model=settings.gemini_model,
-            google_api_key=settings.gemini_api_key,
-            temperature=settings.llm_temperature,
-        )
+        self._pool = get_pool()
 
     async def invoke(
         self,
         messages: list[BaseMessage],
         output_schema: type[T],
     ) -> T:
-        structured_llm = self._llm.with_structured_output(output_schema)
+        client = self._pool.acquire()
+
+        structured_llm = client.with_structured_output(output_schema)
 
         response = await structured_llm.ainvoke(messages)
 
