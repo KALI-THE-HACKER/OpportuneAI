@@ -30,22 +30,24 @@ class GeminiClientPool:
         self._cycle = cycle(self._clients)
         self._lock = Lock()
 
-        self._states = {client: ClientState(client=client) for client in self._clients}
+        self._states = {
+            id(client): ClientState(client=client) for client in self._clients
+        }
 
     def acquire(self):
         with self._lock:
             client = next(self._cycle)
-            self._states[client].requests += 1
+            self._states[id(client)].requests += 1
             return client
 
     def mark_failure(self, client: ChatGoogleGenerativeAI) -> None:
         """Record a failed request for a client."""
         with self._lock:
-            self._states[client].failures += 1
+            self._states[id(client)].failures += 1
 
     def state(self, client: ChatGoogleGenerativeAI) -> ClientState:
         """Return the tracked state for a client."""
-        return self._states[client]
+        return self._states[id(client)]
 
 
 _pool: GeminiClientPool | None = None

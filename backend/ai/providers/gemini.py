@@ -1,5 +1,5 @@
 from langchain_core.messages import BaseMessage
-from ai.pools.llm_pool import get_pool
+from ai.pools.gemini_pool import get_pool
 
 from pydantic import BaseModel
 from typing import TypeVar

@@ -3,6 +3,7 @@ from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
 
 from ai.providers.gemini import GeminiLLM
+from ai.pools.gemini_pool import get_pool
 
 
 class EchoResponse(BaseModel):
@@ -16,6 +17,7 @@ async def test_gemini_invoke_returns_structured_output() -> None:
     """Verify Gemini returns structured output matching the requested schema."""
 
     llm = GeminiLLM()
+    assert llm._pool is get_pool()
 
     messages = [
         HumanMessage(

@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.0
 
     # Gemini Settings
-    gemini_api_key: str
+    gemini_api_keys: list[str]
     gemini_model: str = "gemini-2.5-flash"
 
     model_config = SettingsConfigDict(
