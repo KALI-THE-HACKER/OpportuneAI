@@ -14,7 +14,7 @@ class RawJobRepository:
 
         return set(result.scalars().all())
 
-    async def save_many(self, jobs: list[RawJobData]) -> None:
+    async def save_many(self, jobs: list[RawJobData]) -> list[RawJob]:
 
         db_jobs = [
             RawJob(
@@ -33,4 +33,11 @@ class RawJobRepository:
 
         self.db.add_all(db_jobs)
 
+        await self.db.flush()
+
+        for job in db_jobs:
+            await self.db.refresh(job)
+
         await self.db.commit()
+
+        return db_jobs

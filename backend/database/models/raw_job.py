@@ -1,10 +1,18 @@
 from datetime import datetime
 from typing import Any
+from enum import StrEnum
 
 from sqlalchemy import JSON, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database.base import Base
+
+
+class ProcessingStatus(StrEnum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    PROCESSED = "processed"
+    FAILED = "failed"
 
 
 class RawJob(Base):
@@ -23,4 +31,11 @@ class RawJob(Base):
     scraped_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
+    )
+    processing_status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default=ProcessingStatus.PENDING,
+        server_default=ProcessingStatus.PENDING,
+        index=True,
     )

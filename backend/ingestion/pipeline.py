@@ -8,6 +8,9 @@ from providers.wellfound_provider import WellfoundProvider
 
 from database.repositories.raw_job_repository import RawJobRepository
 
+from workers.ai_worker import process_raw_job
+from workers.queue import ai_processing_queue
+
 # Configure logging to write to ingestion.log in the backend directory
 log_file = Path(__file__).resolve().parent.parent / "ingestion.log"
 root_logger = logging.getLogger()
@@ -56,7 +59,13 @@ class IngestionPipeline:
                     job for job in jobs if job.content_hash not in existing_hashes
                 ]
 
-                await self.repository.save_many(new_jobs)
+                saved_jobs = await self.repository.save_many(new_jobs)
+
+                for job in saved_jobs:
+                    ai_processing_queue.enqueue(
+                        process_raw_job,
+                        job.id,
+                    )
 
                 existing_hashes.update(job.content_hash for job in new_jobs)
                 total_saved += len(new_jobs)

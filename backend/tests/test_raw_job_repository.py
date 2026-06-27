@@ -31,7 +31,12 @@ async def test_save_many_and_get_existing_hashes():
             raw_payload={"description": "test"},
         )
 
-        await repo.save_many([test_job])
+        saved_jobs = await repo.save_many([test_job])
+
+        assert len(saved_jobs) == 1
+        assert saved_jobs[0].id is not None
+        assert saved_jobs[0].content_hash == hash_value
+        assert saved_jobs[0].processing_status == "pending"
 
         hashes = await repo.get_existing_hashes()
 

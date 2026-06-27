@@ -10,6 +10,8 @@ asyncpg
 alembic
 psycopg2
 pytest
+redis
+rq
 
 #DEV DEPENDENCIES
 ruff
