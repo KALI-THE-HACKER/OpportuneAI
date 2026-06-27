@@ -12,7 +12,20 @@ class Settings(BaseSettings):
     database_url: str
     alembic_database_url: str
 
+    # Redis Settings
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_db: int = 0
+
     firecrawl_api_key: str
+
+    # LLM Settings
+    llm_provider: str = "gemini"
+    llm_temperature: float = 0.0
+
+    # Gemini Settings
+    gemini_api_key: str
+    gemini_model: str = "gemini-2.5-flash"
 
     model_config = SettingsConfigDict(
         env_file=".env",
