@@ -30,7 +30,7 @@ function RecommendationsPage() {
         description="Roles ranked by your profile, skills, and recent signals."
       />
       {q.isLoading ? (
-        <LoadingState />
+        <LoadingState variant="job-grid" count={6} />
       ) : q.isError ? (
         <ErrorState onRetry={() => q.refetch()} />
       ) : q.data!.length === 0 ? (

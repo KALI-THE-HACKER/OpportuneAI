@@ -1,22 +1,37 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { z } from "zod";
+import { Sparkles } from "lucide-react";
 import { userApi } from "@/lib/api";
 import { PageHeader } from "@/components/shared/page-header";
 import { LoadingState, ErrorState } from "@/components/shared/state-views";
 import type { UserProfile } from "@/lib/mock/user";
 
+const profileSearchSchema = z.object({
+  onboarding: z.string().optional(),
+});
+
 export const Route = createFileRoute("/app/profile")({
+  validateSearch: profileSearchSchema,
   head: () => ({ meta: [{ title: "Profile & preferences · OpportuneAI" }] }),
   component: ProfilePage,
 });
 
 function ProfilePage() {
   const qc = useQueryClient();
+  const search = useSearch({ from: "/app/profile" });
+  const navigate = useNavigate();
+
   const q = useQuery({ queryKey: ["user"], queryFn: () => userApi.get() });
   const update = useMutation({
     mutationFn: (patch: Partial<UserProfile>) => userApi.update(patch),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["user"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["user"] });
+      if (search.onboarding === "true") {
+        void navigate({ to: "/app/resume", search: { onboarding: "true" } });
+      }
+    },
   });
 
   const [form, setForm] = useState<UserProfile | null>(null);
@@ -24,7 +39,7 @@ function ProfilePage() {
     if (q.data) setForm(q.data);
   }, [q.data]);
 
-  if (q.isLoading || !form) return <LoadingState />;
+  if (q.isLoading || !form) return <LoadingState variant="profile" />;
   if (q.isError) return <ErrorState onRetry={() => q.refetch()} />;
 
   return (
@@ -33,6 +48,19 @@ function ProfilePage() {
         title="Profile & preferences"
         description="Tune what we look for on your behalf."
       />
+
+      {search.onboarding === "true" && (
+        <div className="mb-6 p-4 bg-accent/5 ring-1 ring-accent/20 rounded-lg flex items-center justify-between gap-4 max-w-2xl">
+          <div>
+            <h4 className="text-sm font-semibold text-accent flex items-center gap-1.5">
+              <Sparkles className="size-4 animate-pulse" /> Step 1: Complete your profile
+            </h4>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Please enter your target job title, preferences, and details. This helps OpportuneAI filter relevant job matching signals.
+            </p>
+          </div>
+        </div>
+      )}
       <form
         onSubmit={(e) => {
           e.preventDefault();

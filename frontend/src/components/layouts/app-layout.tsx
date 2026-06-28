@@ -174,3 +174,85 @@ export function AppLayout() {
     </div>
   );
 }
+
+export function AppLayoutLoading() {
+  return (
+    <div className="min-h-screen flex bg-background text-foreground animate-pulse">
+      {/* Sidebar skeleton */}
+      <aside className="hidden lg:flex w-60 shrink-0 border-r border-border flex-col bg-sidebar">
+        <div className="h-14 px-5 flex items-center border-b border-border">
+          <Logo />
+        </div>
+        <nav className="flex-1 p-3 space-y-3">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-2.5 px-3 h-8">
+              <div className="size-4 bg-muted rounded shrink-0" />
+              <div className="h-4 bg-muted rounded w-24" />
+            </div>
+          ))}
+        </nav>
+      </aside>
+
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Header skeleton */}
+        <header className="h-14 border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-40">
+          <div className="h-full px-4 sm:px-6 flex items-center justify-between">
+            <div className="h-4 bg-muted rounded w-32" />
+            <div className="flex items-center gap-3">
+              <div className="size-8 bg-muted rounded-md" />
+              <div className="size-8 bg-muted rounded-md" />
+              <div className="size-8 bg-muted rounded-full" />
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content Area */}
+        <main className="flex-1 px-4 sm:px-6 py-8 max-w-7xl w-full mx-auto space-y-8">
+          <div className="space-y-2">
+            <div className="h-8 bg-muted rounded w-48" />
+            <div className="h-4 bg-muted rounded w-72" />
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="p-5 bg-card ring-1 ring-border rounded-lg space-y-3">
+                <div className="flex justify-between items-center">
+                  <div className="h-3 bg-muted rounded w-20" />
+                  <div className="size-4 bg-muted rounded" />
+                </div>
+                <div className="h-7 bg-muted rounded w-16" />
+                <div className="h-1 bg-muted rounded w-full mt-2" />
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-4">
+              <div className="h-4 bg-muted rounded w-36" />
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="p-6 bg-card ring-1 ring-border rounded-lg space-y-4">
+                  <div className="flex gap-4">
+                    <div className="size-12 bg-muted rounded-md shrink-0" />
+                    <div className="flex-1 space-y-2.5">
+                      <div className="h-4 bg-muted rounded w-1/3" />
+                      <div className="h-3 bg-muted rounded w-1/2" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-6">
+              <div className="p-6 bg-card ring-1 ring-border rounded-lg h-40 space-y-4">
+                <div className="h-4 bg-muted rounded w-24" />
+                <div className="space-y-2">
+                  <div className="h-3 bg-muted rounded w-full" />
+                  <div className="h-3 bg-muted rounded w-5/6" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}

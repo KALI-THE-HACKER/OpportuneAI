@@ -6,6 +6,11 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { VitePWA } from "vite-plugin-pwa";
+import basicSsl from "@vitejs/plugin-basic-ssl";
+import { loadEnv } from "vite";
+
+const env = loadEnv(process.env.NODE_ENV || "development", process.cwd(), "");
+const useSsl = env.VITE_USE_SSL === "true";
 
 export default defineConfig({
   tanstackStart: {
@@ -15,6 +20,7 @@ export default defineConfig({
   },
   vite: {
     plugins: [
+      ...(useSsl ? [basicSsl()] : []),
       VitePWA({
         registerType: "autoUpdate",
         injectRegister: null,

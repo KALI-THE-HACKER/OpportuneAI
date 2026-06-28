@@ -1,26 +1,40 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { FileText, Upload, Trash2 } from "lucide-react";
+import { z } from "zod";
+import { FileText, Upload, Trash2, Sparkles } from "lucide-react";
 import { resumeApi } from "@/lib/api";
 import { PageHeader } from "@/components/shared/page-header";
 import { LoadingState, ErrorState, EmptyState } from "@/components/shared/state-views";
 import { timeAgo } from "@/lib/format";
 
+const resumeSearchSchema = z.object({
+  onboarding: z.string().optional(),
+});
+
 export const Route = createFileRoute("/app/resume")({
+  validateSearch: resumeSearchSchema,
   head: () => ({ meta: [{ title: "Resume · OpportuneAI" }] }),
   component: ResumePage,
 });
 
 function ResumePage() {
   const qc = useQueryClient();
+  const search = useSearch({ from: "/app/resume" });
+  const navigate = useNavigate();
+
   const q = useQuery({ queryKey: ["resume"], queryFn: () => resumeApi.get() });
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
   const upload = useMutation({
     mutationFn: (f: File) => resumeApi.upload({ name: f.name, sizeKb: Math.round(f.size / 1024) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["resume"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["resume"] });
+      if (search.onboarding === "true") {
+        void navigate({ to: "/app/dashboard" });
+      }
+    },
   });
   const remove = useMutation({
     mutationFn: () => resumeApi.remove(),
@@ -38,6 +52,25 @@ function ResumePage() {
         title="Resume & profile extraction"
         description="Upload once. We extract skills, level, and projects to power every match."
       />
+
+      {search.onboarding === "true" && (
+        <div className="mb-6 p-4 bg-accent/5 ring-1 ring-accent/20 rounded-lg flex items-center justify-between gap-4">
+          <div>
+            <h4 className="text-sm font-semibold text-accent flex items-center gap-1.5">
+              <Sparkles className="size-4 animate-pulse" /> Step 2: Upload your resume
+            </h4>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Upload your resume to automatically extract your skills, experience, and unlock personalized AI recommendations.
+            </p>
+          </div>
+          <Link
+            to="/app/dashboard"
+            className="text-xs font-medium text-foreground hover:text-accent whitespace-nowrap"
+          >
+            Skip to Dashboard &rarr;
+          </Link>
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-6">
         <div
@@ -78,7 +111,7 @@ function ResumePage() {
 
         <aside>
           {q.isLoading ? (
-            <LoadingState />
+            <LoadingState variant="resume" />
           ) : q.isError ? (
             <ErrorState onRetry={() => q.refetch()} />
           ) : !q.data ? (

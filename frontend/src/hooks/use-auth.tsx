@@ -51,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const token = await getAccessTokenSilently();
           setApiAuthToken(token);
           const profile = await userApi.get();
+          sessionStorage.removeItem("onboarding_redirected");
           setUser(profile);
 
           const session: Session = {
@@ -80,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async signIn(email, password) {
       setProfileLoading(true);
       try {
+        sessionStorage.removeItem("onboarding_redirected");
         const session = await authApi.signIn(email, password);
         setLocalSession(session);
         setUser(session.user);
@@ -91,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async signUp(name, email, password) {
       setProfileLoading(true);
       try {
+        sessionStorage.removeItem("onboarding_redirected");
         const session = await authApi.signUp(name, email, password);
         if (session.token) {
           setLocalSession(session);
@@ -113,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     async signOut() {
+      sessionStorage.removeItem("onboarding_redirected");
       persistSession(null);
       setLocalSession(null);
       setUser(null);

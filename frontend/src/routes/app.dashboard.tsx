@@ -69,7 +69,7 @@ function DashboardPage() {
             </Link>
           </div>
           {recs.isLoading ? (
-            <LoadingState />
+            <LoadingState variant="job-list" count={3} />
           ) : recs.isError ? (
             <ErrorState onRetry={() => recs.refetch()} />
           ) : (

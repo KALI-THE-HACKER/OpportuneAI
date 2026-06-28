@@ -28,7 +28,7 @@ function AppliedPage() {
         description="Track every role you've applied to in one place."
       />
       {q.isLoading ? (
-        <LoadingState />
+        <LoadingState variant="table" count={5} />
       ) : q.isError ? (
         <ErrorState onRetry={() => q.refetch()} />
       ) : q.data!.length === 0 ? (

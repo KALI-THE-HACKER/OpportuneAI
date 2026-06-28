@@ -43,7 +43,13 @@ function AdminPage() {
       />
 
       {isLoading ? (
-        <LoadingState />
+        <div className="space-y-8">
+          <LoadingState variant="stats" count={4} />
+          <div className="space-y-4">
+            <div className="h-4 bg-muted rounded w-20 animate-pulse" />
+            <LoadingState variant="table" count={3} />
+          </div>
+        </div>
       ) : isError ? (
         <ErrorState
           onRetry={() => {

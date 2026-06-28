@@ -28,7 +28,7 @@ function JobDetailsPage() {
     },
   });
 
-  if (q.isLoading) return <LoadingState />;
+  if (q.isLoading) return <LoadingState variant="job-detail" />;
   if (q.isError) return <ErrorState onRetry={() => q.refetch()} />;
   if (!q.data)
     return (

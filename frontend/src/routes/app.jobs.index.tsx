@@ -151,7 +151,7 @@ function JobExplorer() {
           </div>
 
           {query.isLoading ? (
-            <LoadingState />
+            <LoadingState variant="job-list" count={5} />
           ) : query.isError ? (
             <ErrorState onRetry={() => query.refetch()} />
           ) : query.data!.items.length === 0 ? (

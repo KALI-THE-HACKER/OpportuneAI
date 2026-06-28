@@ -22,7 +22,7 @@ function SavedPage() {
     <>
       <PageHeader title="Saved jobs" description="Roles you've bookmarked to review later." />
       {q.isLoading ? (
-        <LoadingState />
+        <LoadingState variant="job-grid" count={4} />
       ) : q.isError ? (
         <ErrorState onRetry={() => q.refetch()} />
       ) : q.data!.length === 0 ? (
