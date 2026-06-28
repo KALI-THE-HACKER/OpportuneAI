@@ -20,22 +20,36 @@ function ProfilePage() {
   });
 
   const [form, setForm] = useState<UserProfile | null>(null);
-  useEffect(() => { if (q.data) setForm(q.data); }, [q.data]);
+  useEffect(() => {
+    if (q.data) setForm(q.data);
+  }, [q.data]);
 
   if (q.isLoading || !form) return <LoadingState />;
   if (q.isError) return <ErrorState onRetry={() => q.refetch()} />;
 
   return (
     <>
-      <PageHeader title="Profile & preferences" description="Tune what we look for on your behalf." />
+      <PageHeader
+        title="Profile & preferences"
+        description="Tune what we look for on your behalf."
+      />
       <form
-        onSubmit={(e) => { e.preventDefault(); update.mutate(form); }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          update.mutate(form);
+        }}
         className="max-w-2xl space-y-6"
       >
         <Card title="Identity">
-          <Row label="Name"><Input value={form.name} onChange={(v) => setForm({ ...form, name: v })} /></Row>
-          <Row label="Title"><Input value={form.title} onChange={(v) => setForm({ ...form, title: v })} /></Row>
-          <Row label="Location"><Input value={form.location} onChange={(v) => setForm({ ...form, location: v })} /></Row>
+          <Row label="Name">
+            <Input value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
+          </Row>
+          <Row label="Title">
+            <Input value={form.title} onChange={(v) => setForm({ ...form, title: v })} />
+          </Row>
+          <Row label="Location">
+            <Input value={form.location} onChange={(v) => setForm({ ...form, location: v })} />
+          </Row>
           <Row label="Bio">
             <textarea
               value={form.bio}
@@ -49,26 +63,53 @@ function ProfilePage() {
           <Row label="Preferred roles">
             <Input
               value={form.preferredRoles.join(", ")}
-              onChange={(v) => setForm({ ...form, preferredRoles: v.split(",").map((s) => s.trim()).filter(Boolean) })}
+              onChange={(v) =>
+                setForm({
+                  ...form,
+                  preferredRoles: v
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                })
+              }
             />
           </Row>
           <Row label="Preferred locations">
             <Input
               value={form.preferredLocations.join(", ")}
-              onChange={(v) => setForm({ ...form, preferredLocations: v.split(",").map((s) => s.trim()).filter(Boolean) })}
+              onChange={(v) =>
+                setForm({
+                  ...form,
+                  preferredLocations: v
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                })
+              }
             />
           </Row>
           <Row label="Min salary (USD)">
-            <Input type="number" value={String(form.minSalary)} onChange={(v) => setForm({ ...form, minSalary: Number(v) || 0 })} />
+            <Input
+              type="number"
+              value={String(form.minSalary)}
+              onChange={(v) => setForm({ ...form, minSalary: Number(v) || 0 })}
+            />
           </Row>
           <Row label="Work mode">
             <div className="flex gap-3">
-              {(["remote","hybrid","on-site"] as const).map((m) => (
+              {(["remote", "hybrid", "on-site"] as const).map((m) => (
                 <label key={m} className="text-sm flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={form.workModes.includes(m)}
-                    onChange={() => setForm({ ...form, workModes: form.workModes.includes(m) ? form.workModes.filter((x) => x !== m) : [...form.workModes, m] })}
+                    onChange={() =>
+                      setForm({
+                        ...form,
+                        workModes: form.workModes.includes(m)
+                          ? form.workModes.filter((x) => x !== m)
+                          : [...form.workModes, m],
+                      })
+                    }
                     className="size-4 accent-accent"
                   />
                   <span className="capitalize">{m}</span>
@@ -96,7 +137,9 @@ function ProfilePage() {
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="bg-card ring-1 ring-border rounded-lg p-6">
-      <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">{title}</h2>
+      <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
+        {title}
+      </h2>
       <div className="space-y-4">{children}</div>
     </section>
   );
@@ -109,7 +152,15 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     </label>
   );
 }
-function Input({ value, onChange, type = "text" }: { value: string; onChange: (v: string) => void; type?: string }) {
+function Input({
+  value,
+  onChange,
+  type = "text",
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+}) {
   return (
     <input
       type={type}

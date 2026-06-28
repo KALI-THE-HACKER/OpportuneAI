@@ -1,14 +1,14 @@
-import { delay } from "./client";
-import { MOCK_USER, type UserProfile } from "../mock/user";
-
-let profile: UserProfile = { ...MOCK_USER };
+import { apiCall } from "./client";
+import type { UserProfile } from "../mock/user";
 
 export const userApi = {
   async get(): Promise<UserProfile> {
-    return delay(profile);
+    return apiCall<UserProfile>("/api/auth/me");
   },
   async update(patch: Partial<UserProfile>): Promise<UserProfile> {
-    profile = { ...profile, ...patch };
-    return delay(profile, 400);
+    return apiCall<UserProfile>("/api/users/me", {
+      method: "PUT",
+      body: JSON.stringify(patch),
+    });
   },
 };

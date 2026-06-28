@@ -7,13 +7,14 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ThemeProvider } from "../hooks/use-theme";
 import { AuthProvider } from "../hooks/use-auth";
 import { registerServiceWorker } from "../lib/pwa/register-sw";
+import { Auth0Provider } from "@auth0/auth0-react";
 
 function NotFoundComponent() {
   return (
@@ -82,10 +83,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#fbfbfb" },
       { title: "OpportuneAI — Your AI career copilot" },
-      { name: "description", content: "OpportuneAI is an AI-powered job discovery and application copilot. Personalized matches, skill-gap insights, and a clean workflow for serious job seekers." },
+      {
+        name: "description",
+        content:
+          "OpportuneAI is an AI-powered job discovery and application copilot. Personalized matches, skill-gap insights, and a clean workflow for serious job seekers.",
+      },
       { name: "author", content: "OpportuneAI" },
       { property: "og:title", content: "OpportuneAI — Your AI career copilot" },
-      { property: "og:description", content: "Personalized job matches, AI insights, and an application tracker built for serious job seekers." },
+      {
+        property: "og:description",
+        content:
+          "Personalized job matches, AI insights, and an application tracker built for serious job seekers.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@OpportuneAI" },
@@ -121,19 +130,48 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     void registerServiceWorker();
+    setMounted(true);
   }, []);
+
+  const domain = import.meta.env.VITE_AUTH0_DOMAIN || "opportuneai.us.auth0.com";
+  const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID || "mock_client_id";
+  const audience = import.meta.env.VITE_AUTH0_AUDIENCE || "https://api.opportuneai.com";
+
+  if (!mounted) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <AuthProvider>
+            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+            <Outlet />
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AuthProvider>
-          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-          <Outlet />
-        </AuthProvider>
-      </ThemeProvider>
+      <Auth0Provider
+        domain={domain}
+        clientId={clientId}
+        authorizationParams={{
+          redirect_uri:
+            typeof window !== "undefined" ? window.location.origin + "/auth/callback" : undefined,
+          audience: audience,
+        }}
+      >
+        <ThemeProvider>
+          <AuthProvider>
+            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+            <Outlet />
+          </AuthProvider>
+        </ThemeProvider>
+      </Auth0Provider>
     </QueryClientProvider>
   );
 }

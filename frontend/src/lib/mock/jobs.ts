@@ -27,29 +27,83 @@ export interface Job {
 }
 
 const skillsPool = [
-  "TypeScript","React","Node.js","Python","Rust","Go","Kubernetes","Docker","AWS","GCP",
-  "PostgreSQL","Redis","GraphQL","REST APIs","Distributed Systems","Machine Learning",
-  "LLMs","PyTorch","TensorFlow","Figma","Design Systems","Tailwind CSS","Next.js",
-  "Stakeholder Management","SQL Advanced Analytics","System Design","CI/CD","Terraform"
+  "TypeScript",
+  "React",
+  "Node.js",
+  "Python",
+  "Rust",
+  "Go",
+  "Kubernetes",
+  "Docker",
+  "AWS",
+  "GCP",
+  "PostgreSQL",
+  "Redis",
+  "GraphQL",
+  "REST APIs",
+  "Distributed Systems",
+  "Machine Learning",
+  "LLMs",
+  "PyTorch",
+  "TensorFlow",
+  "Figma",
+  "Design Systems",
+  "Tailwind CSS",
+  "Next.js",
+  "Stakeholder Management",
+  "SQL Advanced Analytics",
+  "System Design",
+  "CI/CD",
+  "Terraform",
 ];
 
 const companies = [
-  "Linear Operations","Framework Labs","Quantum Infrastructure","Neural Dynamics",
-  "Lumina Systems","Vercel","Synthetix","Orbit Logic","Helix AI","Northwind Cloud",
-  "Cluster Systems","Argon Labs","Vector Foundry","Meridian Health","Atlas Compute"
+  "Linear Operations",
+  "Framework Labs",
+  "Quantum Infrastructure",
+  "Neural Dynamics",
+  "Lumina Systems",
+  "Vercel",
+  "Synthetix",
+  "Orbit Logic",
+  "Helix AI",
+  "Northwind Cloud",
+  "Cluster Systems",
+  "Argon Labs",
+  "Vector Foundry",
+  "Meridian Health",
+  "Atlas Compute",
 ];
 
 const locations = [
-  "New York, NY","San Francisco, CA","Remote","Berlin, DE","London, UK",
-  "Tokyo, JP","Toronto, CA","Austin, TX","Amsterdam, NL","Singapore"
+  "New York, NY",
+  "San Francisco, CA",
+  "Remote",
+  "Berlin, DE",
+  "London, UK",
+  "Tokyo, JP",
+  "Toronto, CA",
+  "Austin, TX",
+  "Amsterdam, NL",
+  "Singapore",
 ];
 
 const titles = [
-  "Senior Systems Architect","Product Strategy Lead","Staff Software Engineer",
-  "AI Research Lead","Senior UX Engineer","Principal Platform Engineer",
-  "Engineering Manager","Senior Product Designer","Backend Engineer",
-  "ML Infrastructure Engineer","Full Stack Developer","Site Reliability Engineer",
-  "Lead Product Manager","Data Platform Engineer","Frontend Architect"
+  "Senior Systems Architect",
+  "Product Strategy Lead",
+  "Staff Software Engineer",
+  "AI Research Lead",
+  "Senior UX Engineer",
+  "Principal Platform Engineer",
+  "Engineering Manager",
+  "Senior Product Designer",
+  "Backend Engineer",
+  "ML Infrastructure Engineer",
+  "Full Stack Developer",
+  "Site Reliability Engineer",
+  "Lead Product Manager",
+  "Data Platform Engineer",
+  "Frontend Architect",
 ];
 
 function pick<T>(arr: T[], n: number, seed: number): T[] {
@@ -67,13 +121,17 @@ function pick<T>(arr: T[], n: number, seed: number): T[] {
 export const MOCK_JOBS: Job[] = Array.from({ length: 48 }).map((_, i) => {
   const skills = pick(skillsPool, 6, i + 1);
   const matched = skills.slice(0, 4);
-  const missing = pick(skillsPool.filter(s => !matched.includes(s)), 2, i + 7);
+  const missing = pick(
+    skillsPool.filter((s) => !matched.includes(s)),
+    2,
+    i + 7,
+  );
   const match = 60 + ((i * 13) % 40);
   const minSal = 90 + ((i * 17) % 180);
   const maxSal = minSal + 30 + ((i * 7) % 80);
-  const modes: WorkMode[] = ["remote","hybrid","on-site"];
-  const types: JobType[] = ["full-time","contract","full-time","part-time"];
-  const lvls: Job["experienceLevel"][] = ["Mid","Senior","Lead","Principal","Senior"];
+  const modes: WorkMode[] = ["remote", "hybrid", "on-site"];
+  const types: JobType[] = ["full-time", "contract", "full-time", "part-time"];
+  const lvls: Job["experienceLevel"][] = ["Mid", "Senior", "Lead", "Principal", "Senior"];
   return {
     id: `job-${String(i + 1).padStart(3, "0")}`,
     title: titles[i % titles.length],
@@ -91,13 +149,13 @@ export const MOCK_JOBS: Job[] = Array.from({ length: 48 }).map((_, i) => {
       "Architect and ship core platform services end-to-end",
       "Partner with product and design on roadmap decisions",
       "Mentor engineers and raise the technical bar",
-      "Own production reliability and on-call rotation"
+      "Own production reliability and on-call rotation",
     ],
     requirements: [
       "7+ years building production systems at scale",
       "Deep expertise in at least two languages from the stack",
       "Track record of shipping in ambiguous environments",
-      "Strong written and verbal communication"
+      "Strong written and verbal communication",
     ],
     skills,
     matchScore: match,
@@ -106,12 +164,12 @@ export const MOCK_JOBS: Job[] = Array.from({ length: 48 }).map((_, i) => {
     aiExplanation:
       "Your experience overlaps strongly with this team's stack and product surface. Filling the missing skill gaps would bring you above a 95% fit and unlock the upper compensation band.",
     experienceLevel: lvls[i % lvls.length],
-    saved: i % 7 === 0
+    saved: i % 7 === 0,
   };
 });
 
 export const APPLIED_JOB_IDS = ["job-002", "job-005", "job-008", "job-011", "job-014"];
-export const SAVED_JOB_IDS = MOCK_JOBS.filter(j => j.saved).map(j => j.id);
+export const SAVED_JOB_IDS = MOCK_JOBS.filter((j) => j.saved).map((j) => j.id);
 
 export interface ApplicationRecord {
   id: string;
@@ -125,8 +183,8 @@ export interface ApplicationRecord {
 export const MOCK_APPLICATIONS: ApplicationRecord[] = APPLIED_JOB_IDS.map((jobId, i) => ({
   id: `app-${i + 1}`,
   jobId,
-  status: (["applied","interviewing","applied","offer","rejected"] as ApplicationStatus[])[i],
+  status: (["applied", "interviewing", "applied", "offer", "rejected"] as ApplicationStatus[])[i],
   appliedAt: new Date(Date.now() - (i + 1) * 86400000 * 3).toISOString(),
   lastUpdate: new Date(Date.now() - (i + 1) * 86400000).toISOString(),
-  notes: i === 1 ? "Second-round technical scheduled for next Tuesday." : undefined
+  notes: i === 1 ? "Second-round technical scheduled for next Tuesday." : undefined,
 }));

@@ -34,13 +34,23 @@ function ResumePage() {
 
   return (
     <>
-      <PageHeader title="Resume & profile extraction" description="Upload once. We extract skills, level, and projects to power every match." />
+      <PageHeader
+        title="Resume & profile extraction"
+        description="Upload once. We extract skills, level, and projects to power every match."
+      />
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-6">
         <div
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
           onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            handleFiles(e.dataTransfer.files);
+          }}
           className={`p-10 rounded-lg ring-1 ring-dashed flex flex-col items-center justify-center text-center bg-card transition-colors ${
             dragOver ? "ring-accent bg-accent/5" : "ring-border"
           }`}
@@ -50,7 +60,13 @@ function ResumePage() {
           </div>
           <h3 className="font-medium">Drop your resume here</h3>
           <p className="text-sm text-muted-foreground mt-1">PDF or DOCX, up to 5MB</p>
-          <input ref={fileRef} type="file" accept=".pdf,.docx" className="hidden" onChange={(e) => handleFiles(e.target.files)} />
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".pdf,.docx"
+            className="hidden"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
           <button
             onClick={() => fileRef.current?.click()}
             disabled={upload.isPending}
@@ -61,15 +77,23 @@ function ResumePage() {
         </div>
 
         <aside>
-          {q.isLoading ? <LoadingState /> :
-            q.isError ? <ErrorState onRetry={() => q.refetch()} /> :
-            !q.data ? <EmptyState title="No resume on file" description="Upload one to start matching." /> :
+          {q.isLoading ? (
+            <LoadingState />
+          ) : q.isError ? (
+            <ErrorState onRetry={() => q.refetch()} />
+          ) : !q.data ? (
+            <EmptyState title="No resume on file" description="Upload one to start matching." />
+          ) : (
             <div className="p-6 bg-card ring-1 ring-border rounded-lg space-y-5">
               <div className="flex items-center gap-3">
-                <div className="size-10 grid place-items-center rounded-md bg-brand text-brand-foreground"><FileText className="size-4" /></div>
+                <div className="size-10 grid place-items-center rounded-md bg-brand text-brand-foreground">
+                  <FileText className="size-4" />
+                </div>
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">{q.data.fileName}</div>
-                  <div className="text-xs text-muted-foreground">{q.data.sizeKb} KB · uploaded {timeAgo(q.data.uploadedAt)}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {q.data.sizeKb} KB · uploaded {timeAgo(q.data.uploadedAt)}
+                  </div>
                 </div>
               </div>
 
@@ -79,10 +103,17 @@ function ResumePage() {
               <Field label="Confidence" value={`${Math.round(q.data.confidence * 100)}%`} />
 
               <div>
-                <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Extracted skills</div>
+                <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">
+                  Extracted skills
+                </div>
                 <div className="flex flex-wrap gap-1.5">
                   {q.data.extractedSkills.map((s) => (
-                    <span key={s} className="px-2 py-0.5 text-[11px] rounded bg-muted text-muted-foreground ring-1 ring-border">{s}</span>
+                    <span
+                      key={s}
+                      className="px-2 py-0.5 text-[11px] rounded bg-muted text-muted-foreground ring-1 ring-border"
+                    >
+                      {s}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -94,7 +125,7 @@ function ResumePage() {
                 <Trash2 className="size-4" /> Remove resume
               </button>
             </div>
-          }
+          )}
         </aside>
       </div>
     </>

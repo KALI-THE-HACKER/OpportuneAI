@@ -1,5 +1,12 @@
 import { delay, type Paginated } from "./client";
-import { MOCK_JOBS, type Job, MOCK_APPLICATIONS, type ApplicationRecord, APPLIED_JOB_IDS, SAVED_JOB_IDS } from "../mock/jobs";
+import {
+  MOCK_JOBS,
+  type Job,
+  MOCK_APPLICATIONS,
+  type ApplicationRecord,
+  APPLIED_JOB_IDS,
+  SAVED_JOB_IDS,
+} from "../mock/jobs";
 
 export interface JobsQuery {
   q?: string;
@@ -20,12 +27,13 @@ function applyFilters(jobs: Job[], q: JobsQuery): Job[] {
       (j) =>
         j.title.toLowerCase().includes(term) ||
         j.company.toLowerCase().includes(term) ||
-        j.skills.some((s) => s.toLowerCase().includes(term))
+        j.skills.some((s) => s.toLowerCase().includes(term)),
     );
   }
   if (q.workMode?.length) out = out.filter((j) => q.workMode!.includes(j.workMode));
   if (q.type?.length) out = out.filter((j) => q.type!.includes(j.type));
-  if (q.experienceLevel?.length) out = out.filter((j) => q.experienceLevel!.includes(j.experienceLevel));
+  if (q.experienceLevel?.length)
+    out = out.filter((j) => q.experienceLevel!.includes(j.experienceLevel));
   if (q.minSalary) out = out.filter((j) => j.salaryMax >= q.minSalary!);
   switch (q.sort) {
     case "recent":
@@ -52,7 +60,9 @@ export const jobsApi = {
     const filtered = applyFilters(MOCK_JOBS, query);
     const start = (page - 1) * pageSize;
     return delay({
-      items: filtered.slice(start, start + pageSize).map((j) => ({ ...j, saved: savedSet.has(j.id) })),
+      items: filtered
+        .slice(start, start + pageSize)
+        .map((j) => ({ ...j, saved: savedSet.has(j.id) })),
       total: filtered.length,
       page,
       pageSize,
@@ -67,7 +77,7 @@ export const jobsApi = {
       [...MOCK_JOBS]
         .sort((a, b) => b.matchScore - a.matchScore)
         .slice(0, limit)
-        .map((j) => ({ ...j, saved: savedSet.has(j.id) }))
+        .map((j) => ({ ...j, saved: savedSet.has(j.id) })),
     );
   },
   async saved(): Promise<Job[]> {
@@ -83,7 +93,7 @@ export const jobsApi = {
       MOCK_APPLICATIONS.map((a) => ({
         ...a,
         job: MOCK_JOBS.find((j) => j.id === a.jobId)!,
-      }))
+      })),
     );
   },
   async apply(jobId: string): Promise<ApplicationRecord> {

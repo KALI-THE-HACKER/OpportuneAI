@@ -6,6 +6,8 @@ from sqlalchemy import pool
 from alembic import context
 
 from database.base import Base
+# Import all models here so they register on Base.metadata for autogenerate
+
 
 from config.settings import settings
 
