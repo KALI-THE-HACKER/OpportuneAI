@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     openrouter_api_key: str | None = None
     openrouter_model: str = "openai/gpt-oss-120b:free"
 
+    # Auth0 Settings
+    auth0_domain: str = ""
+    auth0_api_audience: str = ""
+    auth0_client_id: str = ""
+    auth0_client_secret: str = ""
+    auth0_connection: str = "Username-Password-Authentication"
+
     model_config = SettingsConfigDict(
         env_file=".env",
     )

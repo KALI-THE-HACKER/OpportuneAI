@@ -10,7 +10,10 @@ export function delay<T>(value: T, ms = API_LATENCY_MS): Promise<T> {
 }
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
     super(message);
   }
 }
@@ -21,3 +24,62 @@ export type Paginated<T> = {
   page: number;
   pageSize: number;
 };
+
+// Global authentication token variable set by the auth hook
+let authToken: string | null = null;
+
+export function setApiAuthToken(token: string | null) {
+  authToken = token;
+}
+
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+export async function apiCall<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers = new Headers(options.headers || {});
+
+  if (authToken) {
+    headers.set("Authorization", `Bearer ${authToken}`);
+  }
+
+  if (options.body && typeof options.body === "string" && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  const url = `${BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      let message = "API request failed";
+      try {
+        const errorData = await response.json();
+        const rawDetail = errorData.detail || errorData.message || message;
+        if (typeof rawDetail === "object" && rawDetail !== null) {
+          message = rawDetail.message || rawDetail.error || JSON.stringify(rawDetail);
+        } else {
+          message = String(rawDetail);
+        }
+      } catch {
+        try {
+          message = await response.text();
+        } catch {
+          // Ignore failures, fall back to default message
+        }
+      }
+      throw new ApiError(response.status, message);
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      return (await response.json()) as T;
+    }
+    return {} as T;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(500, error instanceof Error ? error.message : "Network error");
+  }
+}

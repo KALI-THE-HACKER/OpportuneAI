@@ -7,8 +7,15 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "OpportuneAI — The intelligence layer for your professional search" },
-      { name: "description", content: "Direct access to the hidden job market. AI matching, skill-gap analysis, and an application tracker built for serious job seekers." },
-      { property: "og:title", content: "OpportuneAI — The intelligence layer for your professional search" },
+      {
+        name: "description",
+        content:
+          "Direct access to the hidden job market. AI matching, skill-gap analysis, and an application tracker built for serious job seekers.",
+      },
+      {
+        property: "og:title",
+        content: "OpportuneAI — The intelligence layer for your professional search",
+      },
       { property: "og:description", content: "AI-powered job discovery and application copilot." },
     ],
   }),
@@ -16,12 +23,36 @@ export const Route = createFileRoute("/")({
 });
 
 const features = [
-  { icon: Sparkles, title: "AI-ranked recommendations", body: "Roles ordered by match score, recency, and signal — not vanity filters." },
-  { icon: Search, title: "Deep job explorer", body: "Search, filter, and sort across thousands of high-signal opportunities." },
-  { icon: FileText, title: "Resume intelligence", body: "Upload once. We extract skills, level, and projects to power every match." },
-  { icon: BarChart3, title: "Skill-gap insights", body: "See exactly which skills move you from 80% to 95% for the role you want." },
-  { icon: Bell, title: "Application tracker", body: "Saved, applied, interviewing — one calm surface for the whole pipeline." },
-  { icon: ShieldCheck, title: "Yours alone", body: "Your profile stays private. We share with employers only when you apply." },
+  {
+    icon: Sparkles,
+    title: "AI-ranked recommendations",
+    body: "Roles ordered by match score, recency, and signal — not vanity filters.",
+  },
+  {
+    icon: Search,
+    title: "Deep job explorer",
+    body: "Search, filter, and sort across thousands of high-signal opportunities.",
+  },
+  {
+    icon: FileText,
+    title: "Resume intelligence",
+    body: "Upload once. We extract skills, level, and projects to power every match.",
+  },
+  {
+    icon: BarChart3,
+    title: "Skill-gap insights",
+    body: "See exactly which skills move you from 80% to 95% for the role you want.",
+  },
+  {
+    icon: Bell,
+    title: "Application tracker",
+    body: "Saved, applied, interviewing — one calm surface for the whole pipeline.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Yours alone",
+    body: "Your profile stays private. We share with employers only when you apply.",
+  },
 ];
 
 function LandingPage() {
@@ -32,8 +63,18 @@ function LandingPage() {
           <Logo />
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <Link to="/auth/sign-in" className="h-8 px-3 inline-flex items-center text-sm font-medium text-foreground hover:text-accent transition-colors">Sign in</Link>
-            <Link to="/auth/sign-up" className="h-8 px-3 inline-flex items-center text-sm font-medium bg-brand text-brand-foreground rounded-md ring-1 ring-brand hover:bg-brand/90 transition-colors">Get access</Link>
+            <Link
+              to="/auth/sign-in"
+              className="h-8 px-3 inline-flex items-center text-sm font-medium text-foreground hover:text-accent transition-colors"
+            >
+              Sign in
+            </Link>
+            <Link
+              to="/auth/sign-up"
+              className="h-8 px-3 inline-flex items-center text-sm font-medium bg-brand text-brand-foreground rounded-md ring-1 ring-brand hover:bg-brand/90 transition-colors"
+            >
+              Get access
+            </Link>
           </div>
         </div>
       </nav>
@@ -43,19 +84,28 @@ function LandingPage() {
           <div className="max-w-6xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand/5 ring-1 ring-brand/10 mb-8">
               <span className="size-1.5 rounded-full bg-accent animate-pulse" />
-              <span className="text-[11px] font-medium tracking-wide uppercase text-muted-foreground">System online · v2.04</span>
+              <span className="text-[11px] font-medium tracking-wide uppercase text-muted-foreground">
+                System online · v2.04
+              </span>
             </div>
             <h1 className="text-5xl md:text-6xl font-semibold leading-tight text-balance mb-6">
               The intelligence layer for your professional search
             </h1>
             <p className="text-lg text-muted-foreground max-w-[56ch] mx-auto text-pretty mb-10">
-              Direct access to the hidden market. Automated matching for high-signal opportunities with calculated skill-gap analysis.
+              Direct access to the hidden market. Automated matching for high-signal opportunities
+              with calculated skill-gap analysis.
             </p>
             <div className="flex items-center justify-center gap-3 flex-wrap">
-              <Link to="/auth/sign-up" className="h-10 px-5 inline-flex items-center gap-2 bg-brand text-brand-foreground text-sm font-medium rounded-md ring-1 ring-brand hover:bg-brand/90 transition-colors">
+              <Link
+                to="/auth/sign-up"
+                className="h-10 px-5 inline-flex items-center gap-2 bg-brand text-brand-foreground text-sm font-medium rounded-md ring-1 ring-brand hover:bg-brand/90 transition-colors"
+              >
                 Access platform <ArrowRight className="size-4" />
               </Link>
-              <Link to="/auth/sign-in" className="h-10 px-5 inline-flex items-center text-sm font-medium rounded-md ring-1 ring-border bg-background hover:bg-surface transition-colors">
+              <Link
+                to="/auth/sign-in"
+                className="h-10 px-5 inline-flex items-center text-sm font-medium rounded-md ring-1 ring-border bg-background hover:bg-surface transition-colors"
+              >
                 Sign in
               </Link>
             </div>
@@ -65,8 +115,12 @@ function LandingPage() {
         <section className="py-16 px-6 bg-surface border-y border-border">
           <div className="max-w-6xl mx-auto">
             <div className="mb-12 max-w-2xl">
-              <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Capabilities</span>
-              <h2 className="text-3xl font-semibold mt-2">Built for serious operators, not casual swiping.</h2>
+              <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Capabilities
+              </span>
+              <h2 className="text-3xl font-semibold mt-2">
+                Built for serious operators, not casual swiping.
+              </h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {features.map(({ icon: Icon, title, body }) => (
@@ -85,8 +139,14 @@ function LandingPage() {
         <section className="py-24 px-6">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl font-semibold mb-4">Your unfair advantage in the market.</h2>
-            <p className="text-muted-foreground mb-8">Join thousands of senior operators who've replaced spreadsheets and tab chaos with a single calm copilot.</p>
-            <Link to="/auth/sign-up" className="h-10 px-5 inline-flex items-center gap-2 bg-brand text-brand-foreground text-sm font-medium rounded-md ring-1 ring-brand hover:bg-brand/90 transition-colors">
+            <p className="text-muted-foreground mb-8">
+              Join thousands of senior operators who've replaced spreadsheets and tab chaos with a
+              single calm copilot.
+            </p>
+            <Link
+              to="/auth/sign-up"
+              className="h-10 px-5 inline-flex items-center gap-2 bg-brand text-brand-foreground text-sm font-medium rounded-md ring-1 ring-brand hover:bg-brand/90 transition-colors"
+            >
               Get started <ArrowRight className="size-4" />
             </Link>
           </div>
@@ -98,9 +158,15 @@ function LandingPage() {
           <div className="flex items-center gap-6">
             <Logo />
             <nav className="flex gap-4 text-xs font-medium text-muted-foreground">
-              <a href="#" className="hover:text-foreground">Privacy</a>
-              <a href="#" className="hover:text-foreground">Terms</a>
-              <a href="#" className="hover:text-foreground">Security</a>
+              <a href="#" className="hover:text-foreground">
+                Privacy
+              </a>
+              <a href="#" className="hover:text-foreground">
+                Terms
+              </a>
+              <a href="#" className="hover:text-foreground">
+                Security
+              </a>
             </nav>
           </div>
           <div className="text-[10px] text-muted-foreground font-medium tracking-wide uppercase">

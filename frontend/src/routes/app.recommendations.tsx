@@ -12,7 +12,10 @@ export const Route = createFileRoute("/app/recommendations")({
 
 function RecommendationsPage() {
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["recommendations", "all"], queryFn: () => jobsApi.recommendations(12) });
+  const q = useQuery({
+    queryKey: ["recommendations", "all"],
+    queryFn: () => jobsApi.recommendations(12),
+  });
 
   async function toggleSave(id: string) {
     await jobsApi.toggleSave(id);
@@ -22,14 +25,26 @@ function RecommendationsPage() {
 
   return (
     <>
-      <PageHeader title="AI recommendations" description="Roles ranked by your profile, skills, and recent signals." />
-      {q.isLoading ? <LoadingState /> :
-        q.isError ? <ErrorState onRetry={() => q.refetch()} /> :
-        q.data!.length === 0 ? <EmptyState title="No recommendations yet" description="Upload a resume to get personalized matches." /> :
+      <PageHeader
+        title="AI recommendations"
+        description="Roles ranked by your profile, skills, and recent signals."
+      />
+      {q.isLoading ? (
+        <LoadingState />
+      ) : q.isError ? (
+        <ErrorState onRetry={() => q.refetch()} />
+      ) : q.data!.length === 0 ? (
+        <EmptyState
+          title="No recommendations yet"
+          description="Upload a resume to get personalized matches."
+        />
+      ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {q.data!.map((j) => <JobCard key={j.id} job={j} onToggleSave={toggleSave} />)}
+          {q.data!.map((j) => (
+            <JobCard key={j.id} job={j} onToggleSave={toggleSave} />
+          ))}
         </div>
-      }
+      )}
     </>
   );
 }

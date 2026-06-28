@@ -30,13 +30,27 @@ function JobDetailsPage() {
 
   if (q.isLoading) return <LoadingState />;
   if (q.isError) return <ErrorState onRetry={() => q.refetch()} />;
-  if (!q.data) return <EmptyState title="Job not found" description="This listing may have been removed." action={<Link to="/app/jobs" className="text-foreground underline">Back to explorer</Link>} />;
+  if (!q.data)
+    return (
+      <EmptyState
+        title="Job not found"
+        description="This listing may have been removed."
+        action={
+          <Link to="/app/jobs" className="text-foreground underline">
+            Back to explorer
+          </Link>
+        }
+      />
+    );
 
   const job = q.data;
 
   return (
     <>
-      <Link to="/app/jobs" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6">
+      <Link
+        to="/app/jobs"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6"
+      >
         <ArrowLeft className="size-4" /> Back to explorer
       </Link>
 
@@ -52,21 +66,46 @@ function JobDetailsPage() {
                 <p className="text-sm text-muted-foreground mt-1">
                   {job.company} · {job.location} · {job.workMode} · {job.type}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">{formatSalary(job.salaryMin, job.salaryMax)} · Posted {timeAgo(job.postedAt)}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatSalary(job.salaryMin, job.salaryMax)} · Posted {timeAgo(job.postedAt)}
+                </p>
               </div>
             </div>
           </header>
 
-          <Section title="About the role"><p className="text-sm text-foreground/90 leading-relaxed">{job.description}</p></Section>
+          <Section title="About the role">
+            <p className="text-sm text-foreground/90 leading-relaxed">{job.description}</p>
+          </Section>
           <Section title="Responsibilities">
-            <ul className="space-y-2 text-sm text-foreground/90">{job.responsibilities.map((r) => <li key={r} className="flex gap-2"><span className="text-accent">·</span>{r}</li>)}</ul>
+            <ul className="space-y-2 text-sm text-foreground/90">
+              {job.responsibilities.map((r) => (
+                <li key={r} className="flex gap-2">
+                  <span className="text-accent">·</span>
+                  {r}
+                </li>
+              ))}
+            </ul>
           </Section>
           <Section title="Requirements">
-            <ul className="space-y-2 text-sm text-foreground/90">{job.requirements.map((r) => <li key={r} className="flex gap-2"><span className="text-accent">·</span>{r}</li>)}</ul>
+            <ul className="space-y-2 text-sm text-foreground/90">
+              {job.requirements.map((r) => (
+                <li key={r} className="flex gap-2">
+                  <span className="text-accent">·</span>
+                  {r}
+                </li>
+              ))}
+            </ul>
           </Section>
           <Section title="Skills">
             <div className="flex flex-wrap gap-2">
-              {job.skills.map((s) => <span key={s} className="px-2 py-1 text-[11px] bg-muted text-muted-foreground rounded ring-1 ring-border">{s}</span>)}
+              {job.skills.map((s) => (
+                <span
+                  key={s}
+                  className="px-2 py-1 text-[11px] bg-muted text-muted-foreground rounded ring-1 ring-border"
+                >
+                  {s}
+                </span>
+              ))}
             </div>
           </Section>
         </article>
@@ -82,7 +121,15 @@ function JobDetailsPage() {
               disabled={apply.isPending || apply.isSuccess}
               className="w-full h-10 inline-flex items-center justify-center gap-2 rounded-md bg-brand text-brand-foreground text-sm font-medium ring-1 ring-brand hover:bg-brand/90 disabled:opacity-60"
             >
-              {apply.isSuccess ? <><CheckCircle2 className="size-4" /> Application sent</> : <><Send className="size-4" /> Apply now</>}
+              {apply.isSuccess ? (
+                <>
+                  <CheckCircle2 className="size-4" /> Application sent
+                </>
+              ) : (
+                <>
+                  <Send className="size-4" /> Apply now
+                </>
+              )}
             </button>
             <button
               onClick={() => save.mutate()}
@@ -101,19 +148,33 @@ function JobDetailsPage() {
             <p className="text-sm text-foreground/90 leading-relaxed">{job.aiExplanation}</p>
 
             <div className="mt-4">
-              <div className="text-[11px] uppercase tracking-widest text-muted-foreground mb-2">Matched skills</div>
+              <div className="text-[11px] uppercase tracking-widest text-muted-foreground mb-2">
+                Matched skills
+              </div>
               <div className="flex flex-wrap gap-1.5">
                 {job.matchedSkills.map((s) => (
-                  <span key={s} className="px-1.5 py-0.5 text-[10px] rounded bg-accent/10 text-accent ring-1 ring-accent/20">{s}</span>
+                  <span
+                    key={s}
+                    className="px-1.5 py-0.5 text-[10px] rounded bg-accent/10 text-accent ring-1 ring-accent/20"
+                  >
+                    {s}
+                  </span>
                 ))}
               </div>
             </div>
             {job.missingSkills.length > 0 && (
               <div className="mt-3">
-                <div className="text-[11px] uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1"><AlertTriangle className="size-3 text-amber-500" /> Missing skills</div>
+                <div className="text-[11px] uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1">
+                  <AlertTriangle className="size-3 text-amber-500" /> Missing skills
+                </div>
                 <div className="flex flex-wrap gap-1.5">
                   {job.missingSkills.map((s) => (
-                    <span key={s} className="px-1.5 py-0.5 text-[10px] rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20">{s}</span>
+                    <span
+                      key={s}
+                      className="px-1.5 py-0.5 text-[10px] rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20"
+                    >
+                      {s}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -128,7 +189,9 @@ function JobDetailsPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mb-6">
-      <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">{title}</h2>
+      <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+        {title}
+      </h2>
       {children}
     </section>
   );

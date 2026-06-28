@@ -8,22 +8,18 @@ export function MatchBadge({ score }: { score: number }) {
     score >= 90
       ? "bg-accent/10 text-accent ring-accent/20"
       : score >= 75
-      ? "bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-400"
-      : "bg-muted text-muted-foreground ring-border";
+        ? "bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-400"
+        : "bg-muted text-muted-foreground ring-border";
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ring-1 ${tone}`}>
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ring-1 ${tone}`}
+    >
       {score}% MATCH
     </span>
   );
 }
 
-export function JobCard({
-  job,
-  onToggleSave,
-}: {
-  job: Job;
-  onToggleSave?: (id: string) => void;
-}) {
+export function JobCard({ job, onToggleSave }: { job: Job; onToggleSave?: (id: string) => void }) {
   return (
     <article className="group p-6 bg-card ring-1 ring-border rounded-lg transition-colors hover:ring-foreground/20">
       <div className="flex justify-between items-start gap-4">
@@ -65,7 +61,10 @@ export function JobCard({
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         {job.skills.slice(0, 5).map((s) => (
-          <span key={s} className="px-2 py-1 text-[11px] bg-muted text-muted-foreground rounded ring-1 ring-border">
+          <span
+            key={s}
+            className="px-2 py-1 text-[11px] bg-muted text-muted-foreground rounded ring-1 ring-border"
+          >
             {s}
           </span>
         ))}

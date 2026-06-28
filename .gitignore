@@ -5,3 +5,4 @@ test.py
 venv
 __pycache__
 dump.rdb
+.DS_Store

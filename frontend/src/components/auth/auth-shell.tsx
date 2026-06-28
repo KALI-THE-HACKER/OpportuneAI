@@ -29,9 +29,7 @@ export function AuthShell({
         <div className="w-full max-w-sm">
           <div className="mb-8">
             <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
-            {description && (
-              <p className="text-sm text-muted-foreground mt-1.5">{description}</p>
-            )}
+            {description && <p className="text-sm text-muted-foreground mt-1.5">{description}</p>}
           </div>
           {children}
           {footer && <div className="mt-6 text-sm text-muted-foreground text-center">{footer}</div>}

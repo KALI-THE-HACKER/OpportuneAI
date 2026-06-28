@@ -27,15 +27,19 @@ export function EmptyState({
         {icon ?? <Inbox className="size-5" />}
       </div>
       <h3 className="font-medium text-foreground">{title}</h3>
-      {description && (
-        <p className="text-sm text-muted-foreground mt-1 max-w-sm">{description}</p>
-      )}
+      {description && <p className="text-sm text-muted-foreground mt-1 max-w-sm">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
 }
 
-export function ErrorState({ message = "Something went wrong.", onRetry }: { message?: string; onRetry?: () => void }) {
+export function ErrorState({
+  message = "Something went wrong.",
+  onRetry,
+}: {
+  message?: string;
+  onRetry?: () => void;
+}) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
       <div className="size-10 grid place-items-center rounded-full bg-destructive/10 text-destructive mb-3">

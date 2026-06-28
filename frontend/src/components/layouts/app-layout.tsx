@@ -1,6 +1,18 @@
 import { Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
-  LayoutDashboard, Sparkles, Search, Bookmark, Send, FileText, User, Bell, Settings, ShieldCheck, LogOut, Menu, X,
+  LayoutDashboard,
+  Sparkles,
+  Search,
+  Bookmark,
+  Send,
+  FileText,
+  User,
+  Bell,
+  Settings,
+  ShieldCheck,
+  LogOut,
+  Menu,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "@/components/shared/logo";
@@ -146,7 +158,11 @@ export function AppLayout() {
                 to="/app/profile"
                 className="size-8 inline-grid place-items-center rounded-full bg-brand text-brand-foreground text-xs font-medium"
               >
-                {user?.name?.split(" ").map((n) => n[0]).join("").slice(0, 2) ?? "AC"}
+                {user?.name
+                  ?.split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .slice(0, 2) ?? "AC"}
               </Link>
             </div>
           </div>

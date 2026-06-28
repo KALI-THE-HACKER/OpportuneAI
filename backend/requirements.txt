@@ -18,5 +18,7 @@ langchain-openrouter
 
 
 #DEV DEPENDENCIES
+python-jose[cryptography]
+httpx
 ruff
 pre-commit

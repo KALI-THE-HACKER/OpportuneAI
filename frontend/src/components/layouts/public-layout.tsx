@@ -33,9 +33,15 @@ export function PublicLayout() {
           <div className="flex items-center gap-6">
             <Logo />
             <nav className="flex gap-4 text-xs font-medium text-muted-foreground">
-              <a href="#" className="hover:text-foreground">Privacy</a>
-              <a href="#" className="hover:text-foreground">Terms</a>
-              <a href="#" className="hover:text-foreground">Security</a>
+              <a href="#" className="hover:text-foreground">
+                Privacy
+              </a>
+              <a href="#" className="hover:text-foreground">
+                Terms
+              </a>
+              <a href="#" className="hover:text-foreground">
+                Security
+              </a>
             </nav>
           </div>
           <div className="text-[10px] text-muted-foreground font-medium tracking-wide uppercase">

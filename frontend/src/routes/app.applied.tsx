@@ -23,19 +23,32 @@ function AppliedPage() {
 
   return (
     <>
-      <PageHeader title="Applications" description="Track every role you've applied to in one place." />
-      {q.isLoading ? <LoadingState /> :
-        q.isError ? <ErrorState onRetry={() => q.refetch()} /> :
-        q.data!.length === 0 ?
-          <EmptyState title="No applications yet" description="Apply to a job to start tracking here." /> :
+      <PageHeader
+        title="Applications"
+        description="Track every role you've applied to in one place."
+      />
+      {q.isLoading ? (
+        <LoadingState />
+      ) : q.isError ? (
+        <ErrorState onRetry={() => q.refetch()} />
+      ) : q.data!.length === 0 ? (
+        <EmptyState
+          title="No applications yet"
+          description="Apply to a job to start tracking here."
+        />
+      ) : (
         <div className="bg-card ring-1 ring-border rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-surface text-muted-foreground">
                 <tr>
                   <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Role</th>
-                  <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Company</th>
-                  <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Applied</th>
+                  <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
+                    Company
+                  </th>
+                  <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
+                    Applied
+                  </th>
                   <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider"></th>
                 </tr>
@@ -47,12 +60,20 @@ function AppliedPage() {
                     <td className="px-6 py-4 text-muted-foreground">{a.job.company}</td>
                     <td className="px-6 py-4 text-muted-foreground">{timeAgo(a.appliedAt)}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded ring-1 ${statusTone[a.status]}`}>
+                      <span
+                        className={`px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded ring-1 ${statusTone[a.status]}`}
+                      >
                         {a.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Link to="/app/jobs/$jobId" params={{ jobId: a.jobId }} className="text-foreground hover:text-accent text-sm">View</Link>
+                      <Link
+                        to="/app/jobs/$jobId"
+                        params={{ jobId: a.jobId }}
+                        className="text-foreground hover:text-accent text-sm"
+                      >
+                        View
+                      </Link>
                     </td>
                   </tr>
                 ))}
@@ -60,7 +81,7 @@ function AppliedPage() {
             </table>
           </div>
         </div>
-      }
+      )}
     </>
   );
 }

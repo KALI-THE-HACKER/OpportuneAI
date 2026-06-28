@@ -21,19 +21,31 @@ function SavedPage() {
   return (
     <>
       <PageHeader title="Saved jobs" description="Roles you've bookmarked to review later." />
-      {q.isLoading ? <LoadingState /> :
-        q.isError ? <ErrorState onRetry={() => q.refetch()} /> :
-        q.data!.length === 0 ?
-          <EmptyState
-            icon={<Bookmark className="size-5" />}
-            title="Nothing saved yet"
-            description="Tap the bookmark on any job to keep it here."
-            action={<Link to="/app/jobs" className="h-9 px-4 inline-flex items-center rounded-md bg-brand text-brand-foreground text-sm">Browse jobs</Link>}
-          /> :
+      {q.isLoading ? (
+        <LoadingState />
+      ) : q.isError ? (
+        <ErrorState onRetry={() => q.refetch()} />
+      ) : q.data!.length === 0 ? (
+        <EmptyState
+          icon={<Bookmark className="size-5" />}
+          title="Nothing saved yet"
+          description="Tap the bookmark on any job to keep it here."
+          action={
+            <Link
+              to="/app/jobs"
+              className="h-9 px-4 inline-flex items-center rounded-md bg-brand text-brand-foreground text-sm"
+            >
+              Browse jobs
+            </Link>
+          }
+        />
+      ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {q.data!.map((j) => <JobCard key={j.id} job={j} onToggleSave={toggleSave} />)}
+          {q.data!.map((j) => (
+            <JobCard key={j.id} job={j} onToggleSave={toggleSave} />
+          ))}
         </div>
-      }
+      )}
     </>
   );
 }

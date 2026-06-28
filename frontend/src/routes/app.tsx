@@ -12,6 +12,7 @@ function AuthGate() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   if (isLoading) return <LoadingState label="Loading your workspace…" />;
-  if (!isAuthenticated) return <Navigate to="/auth/sign-in" search={{ redirect: pathname }} replace />;
+  if (!isAuthenticated)
+    return <Navigate to="/auth/sign-in" search={{ redirect: pathname }} replace />;
   return <AppLayout />;
 }
