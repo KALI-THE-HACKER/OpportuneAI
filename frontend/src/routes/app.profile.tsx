@@ -56,7 +56,8 @@ function ProfilePage() {
               <Sparkles className="size-4 animate-pulse" /> Step 1: Complete your profile
             </h4>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Please enter your target job title, preferences, and details. This helps OpportuneAI filter relevant job matching signals.
+              Please enter your target job title, preferences, and details. This helps OpportuneAI
+              filter relevant job matching signals.
             </p>
           </div>
         </div>

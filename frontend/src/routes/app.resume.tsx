@@ -60,7 +60,8 @@ function ResumePage() {
               <Sparkles className="size-4 animate-pulse" /> Step 2: Upload your resume
             </h4>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Upload your resume to automatically extract your skills, experience, and unlock personalized AI recommendations.
+              Upload your resume to automatically extract your skills, experience, and unlock
+              personalized AI recommendations.
             </p>
           </div>
           <Link

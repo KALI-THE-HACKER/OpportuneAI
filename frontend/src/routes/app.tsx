@@ -15,7 +15,8 @@ function AuthGate() {
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
       // Check if profile is empty (typical of first login)
-      const isProfileIncomplete = !user.title && (!user.preferredRoles || user.preferredRoles.length === 0);
+      const isProfileIncomplete =
+        !user.title && (!user.preferredRoles || user.preferredRoles.length === 0);
       const sessionRedirected = sessionStorage.getItem("onboarding_redirected") === "true";
 
       // If they just logged in and profile is empty, redirect to profile with onboarding flag
