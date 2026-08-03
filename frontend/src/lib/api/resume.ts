@@ -1,24 +1,38 @@
-import { delay } from "./client";
-import { MOCK_RESUME, type ResumeData } from "../mock/user";
+import { ApiError, apiCall } from "./client";
 
-let current: ResumeData | null = MOCK_RESUME;
+export interface ResumeData {
+  fileName: string;
+  uploadedAt: string;
+  sizeKb: number;
+  status: "processed" | "processing" | "failed";
+  extractedSkills: string[];
+  experienceLevel: string;
+  yearsTotal: number;
+  confidence: number;
+}
 
 export const resumeApi = {
   async get(): Promise<ResumeData | null> {
-    return delay(current);
+    try {
+      return await apiCall<ResumeData>("/api/resume");
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
+    }
   },
-  async upload(file: { name: string; sizeKb: number }): Promise<ResumeData> {
-    current = {
-      ...MOCK_RESUME,
-      fileName: file.name,
-      sizeKb: file.sizeKb,
-      uploadedAt: new Date().toISOString(),
-      status: "processed",
-    };
-    return delay(current, 1200);
+  async upload(file: File): Promise<ResumeData> {
+    console.log("[resumeApi] Uploading resume to /api/resume/upload:", file.name, file.size);
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiCall<ResumeData>("/api/resume/upload", {
+      method: "POST",
+      body: formData,
+    });
   },
   async remove(): Promise<void> {
-    current = null;
-    return delay(undefined, 300);
+    await apiCall<void>("/api/resume", { method: "DELETE" });
+  },
+  async getDownloadUrl(): Promise<{ downloadUrl: string }> {
+    return apiCall<{ downloadUrl: string }>("/api/resume/download");
   },
 };

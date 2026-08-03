@@ -38,6 +38,13 @@ class Settings(BaseSettings):
     auth0_client_secret: str = ""
     auth0_connection: str = "Username-Password-Authentication"
 
+    # Cloudflare R2 resume storage (S3-compatible API)
+    r2_account_id: str | None = None
+    r2_access_key_id: str | None = None
+    r2_secret_access_key: str | None = None
+    r2_bucket_name: str | None = None
+    r2_endpoint_url: str | None = None
+
     model_config = SettingsConfigDict(
         env_file=".env",
     )

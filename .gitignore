@@ -5,4 +5,8 @@ test.py
 venv
 __pycache__
 dump.rdb
+logs/
 .DS_Store
+help_prompt.txt
+.agents/skills/
+sample-resume.pdf

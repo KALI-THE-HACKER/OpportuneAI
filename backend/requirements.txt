@@ -5,6 +5,7 @@ pydantic
 pydantic-settings
 linkedin-jobs-scraper
 firecrawl-py
+beautifulsoup4
 sqlalchemy
 asyncpg
 alembic
@@ -15,6 +16,9 @@ rq
 langchain
 langchain-google-genai
 langchain-openrouter
+pymupdf
+python-multipart
+boto3
 
 
 #DEV DEPENDENCIES

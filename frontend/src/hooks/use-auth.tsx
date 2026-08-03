@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { setApiAuthToken } from "@/lib/api/client";
-import { authApi, getStoredSession, persistSession, type Session } from "@/lib/api/auth";
+import { authApi, getStoredSession, parseJwtExp, persistSession, type Session } from "@/lib/api/auth";
 import { userApi } from "@/lib/api/user";
 import type { UserProfile } from "@/lib/mock/user";
 
@@ -18,11 +18,19 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+function clearOnboardingRedirect() {
+  if (typeof window !== "undefined") {
+    sessionStorage.removeItem("onboarding_redirected");
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const {
+    user: auth0User,
     isAuthenticated: isAuth0Authenticated,
     isLoading: isAuth0Loading,
     getAccessTokenSilently,
+    getIdTokenClaims,
     loginWithRedirect,
     logout,
   } = useAuth0();
@@ -45,26 +53,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Sync Auth0 state when it loads
   useEffect(() => {
     async function syncAuth0Token() {
-      if (isAuth0Authenticated) {
-        setProfileLoading(true);
-        try {
-          const token = await getAccessTokenSilently();
-          setApiAuthToken(token);
-          const profile = await userApi.get();
-          sessionStorage.removeItem("onboarding_redirected");
-          setUser(profile);
+      if (isAuth0Authenticated && auth0User) {
+        const initialUser: UserProfile = {
+          id: auth0User.sub || "auth0-user",
+          name: auth0User.name || auth0User.nickname || "Authenticated User",
+          email: auth0User.email || "",
+          avatarUrl: auth0User.picture,
+          title: "",
+          location: "",
+          bio: "",
+          yearsOfExperience: 0,
+          skills: [],
+          preferredRoles: [],
+          preferredLocations: [],
+          workModes: [],
+          minSalary: 0,
+          emailVerified: auth0User.email_verified || false,
+        };
+        setUser(initialUser);
+        setProfileLoading(false);
 
-          const session: Session = {
-            token,
-            user: profile,
-            expiresAt: Date.now() + 1000 * 60 * 60 * 24 * 7,
-          };
-          persistSession(session);
-          setLocalSession(session);
+        try {
+          let token: string | null = null;
+          try {
+            token = await getAccessTokenSilently();
+          } catch {
+            const claims = await getIdTokenClaims();
+            token = claims?.__raw || null;
+          }
+
+          if (token) {
+            setApiAuthToken(token);
+            const backendProfile = await userApi.get().catch(() => null);
+            const finalUser = backendProfile || initialUser;
+            clearOnboardingRedirect();
+            setUser(finalUser);
+
+            const jwtExp = parseJwtExp(token);
+            const expiresAt = jwtExp || Date.now() + 1000 * 60 * 60 * 24 * 7;
+
+            const session: Session = {
+              token,
+              user: finalUser,
+              expiresAt,
+            };
+            persistSession(session);
+            setLocalSession(session);
+          }
         } catch (error) {
-          console.error("Failed to sync Auth0 token:", error);
-        } finally {
-          setProfileLoading(false);
+          console.error("Auth0 token sync error:", error);
+          persistSession(null);
+          setLocalSession(null);
+          setApiAuthToken(null);
         }
       }
     }
@@ -72,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!isAuth0Loading) {
       void syncAuth0Token();
     }
-  }, [isAuth0Authenticated, isAuth0Loading, getAccessTokenSilently]);
+  }, [isAuth0Authenticated, isAuth0Loading, auth0User, getAccessTokenSilently, getIdTokenClaims]);
 
   const value: AuthState = {
     user,
@@ -81,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async signIn(email, password) {
       setProfileLoading(true);
       try {
-        sessionStorage.removeItem("onboarding_redirected");
+        clearOnboardingRedirect();
         const session = await authApi.signIn(email, password);
         setLocalSession(session);
         setUser(session.user);
@@ -93,7 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async signUp(name, email, password) {
       setProfileLoading(true);
       try {
-        sessionStorage.removeItem("onboarding_redirected");
+        clearOnboardingRedirect();
         const session = await authApi.signUp(name, email, password);
         if (session.token) {
           setLocalSession(session);
@@ -111,12 +151,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     },
     async signInWithSocial(connection) {
-      await loginWithRedirect({
-        authorizationParams: { connection },
-      });
+      const isMockMode =
+        import.meta.env.VITE_AUTH0_CLIENT_ID === "mock_client_id" ||
+        !import.meta.env.VITE_AUTH0_CLIENT_ID;
+
+      if (isMockMode) {
+        setProfileLoading(true);
+        try {
+          clearOnboardingRedirect();
+          const mockToken = `mock-${connection}|google-user-123;google.user@opportune.ai;Google User;https://lh3.googleusercontent.com/a/default-user`;
+          setApiAuthToken(mockToken);
+          const profile = await userApi.get();
+          setUser(profile);
+
+          const session: Session = {
+            token: mockToken,
+            user: profile,
+            expiresAt: Date.now() + 1000 * 60 * 60 * 24 * 7,
+          };
+          persistSession(session);
+          setLocalSession(session);
+        } finally {
+          setProfileLoading(false);
+        }
+      } else {
+        await loginWithRedirect({
+          authorizationParams: { connection },
+        });
+      }
     },
     async signOut() {
-      sessionStorage.removeItem("onboarding_redirected");
+      clearOnboardingRedirect();
       persistSession(null);
       setLocalSession(null);
       setUser(null);

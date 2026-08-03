@@ -93,6 +93,7 @@ async def verify_auth0_token(token: str) -> dict:
             algorithms=["RS256"],
             audience=settings.auth0_api_audience,
             issuer=f"https://{settings.auth0_domain}/",
+            options={"leeway": 60},
         )
         return payload
     except JWTError as e:

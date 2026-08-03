@@ -2,12 +2,13 @@ from unittest.mock import patch
 from uuid import uuid4
 
 from workers.ai_worker import process_raw_job
-from workers.queue import ai_processing_queue
+from workers.queue import ai_processing_queue, resume_processing_queue
 
 
 def test_queue_configuration() -> None:
     """Verify the application is using the expected RQ queue."""
     assert ai_processing_queue.name == "ai-processing"
+    assert resume_processing_queue.name == "resume-processing"
 
 
 @patch("rq.queue.Queue.enqueue")

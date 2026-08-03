@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { z } from "zod";
 import { AuthShell, FormField, inputClass, primaryButtonClass } from "@/components/auth/auth-shell";
 import { useAuth } from "@/hooks/use-auth";
@@ -27,9 +27,11 @@ function SignInPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (isAuthenticated) {
-    navigate({ to: search.redirect ?? "/app/dashboard", replace: true });
-  }
+  useEffect(() => {
+    if (isAuthenticated) {
+      void navigate({ to: search.redirect ?? "/app/dashboard", replace: true });
+    }
+  }, [isAuthenticated, navigate, search.redirect]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -40,6 +42,19 @@ function SignInPage() {
       navigate({ to: search.redirect ?? "/app/dashboard", replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign-in failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSocialSignIn(provider: "google-oauth2" | "github" | "linkedin") {
+    setError(null);
+    setBusy(true);
+    try {
+      await signInWithSocial(provider);
+      navigate({ to: search.redirect ?? "/app/dashboard", replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Sign in with ${provider} failed`);
     } finally {
       setBusy(false);
     }
@@ -113,7 +128,7 @@ function SignInPage() {
       <div className="grid grid-cols-3 gap-2">
         <button
           type="button"
-          onClick={() => void signInWithSocial("google-oauth2")}
+          onClick={() => void handleSocialSignIn("google-oauth2")}
           disabled={busy || isLoading}
           className="h-10 inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium hover:bg-accent transition-colors disabled:opacity-60 disabled:cursor-not-allowed group cursor-pointer"
           title="Sign in with Google"
@@ -148,7 +163,7 @@ function SignInPage() {
 
         <button
           type="button"
-          onClick={() => void signInWithSocial("github")}
+          onClick={() => void handleSocialSignIn("github")}
           disabled={busy || isLoading}
           className="h-10 inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium hover:bg-accent transition-colors disabled:opacity-60 disabled:cursor-not-allowed group cursor-pointer"
           title="Sign in with GitHub"
@@ -158,7 +173,7 @@ function SignInPage() {
         </button>
         <button
           type="button"
-          onClick={() => void signInWithSocial("linkedin")}
+          onClick={() => void handleSocialSignIn("linkedin")}
           disabled={busy || isLoading}
           className="h-10 inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium hover:bg-accent transition-colors disabled:opacity-60 disabled:cursor-not-allowed group cursor-pointer"
           title="Sign in with LinkedIn"

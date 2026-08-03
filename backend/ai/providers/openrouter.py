@@ -5,6 +5,7 @@ from typing import TypeVar
 
 from ai.providers.base import BaseLLM
 from config.settings import settings
+from utils.logging_config import log_dev
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -27,6 +28,37 @@ class OpenRouterLLM(BaseLLM):
         messages: list[BaseMessage],
         output_schema: type[T],
     ) -> T:
+        log_dev(
+            "AI REQUEST MADE (OpenRouter)",
+            {
+                "provider": "openrouter",
+                "model": settings.openrouter_model,
+                "output_schema": output_schema.__name__,
+                "messages": [
+                    {
+                        "role": getattr(m, "type", "user"),
+                        "content": getattr(m, "content", str(m)),
+                    }
+                    for m in messages
+                ],
+            },
+            logger_name="ai",
+        )
+
         structured_llm = self.client.with_structured_output(output_schema)
         response = await structured_llm.ainvoke(messages)
+
+        log_dev(
+            "AI DATA GIVEN (OpenRouter)",
+            {
+                "provider": "openrouter",
+                "model": settings.openrouter_model,
+                "output_schema": output_schema.__name__,
+                "response": response.model_dump()
+                if hasattr(response, "model_dump")
+                else str(response),
+            },
+            logger_name="ai",
+        )
+
         return response

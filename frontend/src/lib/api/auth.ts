@@ -7,6 +7,30 @@ export interface Session {
   token: string;
   user: UserProfile;
   expiresAt: number;
+  message?: string;
+}
+
+export function parseJwtExp(token: string): number | null {
+  if (!token || typeof token !== "string") return null;
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    const payload = JSON.parse(jsonPayload);
+    if (payload && typeof payload.exp === "number") {
+      return payload.exp * 1000;
+    }
+  } catch {
+    // ignore parsing failure
+  }
+  return null;
 }
 
 export function getStoredSession(): Session | null {
@@ -15,9 +39,13 @@ export function getStoredSession(): Session | null {
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as Session;
-    if (s.expiresAt < Date.now()) return null;
+    if (s.expiresAt < Date.now()) {
+      localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
     return s;
   } catch {
+    localStorage.removeItem(SESSION_KEY);
     return null;
   }
 }

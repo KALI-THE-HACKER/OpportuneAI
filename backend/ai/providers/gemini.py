@@ -1,5 +1,7 @@
 from langchain_core.messages import BaseMessage
 from ai.pools.gemini_pool import get_pool
+from config.settings import settings
+from utils.logging_config import log_dev
 
 from pydantic import BaseModel
 from typing import TypeVar
@@ -20,10 +22,38 @@ class GeminiLLM(BaseLLM):
         messages: list[BaseMessage],
         output_schema: type[T],
     ) -> T:
+        log_dev(
+            "AI REQUEST MADE (Gemini)",
+            {
+                "provider": "gemini",
+                "model": settings.gemini_model,
+                "output_schema": output_schema.__name__,
+                "messages": [
+                    {
+                        "role": getattr(m, "type", "user"),
+                        "content": getattr(m, "content", str(m)),
+                    }
+                    for m in messages
+                ],
+            },
+            logger_name="ai",
+        )
+
         client = self._pool.acquire()
-
         structured_llm = client.with_structured_output(output_schema)
-
         response = await structured_llm.ainvoke(messages)
+
+        log_dev(
+            "AI DATA GIVEN (Gemini)",
+            {
+                "provider": "gemini",
+                "model": settings.gemini_model,
+                "output_schema": output_schema.__name__,
+                "response": response.model_dump()
+                if hasattr(response, "model_dump")
+                else str(response),
+            },
+            logger_name="ai",
+        )
 
         return response

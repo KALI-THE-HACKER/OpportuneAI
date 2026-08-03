@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { AuthShell, FormField, inputClass, primaryButtonClass } from "@/components/auth/auth-shell";
 import { useAuth } from "@/hooks/use-auth";
 import { Github, Linkedin, AlertCircle, CheckCircle2 } from "lucide-react";
@@ -24,9 +24,11 @@ function SignUpPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (isAuthenticated) {
-    navigate({ to: "/app/dashboard", replace: true });
-  }
+  useEffect(() => {
+    if (isAuthenticated) {
+      void navigate({ to: "/app/dashboard", replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -70,6 +72,19 @@ function SignUpPage() {
     }
   }
 
+  async function handleSocialSignIn(provider: "google-oauth2" | "github" | "linkedin") {
+    setError(null);
+    setBusy(true);
+    try {
+      await signInWithSocial(provider);
+      navigate({ to: "/app/dashboard", replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Sign up with ${provider} failed`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <AuthShell
       title="Create your account"
@@ -88,16 +103,17 @@ function SignUpPage() {
     >
       {successMessage ? (
         <div className="space-y-6 text-center py-4 animate-in fade-in zoom-in duration-300">
-          <div className="flex justify-center">
-            <div className="bg-emerald-500/10 p-4 rounded-full border border-emerald-500/20">
-              <CheckCircle2 className="w-12 h-12 text-emerald-500 animate-pulse" />
-            </div>
+          <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto border border-emerald-500/20">
+            <CheckCircle2 className="w-6 h-6" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-foreground">Verify your email</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed px-2">{successMessage}</p>
+            <h3 className="text-lg font-semibold tracking-tight">Account created!</h3>
+            <p className="text-sm text-muted-foreground max-w-xs mx-auto">{successMessage}</p>
           </div>
-          <Link to="/auth/sign-in" className={`${primaryButtonClass} block text-center`}>
+          <Link
+            to="/auth/sign-in"
+            className="inline-flex items-center justify-center w-full h-10 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+          >
             Go to Sign In
           </Link>
         </div>
@@ -107,11 +123,13 @@ function SignUpPage() {
             <FormField label="Full name" htmlFor="name">
               <input
                 id="name"
+                type="text"
+                autoComplete="name"
                 required
                 className={inputClass}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="John Doe"
+                placeholder="Alex Morgan"
               />
             </FormField>
             <FormField label="Email address" htmlFor="email">
@@ -169,7 +187,7 @@ function SignUpPage() {
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
-              onClick={() => void signInWithSocial("google-oauth2")}
+              onClick={() => void handleSocialSignIn("google-oauth2")}
               disabled={busy || isLoading}
               className="h-10 inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium hover:bg-accent transition-colors disabled:opacity-60 disabled:cursor-not-allowed group cursor-pointer"
               title="Sign up with Google"
@@ -203,7 +221,7 @@ function SignUpPage() {
             </button>
             <button
               type="button"
-              onClick={() => void signInWithSocial("github")}
+              onClick={() => void handleSocialSignIn("github")}
               disabled={busy || isLoading}
               className="h-10 inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium hover:bg-accent transition-colors disabled:opacity-60 disabled:cursor-not-allowed group cursor-pointer"
               title="Sign up with GitHub"
@@ -213,7 +231,7 @@ function SignUpPage() {
             </button>
             <button
               type="button"
-              onClick={() => void signInWithSocial("linkedin")}
+              onClick={() => void handleSocialSignIn("linkedin")}
               disabled={busy || isLoading}
               className="h-10 inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium hover:bg-accent transition-colors disabled:opacity-60 disabled:cursor-not-allowed group cursor-pointer"
               title="Sign up with LinkedIn"

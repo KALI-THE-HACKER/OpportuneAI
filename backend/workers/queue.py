@@ -18,3 +18,8 @@ ai_processing_queue = Queue(
     "ai-processing",
     connection=redis_connection,
 )
+
+resume_processing_queue = Queue(
+    "resume-processing",
+    connection=redis_connection,
+)

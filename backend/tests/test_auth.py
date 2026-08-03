@@ -34,6 +34,13 @@ async def test_auth_and_profile_sync(dispose_db_engine):
     assert payload["name"] == "Pam PM"
     assert payload["picture"] == "https://example.com/pam.jpg"
 
+    # Test Google OAuth mock token format
+    google_mock_token = "mock-google-oauth2|g-12345;google.user@opportune.ai;Google User;https://example.com/google.jpg"
+    google_payload = await verify_auth0_token(google_mock_token)
+    assert google_payload["sub"] == "google-oauth2|g-12345"
+    assert google_payload["email"] == "google.user@opportune.ai"
+    assert google_payload["name"] == "Google User"
+
     # 2. Test get_current_user dependency (should auto-create the user in DB)
     async with AsyncSessionLocal() as db:
         user = await get_current_user(token=mock_token, db=db)

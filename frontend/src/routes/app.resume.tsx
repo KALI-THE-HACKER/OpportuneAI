@@ -1,8 +1,18 @@
 import { createFileRoute, useNavigate, useSearch, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { FileText, Upload, Trash2, Sparkles } from "lucide-react";
+import {
+  FileText,
+  Upload,
+  Trash2,
+  Sparkles,
+  AlertCircle,
+  Loader2,
+  CheckCircle2,
+  ExternalLink,
+} from "lucide-react";
+import { toast } from "sonner";
 import { resumeApi } from "@/lib/api";
 import { PageHeader } from "@/components/shared/page-header";
 import { LoadingState, ErrorState, EmptyState } from "@/components/shared/state-views";
@@ -23,28 +33,80 @@ function ResumePage() {
   const search = useSearch({ from: "/app/resume" });
   const navigate = useNavigate();
 
-  const q = useQuery({ queryKey: ["resume"], queryFn: () => resumeApi.get() });
+  const q = useQuery({
+    queryKey: ["resume"],
+    queryFn: () => resumeApi.get(),
+    refetchInterval: (query) => (query.state.data?.status === "processing" ? 2000 : false),
+  });
+
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  // Monitor status transitions to alert the user when processing finishes
+  const prevStatusRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const currentStatus = q.data?.status;
+    const prevStatus = prevStatusRef.current;
+    if (prevStatus === "processing" && currentStatus === "processed") {
+      toast.success("Resume processing complete! Extracted skills added to your profile.");
+      void qc.invalidateQueries({ queryKey: ["user"] });
+    } else if (prevStatus === "processing" && currentStatus === "failed") {
+      toast.error("Resume processing failed. Please check the PDF format and try again.");
+    }
+    prevStatusRef.current = currentStatus;
+  }, [q.data?.status, qc]);
 
   const upload = useMutation({
-    mutationFn: (f: File) => resumeApi.upload({ name: f.name, sizeKb: Math.round(f.size / 1024) }),
+    mutationFn: (f: File) => resumeApi.upload(f),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["resume"] });
+      toast.success("Resume uploaded successfully! AI is extracting skills...");
+      void qc.invalidateQueries({ queryKey: ["resume"] });
       if (search.onboarding === "true") {
         void navigate({ to: "/app/dashboard" });
       }
     },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Resume upload failed");
+    },
   });
+
   const remove = useMutation({
     mutationFn: () => resumeApi.remove(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["resume"] }),
+    onSuccess: () => {
+      toast.info("Resume removed");
+      void qc.invalidateQueries({ queryKey: ["resume"] });
+    },
   });
 
   function handleFiles(files?: FileList | null) {
     const f = files?.[0];
-    if (f) upload.mutate(f);
+    if (f) {
+      console.log("[Resume Upload] Submitting file to backend:", f.name, f.size, f.type);
+      upload.mutate(f);
+    }
+    if (fileRef.current) {
+      fileRef.current.value = "";
+    }
   }
+
+  async function handleViewResume() {
+    try {
+      setIsDownloading(true);
+      const res = await resumeApi.getDownloadUrl();
+      if (res.downloadUrl && res.downloadUrl !== "#") {
+        window.open(res.downloadUrl, "_blank", "noopener,noreferrer");
+      } else {
+        toast.info("Resume stored in local dev mode.");
+      }
+    } catch {
+      toast.error("Failed to generate secure download link.");
+    } finally {
+      setIsDownloading(false);
+    }
+  }
+
+  const isProcessing = upload.isPending || q.data?.status === "processing";
 
   return (
     <>
@@ -90,24 +152,52 @@ function ResumePage() {
           }`}
         >
           <div className="size-12 grid place-items-center rounded-full bg-surface mb-4">
-            <Upload className="size-5 text-muted-foreground" />
+            {isProcessing ? (
+              <Loader2 className="size-5 text-accent animate-spin" />
+            ) : (
+              <Upload className="size-5 text-muted-foreground" />
+            )}
           </div>
-          <h3 className="font-medium">Drop your resume here</h3>
-          <p className="text-sm text-muted-foreground mt-1">PDF or DOCX, up to 5MB</p>
+          <h3 className="font-medium">
+            {isProcessing ? "AI is processing your resume..." : "Drop your resume here"}
+          </h3>
+          <p className="text-sm text-muted-foreground mt-1">PDF, up to 5MB</p>
           <input
             ref={fileRef}
             type="file"
-            accept=".pdf,.docx"
+            accept="application/pdf,.pdf"
             className="hidden"
             onChange={(e) => handleFiles(e.target.files)}
           />
           <button
-            onClick={() => fileRef.current?.click()}
-            disabled={upload.isPending}
-            className="mt-4 h-9 px-4 rounded-md bg-brand text-brand-foreground text-sm font-medium ring-1 ring-brand hover:bg-brand/90 disabled:opacity-60"
+            type="button"
+            onClick={() => {
+              if (fileRef.current) fileRef.current.value = "";
+              fileRef.current?.click();
+            }}
+            disabled={isProcessing}
+            className="mt-4 h-9 px-4 rounded-md bg-brand text-brand-foreground text-sm font-medium ring-1 ring-brand hover:bg-brand/90 disabled:opacity-60 cursor-pointer inline-flex items-center gap-2"
           >
-            {upload.isPending ? "Processing…" : "Choose file"}
+            {isProcessing ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Processing…
+              </>
+            ) : (
+              "Choose file"
+            )}
           </button>
+
+          {upload.isError && (
+            <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md text-xs text-destructive flex items-center gap-2 max-w-sm">
+              <AlertCircle className="size-4 shrink-0" />
+              <span>
+                {upload.error instanceof Error
+                  ? upload.error.message
+                  : "Resume upload failed. Please try again."}
+              </span>
+            </div>
+          )}
         </div>
 
         <aside>
@@ -119,42 +209,87 @@ function ResumePage() {
             <EmptyState title="No resume on file" description="Upload one to start matching." />
           ) : (
             <div className="p-6 bg-card ring-1 ring-border rounded-lg space-y-5">
-              <div className="flex items-center gap-3">
-                <div className="size-10 grid place-items-center rounded-md bg-brand text-brand-foreground">
-                  <FileText className="size-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">{q.data.fileName}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {q.data.sizeKb} KB · uploaded {timeAgo(q.data.uploadedAt)}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="size-10 grid place-items-center rounded-md bg-brand text-brand-foreground shrink-0">
+                    <FileText className="size-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium truncate">{q.data.fileName}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {q.data.sizeKb} KB · uploaded {timeAgo(q.data.uploadedAt)}
+                    </div>
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => void handleViewResume()}
+                  disabled={isDownloading}
+                  title="View resume securely"
+                  className="size-8 grid place-items-center rounded-md border border-input bg-surface text-muted-foreground hover:text-foreground hover:bg-accent/10 transition-colors shrink-0"
+                >
+                  {isDownloading ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <ExternalLink className="size-4" />
+                  )}
+                </button>
               </div>
 
+              {q.data.status === "processing" ? (
+                <div className="p-3 bg-amber-500/10 ring-1 ring-amber-500/20 rounded-md text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2">
+                  <Sparkles className="size-4 shrink-0 text-amber-500 animate-pulse mt-0.5" />
+                  <div>
+                    <div className="font-semibold">AI Extraction in Progress</div>
+                    <div className="text-[11px] opacity-80 mt-0.5">
+                      Extracting technical skills, years of experience, and role preferences...
+                    </div>
+                  </div>
+                </div>
+              ) : q.data.status === "processed" ? (
+                <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                  <CheckCircle2 className="size-4" />
+                  <span>Processing complete</span>
+                </div>
+              ) : null}
+
               <Field label="Status" value={q.data.status} />
-              <Field label="Experience level" value={q.data.experienceLevel} />
-              <Field label="Total years" value={`${q.data.yearsTotal} yrs`} />
-              <Field label="Confidence" value={`${Math.round(q.data.confidence * 100)}%`} />
+              <Field label="Experience level" value={q.data.experienceLevel || "Pending"} />
+              <Field label="Total years" value={q.data.yearsTotal ? `${q.data.yearsTotal} yrs` : "Pending"} />
+              <Field
+                label="Confidence"
+                value={q.data.confidence ? `${Math.round(q.data.confidence * 100)}%` : "Pending"}
+              />
 
               <div>
                 <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">
                   Extracted skills
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {q.data.extractedSkills.map((s) => (
-                    <span
-                      key={s}
-                      className="px-2 py-0.5 text-[11px] rounded bg-muted text-muted-foreground ring-1 ring-border"
-                    >
-                      {s}
-                    </span>
-                  ))}
-                </div>
+                {q.data.extractedSkills.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {q.data.extractedSkills.map((s) => (
+                      <span
+                        key={s}
+                        className="px-2 py-0.5 text-[11px] rounded bg-muted text-muted-foreground ring-1 ring-border"
+                      >
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">
+                    {q.data.status === "processing"
+                      ? "Skills will appear here automatically once extracted."
+                      : "No skills extracted yet."}
+                  </p>
+                )}
               </div>
 
               <button
                 onClick={() => remove.mutate()}
-                className="w-full h-9 inline-flex items-center justify-center gap-2 rounded-md ring-1 ring-border text-sm text-destructive hover:bg-destructive/5"
+                disabled={remove.isPending}
+                className="w-full h-9 inline-flex items-center justify-center gap-2 rounded-md ring-1 ring-border text-sm text-destructive hover:bg-destructive/5 disabled:opacity-50"
               >
                 <Trash2 className="size-4" /> Remove resume
               </button>

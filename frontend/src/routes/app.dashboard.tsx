@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Activity, Briefcase, Send, Sparkles } from "lucide-react";
-import { jobsApi, adminApi, notificationsApi } from "@/lib/api";
+import { ArrowRight, Activity, Briefcase, Send, Sparkles, Loader2, CheckCircle2, FileText } from "lucide-react";
+import { jobsApi, adminApi, notificationsApi, resumeApi } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -23,6 +23,11 @@ function DashboardPage() {
   const apps = useQuery({ queryKey: ["applications"], queryFn: () => jobsApi.applications() });
   const notifs = useQuery({ queryKey: ["notifications"], queryFn: () => notificationsApi.list() });
   const stats = useQuery({ queryKey: ["admin-stats"], queryFn: () => adminApi.stats() });
+  const resume = useQuery({
+    queryKey: ["resume"],
+    queryFn: () => resumeApi.get(),
+    refetchInterval: (query) => (query.state.data?.status === "processing" ? 2000 : false),
+  });
 
   return (
     <>
@@ -30,6 +35,30 @@ function DashboardPage() {
         title={`Welcome back, ${user?.name?.split(" ")[0] ?? "there"}`}
         description={`${recs.data?.length ?? 0} new high-signal matches found today.`}
       />
+
+      {resume.data?.status === "processing" && (
+        <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="size-9 grid place-items-center rounded-md bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0">
+              <Loader2 className="size-4 animate-spin" />
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                <Sparkles className="size-4 animate-pulse text-amber-500" /> Resume processing in progress
+              </h4>
+              <p className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-0.5">
+                Extracting technical skills, years of experience, and role preferences to update your match scores.
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/app/resume"
+            className="text-xs font-medium text-amber-700 dark:text-amber-300 hover:underline shrink-0"
+          >
+            View status &rarr;
+          </Link>
+        </div>
+      )}
 
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard

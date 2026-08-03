@@ -1,6 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from routes.auth import router as auth_router
+from routes.resume import router as resume_router
+from utils.logging_config import configure_logging, get_feature_logger
+
+configure_logging()
+logger = get_feature_logger("api")
 
 # Create FastAPI instance
 app = FastAPI(
@@ -21,6 +27,8 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(resume_router)
+logger.info("OpportuneAI API configured")
 
 
 # Health check endpoint

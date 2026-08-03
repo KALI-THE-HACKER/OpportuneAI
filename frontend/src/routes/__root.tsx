@@ -15,6 +15,7 @@ import { ThemeProvider } from "../hooks/use-theme";
 import { AuthProvider } from "../hooks/use-auth";
 import { registerServiceWorker } from "../lib/pwa/register-sw";
 import { Auth0Provider } from "@auth0/auth0-react";
+import { Toaster } from "../components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -161,6 +162,7 @@ function RootComponent() {
           <AuthProvider>
             {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
             <Outlet />
+            <Toaster />
           </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>
@@ -182,6 +184,7 @@ function RootComponent() {
           <AuthProvider>
             {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
             <Outlet />
+            <Toaster />
           </AuthProvider>
         </ThemeProvider>
       </Auth0Provider>
