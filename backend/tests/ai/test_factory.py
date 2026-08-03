@@ -1,9 +1,9 @@
 import pytest
 
+from ai.pools.gemini_pool import get_pool
 from ai.providers.base import BaseLLM
 from ai.providers.factory import get_llm
 from ai.providers.gemini import GeminiLLM
-from ai.pools.gemini_pool import get_pool
 from config.settings import settings
 
 

@@ -1,7 +1,8 @@
+from typing import TypeVar
+
 from langchain_core.messages import BaseMessage
 from langchain_openrouter import ChatOpenRouter
 from pydantic import BaseModel
-from typing import TypeVar
 
 from ai.providers.base import BaseLLM
 from config.settings import settings

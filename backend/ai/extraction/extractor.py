@@ -1,7 +1,7 @@
+from ai.extraction.prompts import JOB_EXTRACTION_PROMPT
 from ai.providers.base import BaseLLM
 from ai.schemas import JobExtraction
 from database.models.raw_job import RawJob
-from ai.extraction.prompts import JOB_EXTRACTION_PROMPT
 from utils.logging_config import log_dev
 
 

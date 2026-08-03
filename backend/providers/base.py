@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+
 from providers.models.raw_jobs_data import RawJobData
 
 

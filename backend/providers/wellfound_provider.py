@@ -2,8 +2,8 @@ from pathlib import Path
 
 import yaml
 
-from providers.models.raw_jobs_data import RawJobData
 from providers.base import BaseProvider
+from providers.models.raw_jobs_data import RawJobData
 from scrapers.wellfound_scraper import scrape_wellfound_jobs
 from utils.hashing import compute_content_hash
 from utils.wellfound_utils import extract_wellfound_job_id

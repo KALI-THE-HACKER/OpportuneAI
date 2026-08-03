@@ -3,8 +3,8 @@ from pathlib import Path
 import httpx
 import yaml
 
-from providers.models.raw_jobs_data import RawJobData
 from providers.base import BaseProvider
+from providers.models.raw_jobs_data import RawJobData
 from utils.hashing import compute_content_hash
 from utils.remoteOK_utils import extract_remoteok_job_id
 

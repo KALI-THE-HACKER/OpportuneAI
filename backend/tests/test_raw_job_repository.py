@@ -1,10 +1,10 @@
+import uuid
+
 import pytest
 
-from database.session import AsyncSessionLocal
 from database.repositories.raw_job_repository import RawJobRepository
+from database.session import AsyncSessionLocal
 from providers.models.raw_jobs_data import RawJobData
-
-import uuid
 
 hash_value = f"test-{uuid.uuid4()}"
 

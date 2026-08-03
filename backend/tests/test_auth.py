@@ -1,9 +1,9 @@
 import pytest
 
-from database.session import AsyncSessionLocal
 from database.repositories.user_repository import UserRepository
-from utils.auth import verify_auth0_token, get_current_user
-from routes.auth import get_me, update_me, UserProfileUpdateSchema
+from database.session import AsyncSessionLocal
+from routes.auth import UserProfileUpdateSchema, get_me, update_me
+from utils.auth import get_current_user, verify_auth0_token
 
 
 @pytest.fixture
@@ -91,7 +91,7 @@ async def test_auth_and_profile_sync(dispose_db_engine):
         assert db_user_after.min_salary == 180000
 
         # 5. Test login route function in mock mode
-        from routes.auth import login, register, LoginInputSchema, RegisterInputSchema
+        from routes.auth import LoginInputSchema, RegisterInputSchema, login, register
 
         login_data = LoginInputSchema(email="pm@opportune.ai", password="somepassword")
         login_res = await login(data=login_data, db=db)

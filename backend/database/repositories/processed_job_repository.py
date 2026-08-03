@@ -1,8 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.processed_job import ProcessedJob
 from ai.schemas import JobExtraction
+from database.models.processed_job import ProcessedJob
 
 
 class ProcessedJobRepository:

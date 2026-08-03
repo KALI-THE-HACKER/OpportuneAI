@@ -5,9 +5,9 @@ credit usage and parses job listings directly from markdown.
 Requires FIRECRAWL_API_KEY in the environment (or .env file).
 """
 
-from typing import List, Dict, Any, Optional
 import os
 import re
+from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
 from firecrawl import V1FirecrawlApp

@@ -1,12 +1,12 @@
-from langchain_core.messages import BaseMessage
-from ai.pools.gemini_pool import get_pool
-from config.settings import settings
-from utils.logging_config import log_dev
-
-from pydantic import BaseModel
 from typing import TypeVar
 
+from langchain_core.messages import BaseMessage
+from pydantic import BaseModel
+
+from ai.pools.gemini_pool import get_pool
 from ai.providers.base import BaseLLM
+from config.settings import settings
+from utils.logging_config import log_dev
 
 T = TypeVar("T", bound=BaseModel)
 

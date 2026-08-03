@@ -1,14 +1,15 @@
-import pytest
 import uuid
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
 
-from database.session import AsyncSessionLocal
-from database.models.raw_job import RawJob, ProcessingStatus
-from database.repositories.raw_job_repository import RawJobRepository
-from database.repositories.processed_job_repository import ProcessedJobRepository
-from providers.models.raw_jobs_data import RawJobData
+import pytest
+
 from ai.schemas import JobExtraction
-from workers.ai_worker import process_raw_job, _process_raw_job
+from database.models.raw_job import ProcessingStatus, RawJob
+from database.repositories.processed_job_repository import ProcessedJobRepository
+from database.repositories.raw_job_repository import RawJobRepository
+from database.session import AsyncSessionLocal
+from providers.models.raw_jobs_data import RawJobData
+from workers.ai_worker import _process_raw_job, process_raw_job
 
 
 @pytest.fixture

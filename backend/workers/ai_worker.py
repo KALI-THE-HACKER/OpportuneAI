@@ -2,11 +2,11 @@ import asyncio
 import logging
 from typing import Any
 
-from database.session import AsyncSessionLocal
-from database.models.raw_job import RawJob, ProcessingStatus
-from database.repositories.processed_job_repository import ProcessedJobRepository
-from ai.providers.factory import get_llm
 from ai.extraction.extractor import JobExtractor
+from ai.providers.factory import get_llm
+from database.models.raw_job import ProcessingStatus, RawJob
+from database.repositories.processed_job_repository import ProcessedJobRepository
+from database.session import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
 

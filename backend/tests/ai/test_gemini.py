@@ -2,8 +2,8 @@ import pytest
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
 
-from ai.providers.gemini import GeminiLLM
 from ai.pools.gemini_pool import get_pool
+from ai.providers.gemini import GeminiLLM
 
 
 class EchoResponse(BaseModel):

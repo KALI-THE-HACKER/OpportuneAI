@@ -1,13 +1,11 @@
 import logging
 from pathlib import Path
 
+from database.repositories.raw_job_repository import RawJobRepository
 from providers.linkedin_provider import LinkedInProvider
 from providers.naukri_provider import NaukriProvider
 from providers.remoteOK_provider import RemoteOKProvider
 from providers.wellfound_provider import WellfoundProvider
-
-from database.repositories.raw_job_repository import RawJobRepository
-
 from workers.ai_worker import process_raw_job
 from workers.queue import ai_processing_queue
 

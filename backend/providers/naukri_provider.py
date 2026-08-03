@@ -1,10 +1,10 @@
-from pathlib import Path
 import re
+from pathlib import Path
 
 import yaml
 
-from providers.models.raw_jobs_data import RawJobData
 from providers.base import BaseProvider
+from providers.models.raw_jobs_data import RawJobData
 from scrapers.naukri_scraper import scrape_naukri_jobs
 from utils.hashing import compute_content_hash
 

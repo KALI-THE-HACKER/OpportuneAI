@@ -1,9 +1,10 @@
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from pydantic import BaseModel
 
-from ai.providers.openrouter import OpenRouterLLM
 from ai.providers.factory import get_llm
+from ai.providers.openrouter import OpenRouterLLM
 
 
 class DummySchema(BaseModel):

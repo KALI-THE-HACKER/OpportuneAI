@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
+from typing import TypeVar
+
 from langchain_core.messages import BaseMessage
 from pydantic import BaseModel
-from typing import TypeVar
 
 T = TypeVar("T", bound=BaseModel)
 

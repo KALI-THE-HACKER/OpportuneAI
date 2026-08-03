@@ -14,6 +14,7 @@ compete with the heavier AI job-extraction pipeline on ``ai-processing``.
 """
 
 import asyncio
+
 from ai.extraction.resume_extractor import ResumeExtractor
 from ai.providers.factory import get_llm
 from database.repositories.user_repository import UserRepository

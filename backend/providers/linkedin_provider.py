@@ -1,12 +1,14 @@
 import logging
+from pathlib import Path
+
+import yaml
+from linkedin_jobs_scraper.filters import ExperienceLevelFilters, TypeFilters
+
 from providers.base import BaseProvider
 from providers.models.raw_jobs_data import RawJobData
 from scrapers.linkedin_scraper import scrape_linkedin_jobs
-from linkedin_jobs_scraper.filters import TypeFilters, ExperienceLevelFilters
 from utils.hashing import compute_content_hash
 from utils.linkedin_utils import extract_external_id, format_job_url
-from pathlib import Path
-import yaml
 
 logger = logging.getLogger(__name__)
 

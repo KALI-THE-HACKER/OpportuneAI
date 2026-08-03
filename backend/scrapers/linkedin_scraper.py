@@ -1,16 +1,17 @@
 import logging
+from typing import Any, Dict, List
+
 from linkedin_jobs_scraper import LinkedinScraper
-from linkedin_jobs_scraper.events import Events, EventData
-from linkedin_jobs_scraper.query import Query, QueryOptions, QueryFilters
+from linkedin_jobs_scraper.events import EventData, Events
 from linkedin_jobs_scraper.filters import (
+    ExperienceLevelFilters,
+    IndustryFilters,
+    OnSiteOrRemoteFilters,
     RelevanceFilters,
     TimeFilters,
     TypeFilters,
-    ExperienceLevelFilters,
-    OnSiteOrRemoteFilters,
-    IndustryFilters,
 )
-from typing import List, Dict, Any
+from linkedin_jobs_scraper.query import Query, QueryFilters, QueryOptions
 
 logger = logging.getLogger(__name__)
 
