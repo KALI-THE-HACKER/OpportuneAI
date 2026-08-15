@@ -23,7 +23,7 @@ The application runs a divided architecture:
 
 ## 3. Current Progress
 
-**Completion Estimate**: ~55% Complete
+**Completion Estimate**: ~65% Complete
 
 ### Implemented
 - Complete async database layer with SQLAlchemy 2.0 and Alembic migrations.
@@ -31,13 +31,18 @@ The application runs a divided architecture:
 - Asynchronous task processing utilizing Redis and Python RQ.
 - Thread-safe `GeminiClientPool` distributing prompts across multiple keys.
 - Complete Auth0 integration on the backend (signup, login, profiles sync, JWT validation) and frontend hook routines.
-- Complete frontend UI layouts (dashboard, search lists, resume upload, settings, admin stats) using mock data.
+- Complete frontend UI layouts (dashboard, search lists, resume upload, settings, admin stats).
+- Cloudflare R2-backed private PDF storage with in-memory text extraction and asynchronous Gemini parsing.
+- High-signal AI resume extraction prompt tuning (filtering trivial office tools and generic soft buzzwords).
+- Standardized system skill catalog (`skills.csv`, `skills.ts`) with combobox autocomplete in `ResumeInsights`.
+- Standardized profile suggestion options (`profile-options.ts`, `search-combobox.tsx`) for job titles, locations, roles, and experience levels.
+- Optimistic UI updates with cache rollback for resume removals.
 
 ### Remaining
 - FastAPI routers for job lists, detail queries, recommendations, saves, and application endpoints.
 - Ingestion scheduler system to automate scraper execution.
 - Match score recalculation tasks triggered upon user profile updates.
-- Real REST backend integration within the frontend API client.
+- Real REST backend integration within the remaining frontend API client modules.
 
 ---
 

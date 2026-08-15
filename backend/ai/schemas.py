@@ -17,7 +17,7 @@ class ResumeExtraction(BaseModel):
 
     skills: list[str] = Field(
         default_factory=list,
-        description="Technical and soft skills found in the resume.",
+        description="High-signal, relevant technical and domain skills strongly evidenced in the resume.",
     )
     experience_level: str = Field(
         default="",

@@ -5,24 +5,27 @@ RESUME_EXTRACTION_PROMPT = ChatPromptTemplate.from_messages(
         (
             "system",
             (
-                "You are an expert resume parser and talent analyst. "
-                "Your job is to extract structured information from a candidate's resume text. "
-                "Rules:\n"
-                "- Extract only information explicitly present in the resume; do not hallucinate.\n"
-                "- `skills`: list every distinct technical skill, programming language, framework, tool, "
-                "methodology, and relevant soft skill mentioned. Normalize capitalisation (e.g. 'javascript' → 'JavaScript').\n"
-                "- `experience_level`: infer from job titles and total years — choose exactly one of: "
+                "You are an expert technical recruiter, talent analyst, and resume intelligence engine. "
+                "Your job is to extract high-quality, structured profile data from a candidate's resume text.\n\n"
+                "Extraction Guidelines:\n"
+                "1. `skills`: Extract ONLY relevant, important, and strong skills with demonstrated capability:\n"
+                "   - Focus on core programming languages, frameworks, libraries, databases, cloud/DevOps tools, "
+                "AI/ML technologies, architectures, and specialized technical proficiencies.\n"
+                "   - Exclude trivial office utilities (e.g., MS Word, PowerPoint, Zoom, Slack, Email) and basic computer usage.\n"
+                "   - Exclude generic, unmeasurable soft skills and filler buzzwords (e.g., 'hardworking', 'team player', 'good communicator', 'fast learner', 'problem solver').\n"
+                "   - Normalize and canonicalize skill names with proper industry capitalization (e.g., 'React', 'Node.js', 'TypeScript', 'PostgreSQL', 'FastAPI', 'AWS', 'Docker', 'Kubernetes', 'Python').\n"
+                "   - Prioritize high-signal skills that directly impact job matching and suitability scoring.\n"
+                "2. `experience_level`: Infer overall seniority from demonstrated responsibilities, titles, and duration — choose exactly one of: "
                 "Intern, Junior, Mid, Senior, Staff, Principal, Executive.\n"
-                "- `years_total`: sum of non-overlapping professional work experience in whole years.\n"
-                "- `confidence`: rate 0.0–1.0 how complete and readable the resume text is "
-                "(1.0 = pristine structured resume, 0.0 = unintelligible).\n"
-                "- `summary`: write a single professional paragraph summarising the candidate's background.\n"
-                "Return data matching the supplied structured output schema exactly."
+                "3. `years_total`: Compute the total sum of professional, non-overlapping work experience in whole years (integer >= 0).\n"
+                "4. `confidence`: Rate between 0.0 and 1.0 based on how clear, complete, and verifiable the extracted data is.\n"
+                "5. `summary`: Provide a concise 2-3 sentence executive professional summary highlighting core strengths, domain focus, and key technologies.\n\n"
+                "Do not hallucinate or extrapolate skills not evidenced in the resume. Return data matching the structured schema exactly."
             ),
         ),
         (
             "human",
-            "Parse the following resume and return structured data.\n\nResume Text:\n{resume_text}",
+            "Parse the following resume text and extract only strong, relevant skills and structured details:\n\nResume Text:\n{resume_text}",
         ),
     ]
 )

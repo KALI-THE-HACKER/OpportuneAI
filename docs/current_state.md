@@ -143,11 +143,27 @@
 
 ---
 
+### 10. Profile & Resume Intelligence UI
+**Frontend** (`frontend/src/components/profile/`, `frontend/src/routes/app.profile.tsx`, `frontend/src/routes/app.resume.tsx`):
+- `ResumeInsights`: Dedicated component for AI-extracted skills with verification against a standardized system catalog.
+- System Skills Catalog (`frontend/src/lib/data/skills.csv`, `skills.ts`): Categorized catalog of standard technical skills with fuzzy/prefix matching and canonicalization.
+- `SearchCombobox` & `MultiSearchCombobox`: Autocomplete search inputs for target job title, location, experience levels, preferred roles, and preferred locations.
+- Standardized Profile Options (`frontend/src/lib/data/profile-options.ts`): Comprehensive catalogs covering internships, specialty engineering tracks, tech hubs, and seniority levels.
+- Optimistic resume removal: Instantly clears cache on client with automatic rollback and user notification on backend failure.
+
+**Backend** (`backend/ai/extraction/resume_prompts.py`, `backend/ai/schemas.py`):
+- Strict prompt rules extracting high-signal, relevant technical proficiencies.
+- Excludes office suite utilities (Word, Excel, Slack, Zoom) and unmeasurable generic soft buzzwords.
+
+**Status**: ✅ Complete and verified with tests
+
+---
+
 ## In Progress
 
 ### 1. Real API Integration (Frontend → Backend)
-- **Completed**: API client structure, auth token management, mock data layer, and live resume upload/status/delete calls
-- **Missing**: Replace mock implementations in `frontend/src/lib/api/*.ts` with real fetch calls
+- **Completed**: API client structure, auth token management, live resume upload/status/delete calls, profile CRUD calls
+- **Missing**: Replace mock implementations in `frontend/src/lib/api/jobs.ts`, `notifications.ts`, `admin.ts` with real fetch calls
 - **Blockers**: Backend job and admin endpoints are not fully implemented
 
 ### 2. Job Search & Filtering API
@@ -193,10 +209,11 @@ Based on codebase analysis (TODOs, stubs, missing routes, comments):
 - [ ] Health check endpoints (`/health`, `/ready`)
 
 ### Frontend
-- [ ] Replace mock API with real backend calls
-- [ ] React Query mutations for apply/save/profile updates
-- [ ] Optimistic updates for save/apply actions
+- [ ] Replace mock API with real backend calls for jobs, applications, saved, admin
+- [ ] React Query mutations for apply/save actions
+- [x] Optimistic updates for resume removal
 - [x] Resume upload to backend (multipart/form-data)
+- [x] Standardized skills and profile combobox autocomplete search
 - [ ] Real-time notifications (WebSocket/SSE)
 - [ ] PWA offline support (service worker registered but not configured)
 - [ ] E2E tests (Playwright/Cypress)
@@ -212,37 +229,6 @@ Based on codebase analysis (TODOs, stubs, missing routes, comments):
 
 ---
 
-## Known Issues
-
-### Bugs
-1. **Naukri/Wellfound scrapers fail silently** - Browser automation is fragile; no retry logic in pipeline
-2. **Content hash collision risk** - 16-char truncated SHA256; should use full hash or add source+external_id
-3. **Mock Auth0 mode parity** - Mock tokens don't match real JWT structure; frontend may behave differently
-4. **AI worker no dead letter queue** - Failed jobs lost after 3 retries
-5. **No transaction boundary in ingestion** - Partial provider failure leaves inconsistent state
-
-### Potential Bugs
-1. **Race condition in user sync** - Concurrent login requests may create duplicate users
-2. **Match score staleness** - Scores computed once, never updated when user profile changes
-3. **Redis connection leak** - RQ worker doesn't explicitly close connections on shutdown
-4. **Gemini pool exhaustion** - No circuit breaker if all connections fail
-
-### Technical Debt
-1. **Scrapers in two places** - `backend/providers/` (used by pipeline) AND `backend/scrapers/` (standalone scripts)
-2. **Frontend mock API** - 350ms artificial latency masks real performance issues
-3. **No request validation** - FastAPI routes use Pydantic but no body size limits
-4. **Hardcoded config** - Scraper config in `config.yml` but some params hardcoded in providers
-5. **Inconsistent error handling** - Some providers raise, others return empty list
-6. **No API pagination standard** - Frontend expects `Paginated<T>` but backend not implemented
-
-### Hacky Workarounds
-1. **Naukri `--naukri-html` fallback** - Manual HTML save for debugging
-2. **Wellfound markdown file write** - Debug artifact (`wellfound.md`) written to cwd
-3. **Mock Auth0 token format** - `mock-auth0|{sub};{email};{name};{avatar}` parsed by frontend
-4. **Gemini pool global instance** - Module-level singleton; hard to test
-
----
-
 ## Current Priorities
 
 ### High Priority (Next 1-2 weeks)
@@ -251,7 +237,7 @@ Based on codebase analysis (TODOs, stubs, missing routes, comments):
    - Enables: Dashboard, Jobs, Recommendations pages
 
 2. **Connect frontend to real API**
-   - Affected: `frontend/src/lib/api/jobs.ts`, `user.ts`, `resume.ts`, `notifications.ts`, `admin.ts`
+   - Affected: `frontend/src/lib/api/jobs.ts`, `notifications.ts`, `admin.ts`
    - Remove mock data, use real fetch calls
 
 3. **Add scheduler for ingestion** (APScheduler)
@@ -260,26 +246,15 @@ Based on codebase analysis (TODOs, stubs, missing routes, comments):
 
 ### Medium Priority (Next 3-4 weeks)
 4. **Implement application/save endpoints** (`/api/applied`, `/api/saved`)
-   - Affected: New models? or extend processed_jobs, new routes
+   - Affected: New models or extend processed_jobs, new routes
    - Enables: Applied, Saved pages
 
-5. **Resume upload & parsing**
-   - Affected: `backend/resume/`, new routes, file storage (S3/local)
-   - Enables: Resume page functionality
-
-6. **Match score recalculation job**
+5. **Match score recalculation job**
    - Affected: New worker job, trigger on profile update
    - Enables: Fresh recommendations
 
-7. **Add rate limiting & health checks**
+6. **Add rate limiting & health checks**
    - Affected: FastAPI middleware, new routes
 
-### Low Priority (Later)
-8. **Docker Compose for local dev**
-9. **CI/CD pipeline**
-10. **Structured logging & monitoring**
-11. **E2E tests**
-12. **Production deployment configs**
-
 ---
-*Last updated: 2026-07-27*
+*Last updated: 2026-08-15*

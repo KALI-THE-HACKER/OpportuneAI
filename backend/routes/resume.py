@@ -323,7 +323,14 @@ class DownloadUrlResponse(BaseModel):
 async def get_resume_download_url(
     user: User = Depends(get_current_user),  # noqa: B008
 ) -> DownloadUrlResponse:
-    """Generate a secure pre-signed download URL for the logged-in user's resume."""
+    """Generate a short-lived, owner-only pre-signed download URL for the user's resume.
+
+    The R2 bucket is private — objects are never publicly reachable.  The URL
+    issued here is valid for 5 minutes and is cryptographically tied to the
+    specific object.  Before signing, ``ResumeStorage.verify_owner`` confirms
+    that the object key was originally namespaced under this user's ID, so
+    one authenticated user can never obtain a link for another user's file.
+    """
     if not user.resume_file_name or not user.resume_storage_key:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -338,7 +345,14 @@ async def get_resume_download_url(
 
     try:
         url = await resume_storage.get_presigned_download_url(
-            user.resume_storage_key, expires_in=900
+            storage_key=user.resume_storage_key,
+            user_id=user.id,
+            file_name=user.resume_file_name,
+        )
+        logger.info(
+            "Issued 5-min private download URL for user_id=%s storage_key=%s",
+            user.id,
+            user.resume_storage_key,
         )
         return DownloadUrlResponse(downloadUrl=url)
     except R2StorageError as exc:

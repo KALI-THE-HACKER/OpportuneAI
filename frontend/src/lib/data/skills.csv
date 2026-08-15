@@ -1,0 +1,174 @@
+name,category
+Python,Languages
+JavaScript,Languages
+TypeScript,Languages
+Java,Languages
+C++,Languages
+C#,Languages
+Go,Languages
+Rust,Languages
+Ruby,Languages
+PHP,Languages
+Swift,Languages
+Kotlin,Languages
+Scala,Languages
+R,Languages
+Dart,Languages
+SQL,Languages
+HTML5,Languages
+CSS3,Languages
+Bash,Languages
+Shell Scripting,Languages
+PowerShell,Languages
+C,Languages
+Elixir,Languages
+Clojure,Languages
+Haskell,Languages
+Lua,Languages
+React,Frontend
+Next.js,Frontend
+Vue.js,Frontend
+Nuxt.js,Frontend
+Angular,Frontend
+Svelte,Frontend
+SvelteKit,Frontend
+Remix,Frontend
+Tailwind CSS,Frontend
+Redux,Frontend
+Zustand,Frontend
+TanStack Query,Frontend
+TanStack Router,Frontend
+Vite,Frontend
+Webpack,Frontend
+Three.js,Frontend
+D3.js,Frontend
+HTML/CSS,Frontend
+Sass/SCSS,Frontend
+Bootstrap,Frontend
+Material UI,Frontend
+shadcn/ui,Frontend
+WebSockets,Frontend
+WebRTC,Frontend
+Node.js,Backend
+Express.js,Backend
+FastAPI,Backend
+Django,Backend
+Flask,Backend
+Spring Boot,Backend
+ASP.NET Core,Backend
+Ruby on Rails,Backend
+Laravel,Backend
+NestJS,Backend
+Gin,Backend
+Actix Web,Backend
+Axum,Backend
+GraphQL,Backend
+REST APIs,Backend
+gRPC,Backend
+Celery,Backend
+Redis Queue (RQ),Backend
+RabbitMQ,Backend
+Apache Kafka,Backend
+PostgreSQL,Databases
+MySQL,Databases
+SQLite,Databases
+MongoDB,Databases
+Redis,Databases
+Elasticsearch,Databases
+Cassandra,Databases
+DynamoDB,Databases
+Supabase,Databases
+Firebase,Databases
+Neo4j,Databases
+ClickHouse,Databases
+Cloudflare R2,Databases
+AWS S3,Databases
+Docker,Cloud & DevOps
+Kubernetes,Cloud & DevOps
+AWS,Cloud & DevOps
+Google Cloud Platform (GCP),Cloud & DevOps
+Microsoft Azure,Cloud & DevOps
+Terraform,Cloud & DevOps
+CI/CD,Cloud & DevOps
+GitHub Actions,Cloud & DevOps
+GitLab CI,Cloud & DevOps
+Linux,Cloud & DevOps
+Nginx,Cloud & DevOps
+Cloudflare,Cloud & DevOps
+Helm,Cloud & DevOps
+Prometheus,Cloud & DevOps
+Grafana,Cloud & DevOps
+Ansible,Cloud & DevOps
+Serverless,Cloud & DevOps
+Vercel,Cloud & DevOps
+Machine Learning,AI & Data
+Deep Learning,AI & Data
+Generative AI,AI & Data
+Large Language Models (LLMs),AI & Data
+LangChain,AI & Data
+LlamaIndex,AI & Data
+PyTorch,AI & Data
+TensorFlow,AI & Data
+Scikit-learn,AI & Data
+OpenCV,AI & Data
+Natural Language Processing (NLP),AI & Data
+Computer Vision,AI & Data
+Pandas,AI & Data
+NumPy,AI & Data
+Hugging Face,AI & Data
+Gemini API,AI & Data
+OpenAI API,AI & Data
+Anthropic API,AI & Data
+Vector Databases,AI & Data
+Pinecone,AI & Data
+ChromaDB,AI & Data
+Qdrant,AI & Data
+Milvus,AI & Data
+Prompt Engineering,AI & Data
+Data Analysis,AI & Data
+Data Engineering,AI & Data
+Apache Spark,AI & Data
+Apache Airflow,AI & Data
+React Native,Mobile
+Flutter,Mobile
+iOS Development,Mobile
+Android Development,Mobile
+SwiftUI,Mobile
+Jetpack Compose,Mobile
+Expo,Mobile
+Ionic,Mobile
+Jest,Testing & QA
+Vitest,Testing & QA
+Cypress,Testing & QA
+Playwright,Testing & QA
+Selenium,Testing & QA
+Pytest,Testing & QA
+JUnit,Testing & QA
+Unit Testing,Testing & QA
+Integration Testing,Testing & QA
+End-to-End (E2E) Testing,Testing & QA
+OAuth 2.0,Security
+OpenID Connect (OIDC),Security
+JSON Web Tokens (JWT),Security
+Web Security,Security
+OWASP,Security
+Auth0,Security
+Cryptography,Security
+IAM,Security
+Single Sign-On (SSO),Security
+Microservices,Architecture & Practices
+System Design,Architecture & Practices
+Event-Driven Architecture,Architecture & Practices
+Clean Architecture,Architecture & Practices
+Domain-Driven Design (DDD),Architecture & Practices
+Agile,Management & Tools
+Scrum,Management & Tools
+Kanban,Management & Tools
+Git,Management & Tools
+GitHub,Management & Tools
+GitLab,Management & Tools
+Jira,Management & Tools
+Linear,Management & Tools
+Product Management,Management & Tools
+Code Review,Management & Tools
+Technical Leadership,Management & Tools

@@ -73,9 +73,28 @@ function ResumePage() {
 
   const remove = useMutation({
     mutationFn: () => resumeApi.remove(),
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ["resume"] });
+      const previousResume = qc.getQueryData(["resume"]);
+      qc.setQueryData(["resume"], null);
+      return { previousResume };
+    },
+    onError: (err, _variables, context) => {
+      if (context?.previousResume !== undefined) {
+        qc.setQueryData(["resume"], context.previousResume);
+      }
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Failed to remove resume. Restored previous state."
+      );
+    },
     onSuccess: () => {
       toast.info("Resume removed");
+    },
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["resume"] });
+      void qc.invalidateQueries({ queryKey: ["user"] });
     },
   });
 
@@ -135,7 +154,8 @@ function ResumePage() {
         </div>
       )}
 
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-6">
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-6">
+        {/* ── Upload drop zone ── */}
         <div
           onDragOver={(e) => {
             e.preventDefault();
@@ -200,7 +220,8 @@ function ResumePage() {
           )}
         </div>
 
-        <aside>
+        {/* ── Sidebar ── */}
+        <aside className="space-y-4">
           {q.isLoading ? (
             <LoadingState variant="resume" />
           ) : q.isError ? (
@@ -208,92 +229,63 @@ function ResumePage() {
           ) : !q.data ? (
             <EmptyState title="No resume on file" description="Upload one to start matching." />
           ) : (
-            <div className="p-6 bg-card ring-1 ring-border rounded-lg space-y-5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="size-10 grid place-items-center rounded-md bg-brand text-brand-foreground shrink-0">
-                    <FileText className="size-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium truncate">{q.data.fileName}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {q.data.sizeKb} KB · uploaded {timeAgo(q.data.uploadedAt)}
+            <>
+              {/* File metadata card */}
+              <div className="p-5 bg-card ring-1 ring-border rounded-lg space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="size-10 grid place-items-center rounded-md bg-brand text-brand-foreground shrink-0">
+                      <FileText className="size-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">{q.data.fileName}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {q.data.sizeKb} KB · uploaded {timeAgo(q.data.uploadedAt)}
+                      </div>
                     </div>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleViewResume()}
+                    disabled={isDownloading}
+                    title="View resume securely (private link, expires in 5 min)"
+                    className="size-8 grid place-items-center rounded-md border border-input bg-surface text-muted-foreground hover:text-foreground hover:bg-accent/10 transition-colors shrink-0"
+                  >
+                    {isDownloading ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <ExternalLink className="size-4" />
+                    )}
+                  </button>
                 </div>
+
+                {q.data.status === "processing" ? (
+                  <div className="p-3 bg-amber-500/10 ring-1 ring-amber-500/20 rounded-md text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2">
+                    <Sparkles className="size-4 shrink-0 text-amber-500 animate-pulse mt-0.5" />
+                    <div>
+                      <div className="font-semibold">AI Extraction in Progress</div>
+                      <div className="text-[11px] opacity-80 mt-0.5">
+                        Extracting technical skills, years of experience, and role preferences...
+                      </div>
+                    </div>
+                  </div>
+                ) : q.data.status === "processed" ? (
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                    <CheckCircle2 className="size-4" />
+                    <span>Processing complete</span>
+                  </div>
+                ) : null}
 
                 <button
-                  type="button"
-                  onClick={() => void handleViewResume()}
-                  disabled={isDownloading}
-                  title="View resume securely"
-                  className="size-8 grid place-items-center rounded-md border border-input bg-surface text-muted-foreground hover:text-foreground hover:bg-accent/10 transition-colors shrink-0"
+                  onClick={() => remove.mutate()}
+                  disabled={remove.isPending}
+                  className="w-full h-9 inline-flex items-center justify-center gap-2 rounded-md ring-1 ring-border text-sm text-destructive hover:bg-destructive/5 disabled:opacity-50"
                 >
-                  {isDownloading ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <ExternalLink className="size-4" />
-                  )}
+                  <Trash2 className="size-4" /> Remove resume
                 </button>
               </div>
-
-              {q.data.status === "processing" ? (
-                <div className="p-3 bg-amber-500/10 ring-1 ring-amber-500/20 rounded-md text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2">
-                  <Sparkles className="size-4 shrink-0 text-amber-500 animate-pulse mt-0.5" />
-                  <div>
-                    <div className="font-semibold">AI Extraction in Progress</div>
-                    <div className="text-[11px] opacity-80 mt-0.5">
-                      Extracting technical skills, years of experience, and role preferences...
-                    </div>
-                  </div>
-                </div>
-              ) : q.data.status === "processed" ? (
-                <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                  <CheckCircle2 className="size-4" />
-                  <span>Processing complete</span>
-                </div>
-              ) : null}
-
-              <Field label="Status" value={q.data.status} />
-              <Field label="Experience level" value={q.data.experienceLevel || "Pending"} />
-              <Field label="Total years" value={q.data.yearsTotal ? `${q.data.yearsTotal} yrs` : "Pending"} />
-              <Field
-                label="Confidence"
-                value={q.data.confidence ? `${Math.round(q.data.confidence * 100)}%` : "Pending"}
-              />
-
-              <div>
-                <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">
-                  Extracted skills
-                </div>
-                {q.data.extractedSkills.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {q.data.extractedSkills.map((s) => (
-                      <span
-                        key={s}
-                        className="px-2 py-0.5 text-[11px] rounded bg-muted text-muted-foreground ring-1 ring-border"
-                      >
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground italic">
-                    {q.data.status === "processing"
-                      ? "Skills will appear here automatically once extracted."
-                      : "No skills extracted yet."}
-                  </p>
-                )}
-              </div>
-
-              <button
-                onClick={() => remove.mutate()}
-                disabled={remove.isPending}
-                className="w-full h-9 inline-flex items-center justify-center gap-2 rounded-md ring-1 ring-border text-sm text-destructive hover:bg-destructive/5 disabled:opacity-50"
-              >
-                <Trash2 className="size-4" /> Remove resume
-              </button>
-            </div>
+            </>
           )}
         </aside>
       </div>
@@ -301,11 +293,4 @@ function ResumePage() {
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium capitalize">{value}</span>
-    </div>
-  );
-}
+
