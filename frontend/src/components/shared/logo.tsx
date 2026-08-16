@@ -2,12 +2,19 @@ import { Link } from "@tanstack/react-router";
 
 export function Logo({ to = "/", className = "" }: { to?: string; className?: string }) {
   return (
-    <Link to={to} className={`inline-flex items-center gap-2 ${className}`}>
-      <span className="size-5 rounded-sm bg-brand grid place-items-center">
-        <span className="size-1.5 rounded-full bg-accent" />
-      </span>
-      <span className="font-semibold tracking-tight text-foreground">
-        Opportune<span className="text-accent">AI</span>
+    <Link to={to} className={`inline-flex items-center group ${className}`}>
+      <img
+        src="https://cdn.luckylinux.dev/opportuneai-assets/OpportuneAI-logo.png"
+        alt="OpportuneAI"
+        className="h-7 w-auto dark:hidden"
+      />
+      <img
+        src="https://cdn.luckylinux.dev/opportuneai-assets/OpportuneAI-logo.png"
+        alt="OpportuneAI"
+        className="h-7 w-auto hidden dark:block"
+      />
+      <span className="font-semibold tracking-tight text-foreground text-sm">
+        Opportune<span className="text-blue-500">AI</span>
       </span>
     </Link>
   );

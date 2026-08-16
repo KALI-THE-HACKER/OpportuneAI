@@ -32,10 +32,10 @@ function LandingPage() {
   const isGridInView = useInView(gridRef, { once: true, margin: "-100px" });
 
   const aboutSegments = [
-    { text: "We build OpportuneAI, ", className: "font-normal text-[#E1E0CC]" },
-    { text: "an autonomous career agent. ", className: "italic font-serif text-[#E1E0CC]" },
+    { text: "We built OpportuneAI, ", className: "font-normal text-[#E1E0CC]" },
+    { text: "an AI copilot for your job search. ", className: "italic font-serif text-[#E1E0CC]" },
     {
-      text: "Engineered to automate job matching, highlight critical skill gaps, and track your applications privately.",
+      text: "It discovers relevant roles, understands your experience, finds the gaps, and prepares personalized applications and outreach.",
       className: "font-normal text-[#E1E0CC]",
     },
   ];
@@ -47,7 +47,7 @@ function LandingPage() {
         <div className="flex-1 w-full relative rounded-2xl md:rounded-[2rem] overflow-hidden flex flex-col justify-between">
           {/* Background Video */}
           <video
-            src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260405_170732_8a9ccda6-5cff-4628-b164-059c500a2b41.mp4"
+            src="https://cdn.luckylinux.dev/opportuneai-assets/hero-background-loop.mp4"
             autoPlay
             loop
             muted
@@ -120,9 +120,7 @@ function LandingPage() {
                   transition={{ duration: 0.8, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
                   className="text-primary/70 text-xs sm:text-sm md:text-base leading-[1.2] text-left"
                 >
-                  OpportuneAI is the intelligence layer for your professional search. Direct gateway
-                  to high-signal matching, automated skill-gap analysis, and private job pipeline
-                  management designed for serious operators.
+                  OpportuneAI matches your resume with relevant jobs, analyzes the company and job description, and prepares personalized recruiter emails for you — ready to review and send.
                 </motion.p>
 
                 <motion.div
@@ -134,7 +132,7 @@ function LandingPage() {
                     to="/auth/sign-up"
                     className="group flex items-center justify-between gap-2 pl-6 pr-2 py-2 bg-primary text-black rounded-full font-medium text-sm sm:text-base transition-all duration-300 hover:gap-3 cursor-pointer shrink-0"
                   >
-                    <span>Join the lab</span>
+                    <span>Start exploring</span>
                     <div className="flex items-center justify-center bg-black rounded-full w-9 h-9 sm:w-10 sm:h-10 transition-transform duration-300 group-hover:scale-110 shrink-0">
                       <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                     </div>
@@ -162,7 +160,7 @@ function LandingPage() {
           className="bg-[#101010] rounded-[2rem] w-full max-w-6xl p-8 sm:p-12 md:p-24 text-center relative z-10 overflow-hidden"
         >
           <span className="text-primary text-[10px] sm:text-xs uppercase tracking-widest block mb-6">
-            Visual intelligence
+            YOUR AI CAREER COPILOT
           </span>
 
           <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl max-w-3xl mx-auto leading-[0.95] sm:leading-[0.9] text-center mb-12">
@@ -170,7 +168,7 @@ function LandingPage() {
           </div>
 
           <ScrollRevealText
-            text="For the past decade, technical recruiting has been broken by noisy keywords and vanity filters. We built OpportuneAI to level the playing field, giving elite professionals an algorithmic advantage to match directly with high-signal roles."
+            text="Stop searching, researching, writing, and tracking everything manually. OpportuneAI brings the entire job search into one workflow — from finding an opportunity to sending a thoughtful message to the right person."
             className="text-[#DEDBC8] text-xs sm:text-sm md:text-base max-w-2xl mx-auto text-center leading-relaxed mt-12"
           />
         </motion.div>
@@ -190,11 +188,11 @@ function LandingPage() {
         {/* Section Header */}
         <div className="text-center mb-16 relative z-10 flex flex-col gap-3">
           <WordsPullUp
-            text="High-signal infrastructure for professional growth."
+            text="From discovery to outreach."
             className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-normal"
           />
           <WordsPullUp
-            text="Built for serious operators. Powered by AI."
+            text="AI handles the tedious work. You make the final call."
             className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-normal text-gray-500"
             delayOffset={0.4}
           />
@@ -213,7 +211,7 @@ function LandingPage() {
             className="h-full relative rounded-2xl overflow-hidden group aspect-[3/4] md:aspect-auto"
           >
             <video
-              src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260406_133058_0504132a-0cf3-4450-a370-8ea3b05c95d4.mp4"
+              src="https://cdn.luckylinux.dev/opportuneai-assets/card-1-astro-video.mp4"
               autoPlay
               loop
               muted
@@ -223,12 +221,12 @@ function LandingPage() {
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none z-10" />
             <div className="absolute bottom-6 left-6 text-left z-20">
               <span className="text-lg sm:text-xl font-medium" style={{ color: "#E1E0CC" }}>
-                Your private career agent.
+                Your career, with an AI copilot.
               </span>
             </div>
           </motion.div>
 
-          {/* Card 2 - AI-Ranked Matches */}
+          {/* Card 2 - AI-Powered Job Matching */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={isGridInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
@@ -237,22 +235,22 @@ function LandingPage() {
           >
             <div>
               <img
-                src="https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260405_171918_4a5edc79-d78f-4637-ac8b-53c43c220606.png&w=1280&q=85"
+                src="https://cdn.luckylinux.dev/opportuneai-assets/card-2-astro-image.mp4"
                 alt="AI-Ranked Matches Icon"
                 className="w-10 h-10 sm:w-12 sm:h-12 rounded object-cover mb-6"
               />
               <div className="flex justify-between items-baseline mb-6">
                 <h3 className="text-lg sm:text-xl font-medium" style={{ color: "#E1E0CC" }}>
-                  AI-Ranked Matches.
+                  AI-Powered Job Matching
                 </h3>
                 <span className="text-xs text-gray-500 font-mono">01</span>
               </div>
               <ul className="space-y-3">
                 {[
-                  "Direct match strength scoring",
-                  "Real-time market signal extraction",
-                  "Calibrated salary estimations",
-                  "Resume-to-role vector alignment",
+                  "Resume-aware job recommendations",
+                  "Personalized match scores",
+                  "Skills & experience comparison",
+                  "Relevant opportunities, not endless listings",
                 ].map((item, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-xs sm:text-sm">
                     <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
@@ -272,7 +270,7 @@ function LandingPage() {
             </Link>
           </motion.div>
 
-          {/* Card 3 - Skill-Gap Analytics */}
+          {/* Card 3 - Opportunity Intelligence */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={isGridInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
@@ -281,22 +279,22 @@ function LandingPage() {
           >
             <div>
               <img
-                src="https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260405_171741_ed9845ab-f5b2-4018-8ce7-07cc01823522.png&w=1280&q=85"
+                src="https://cdn.luckylinux.dev/opportuneai-assets/card-3-astro-image.mp4"
                 alt="Skill-Gap Analytics Icon"
                 className="w-10 h-10 sm:w-12 sm:h-12 rounded object-cover mb-6"
               />
               <div className="flex justify-between items-baseline mb-6">
                 <h3 className="text-lg sm:text-xl font-medium" style={{ color: "#E1E0CC" }}>
-                  Skill-Gap Analytics.
+                  Understand the Opportunity
                 </h3>
                 <span className="text-xs text-gray-500 font-mono">02</span>
               </div>
               <ul className="space-y-3">
                 {[
-                  "Targeted learning recommendations",
-                  "Resume optimization directives",
-                  "Core capability index analysis",
-                  "Level calibrations",
+                  "Analyze the company and job description",
+                  "See why you're a strong match",
+                  "Identify skills worth highlighting",
+                  "Uncover gaps before you apply",
                 ].map((item, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-xs sm:text-sm">
                     <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
@@ -316,7 +314,7 @@ function LandingPage() {
             </Link>
           </motion.div>
 
-          {/* Card 4 - Application Tracker */}
+          {/* Card 4 - Personalized Outreach */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={isGridInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
@@ -325,22 +323,22 @@ function LandingPage() {
           >
             <div>
               <img
-                src="https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260405_171809_f56666dc-c099-4778-ad82-9ad4f209567b.png&w=1280&q=85"
+                src="https://cdn.luckylinux.dev/opportuneai-assets/card-4-astro-image.mp4"
                 alt="Application Tracker Icon"
                 className="w-10 h-10 sm:w-12 sm:h-12 rounded object-cover mb-6"
               />
               <div className="flex justify-between items-baseline mb-6">
                 <h3 className="text-lg sm:text-xl font-medium" style={{ color: "#E1E0CC" }}>
-                  Application Tracker.
+                  Ready-to-Send Recruiter Outreach
                 </h3>
                 <span className="text-xs text-gray-500 font-mono">03</span>
               </div>
               <ul className="space-y-3">
                 {[
-                  "Private job pipeline management",
-                  "Follow-up schedule automation",
-                  "Privacy-first applicant profiles",
-                  "Sync status events",
+                  "Personalized emails for every opportunity",
+                  "Based on your resume, company & JD",
+                  "Tailored to your strongest experiences",
+                  "Review, edit, and send when yourself",
                 ].map((item, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-xs sm:text-sm">
                     <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />

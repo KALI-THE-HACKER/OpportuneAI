@@ -11,6 +11,7 @@ import {
   Loader2,
   CheckCircle2,
   ExternalLink,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { resumeApi } from "@/lib/api";
@@ -60,7 +61,7 @@ function ResumePage() {
   const upload = useMutation({
     mutationFn: (f: File) => resumeApi.upload(f),
     onSuccess: () => {
-      toast.success("Resume uploaded successfully! AI is extracting skills...");
+      toast.success("Resume uploaded! AI is extracting skills…");
       void qc.invalidateQueries({ queryKey: ["resume"] });
       if (search.onboarding === "true") {
         void navigate({ to: "/app/dashboard" });
@@ -84,9 +85,7 @@ function ResumePage() {
         qc.setQueryData(["resume"], context.previousResume);
       }
       toast.error(
-        err instanceof Error
-          ? err.message
-          : "Failed to remove resume. Restored previous state."
+        err instanceof Error ? err.message : "Failed to remove resume. Restored previous state.",
       );
     },
     onSuccess: () => {
@@ -101,7 +100,6 @@ function ResumePage() {
   function handleFiles(files?: FileList | null) {
     const f = files?.[0];
     if (f) {
-      console.log("[Resume Upload] Submitting file to backend:", f.name, f.size, f.type);
       upload.mutate(f);
     }
     if (fileRef.current) {
@@ -130,32 +128,34 @@ function ResumePage() {
   return (
     <>
       <PageHeader
-        title="Resume & profile extraction"
-        description="Upload once. We extract skills, level, and projects to power every match."
+        title="Resume & extraction"
+        description="Upload once. We extract skills, level, and experience to power every match."
       />
 
+      {/* Onboarding step banner */}
       {search.onboarding === "true" && (
-        <div className="mb-6 p-4 bg-accent/5 ring-1 ring-accent/20 rounded-lg flex items-center justify-between gap-4">
+        <div className="mb-6 p-4 bg-accent/5 border border-accent/20 rounded-xl flex items-center justify-between gap-4">
           <div>
             <h4 className="text-sm font-semibold text-accent flex items-center gap-1.5">
-              <Sparkles className="size-4 animate-pulse" /> Step 2: Upload your resume
+              <Sparkles className="size-4 animate-pulse" />
+              Step 2: Upload your resume
             </h4>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Upload your resume to automatically extract your skills, experience, and unlock
-              personalized AI recommendations.
+              Upload your resume to auto-extract skills and unlock personalized AI recommendations.
             </p>
           </div>
           <Link
             to="/app/dashboard"
-            className="text-xs font-medium text-foreground hover:text-accent whitespace-nowrap"
+            className="text-xs font-semibold text-foreground hover:text-accent whitespace-nowrap flex items-center gap-1 shrink-0"
           >
-            Skip to Dashboard &rarr;
+            Skip
+            <ArrowRight className="size-3" />
           </Link>
         </div>
       )}
 
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-6">
-        {/* ── Upload drop zone ── */}
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-6">
+        {/* Drop zone */}
         <div
           onDragOver={(e) => {
             e.preventDefault();
@@ -167,21 +167,36 @@ function ResumePage() {
             setDragOver(false);
             handleFiles(e.dataTransfer.files);
           }}
-          className={`p-10 rounded-lg ring-1 ring-dashed flex flex-col items-center justify-center text-center bg-card transition-colors ${
-            dragOver ? "ring-accent bg-accent/5" : "ring-border"
-          }`}
+          className={`
+            p-12 rounded-xl border-2 border-dashed flex flex-col items-center justify-center text-center
+            bg-card transition-all duration-200 cursor-default
+            ${dragOver
+              ? "border-accent bg-accent/5 shadow-[0_0_0_4px_theme(colors.accent/10%)]"
+              : "border-border hover:border-foreground/20"
+            }
+          `}
         >
-          <div className="size-12 grid place-items-center rounded-full bg-surface mb-4">
+          <div className={`
+            size-14 grid place-items-center rounded-2xl mb-5 transition-all duration-200
+            ${isProcessing
+              ? "bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400"
+              : dragOver
+                ? "bg-accent/15 text-accent"
+                : "bg-surface border border-border text-muted-foreground"
+            }
+          `}>
             {isProcessing ? (
-              <Loader2 className="size-5 text-accent animate-spin" />
+              <Loader2 className="size-6 animate-spin" />
             ) : (
-              <Upload className="size-5 text-muted-foreground" />
+              <Upload className="size-6" />
             )}
           </div>
-          <h3 className="font-medium">
-            {isProcessing ? "AI is processing your resume..." : "Drop your resume here"}
+
+          <h3 className="font-semibold text-foreground text-lg">
+            {isProcessing ? "AI is processing your resume…" : "Drop your resume here"}
           </h3>
-          <p className="text-sm text-muted-foreground mt-1">PDF, up to 5MB</p>
+          <p className="text-sm text-muted-foreground mt-1.5 mb-6">PDF format, up to 5MB</p>
+
           <input
             ref={fileRef}
             type="file"
@@ -196,7 +211,13 @@ function ResumePage() {
               fileRef.current?.click();
             }}
             disabled={isProcessing}
-            className="mt-4 h-9 px-4 rounded-md bg-brand text-brand-foreground text-sm font-medium ring-1 ring-brand hover:bg-brand/90 disabled:opacity-60 cursor-pointer inline-flex items-center gap-2"
+            className="
+              h-10 px-5 inline-flex items-center gap-2 rounded-lg
+              bg-brand text-brand-foreground text-sm font-semibold
+              border border-brand/80 hover:opacity-90
+              disabled:opacity-60 disabled:cursor-not-allowed
+              transition-all duration-150 shadow-sm cursor-pointer
+            "
           >
             {isProcessing ? (
               <>
@@ -204,43 +225,50 @@ function ResumePage() {
                 Processing…
               </>
             ) : (
-              "Choose file"
+              <>
+                <Upload className="size-4" />
+                Choose file
+              </>
             )}
           </button>
 
           {upload.isError && (
-            <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md text-xs text-destructive flex items-center gap-2 max-w-sm">
+            <div className="mt-5 p-3 bg-destructive/8 border border-destructive/20 rounded-lg text-xs text-destructive flex items-center gap-2 max-w-sm">
               <AlertCircle className="size-4 shrink-0" />
               <span>
                 {upload.error instanceof Error
                   ? upload.error.message
-                  : "Resume upload failed. Please try again."}
+                  : "Upload failed. Please try again."}
               </span>
             </div>
           )}
         </div>
 
-        {/* ── Sidebar ── */}
+        {/* Sidebar — resume metadata */}
         <aside className="space-y-4">
           {q.isLoading ? (
             <LoadingState variant="resume" />
           ) : q.isError ? (
             <ErrorState onRetry={() => q.refetch()} />
           ) : !q.data ? (
-            <EmptyState title="No resume on file" description="Upload one to start matching." />
+            <EmptyState
+              icon={<FileText className="size-6" />}
+              title="No resume on file"
+              description="Upload a PDF to start extracting skills and getting matched."
+            />
           ) : (
             <>
               {/* File metadata card */}
-              <div className="p-5 bg-card ring-1 ring-border rounded-lg space-y-4">
+              <div className="p-5 bg-card border border-border rounded-xl shadow-card space-y-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="size-10 grid place-items-center rounded-md bg-brand text-brand-foreground shrink-0">
+                    <div className="size-10 grid place-items-center rounded-xl bg-brand text-brand-foreground shrink-0 shadow-sm">
                       <FileText className="size-4" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-sm font-medium truncate">{q.data.fileName}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {q.data.sizeKb} KB · uploaded {timeAgo(q.data.uploadedAt)}
+                      <div className="text-sm font-semibold truncate">{q.data.fileName}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {q.data.sizeKb} KB · {timeAgo(q.data.uploadedAt)}
                       </div>
                     </div>
                   </div>
@@ -249,8 +277,14 @@ function ResumePage() {
                     type="button"
                     onClick={() => void handleViewResume()}
                     disabled={isDownloading}
-                    title="View resume securely (private link, expires in 5 min)"
-                    className="size-8 grid place-items-center rounded-md border border-input bg-surface text-muted-foreground hover:text-foreground hover:bg-accent/10 transition-colors shrink-0"
+                    title="View resume (expires in 5 min)"
+                    className="
+                      size-8 grid place-items-center rounded-lg
+                      border border-border bg-surface
+                      text-muted-foreground hover:text-foreground hover:bg-card
+                      shadow-card hover:shadow-elevated
+                      transition-all duration-150 shrink-0 cursor-pointer
+                    "
                   >
                     {isDownloading ? (
                       <Loader2 className="size-4 animate-spin" />
@@ -260,18 +294,19 @@ function ResumePage() {
                   </button>
                 </div>
 
+                {/* Processing status */}
                 {q.data.status === "processing" ? (
-                  <div className="p-3 bg-amber-500/10 ring-1 ring-amber-500/20 rounded-md text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2">
+                  <div className="p-3 bg-amber-50 dark:bg-amber-500/8 border border-amber-200 dark:border-amber-500/20 rounded-lg text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2">
                     <Sparkles className="size-4 shrink-0 text-amber-500 animate-pulse mt-0.5" />
                     <div>
                       <div className="font-semibold">AI Extraction in Progress</div>
                       <div className="text-[11px] opacity-80 mt-0.5">
-                        Extracting technical skills, years of experience, and role preferences...
+                        Extracting skills, experience, and role preferences…
                       </div>
                     </div>
                   </div>
                 ) : q.data.status === "processed" ? (
-                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                  <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400 font-semibold p-2.5 bg-emerald-50 dark:bg-emerald-500/8 border border-emerald-200 dark:border-emerald-500/20 rounded-lg">
                     <CheckCircle2 className="size-4" />
                     <span>Processing complete</span>
                   </div>
@@ -280,9 +315,16 @@ function ResumePage() {
                 <button
                   onClick={() => remove.mutate()}
                   disabled={remove.isPending}
-                  className="w-full h-9 inline-flex items-center justify-center gap-2 rounded-md ring-1 ring-border text-sm text-destructive hover:bg-destructive/5 disabled:opacity-50"
+                  className="
+                    w-full h-9 inline-flex items-center justify-center gap-2
+                    rounded-lg border border-border bg-surface
+                    text-sm font-medium text-destructive
+                    hover:bg-destructive/5 hover:border-destructive/30
+                    disabled:opacity-50 transition-all duration-150 cursor-pointer
+                  "
                 >
-                  <Trash2 className="size-4" /> Remove resume
+                  <Trash2 className="size-4" />
+                  Remove resume
                 </button>
               </div>
             </>
@@ -292,5 +334,3 @@ function ResumePage() {
     </>
   );
 }
-
-

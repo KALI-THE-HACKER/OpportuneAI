@@ -18,12 +18,13 @@ The application runs a divided architecture:
 3. **AI Structured Processing**: The worker uses `GeminiClientPool` to query Gemini models using system prompts. It returns Pydantic validation outputs mapping details (skills, salary, experience, employment type) and inserts them into `processed_jobs`.
 4. **REST API Service**: FastAPI app verifying identity tokens statelessly via Auth0 JWKS caching, checking local profiles, and exposing CRUD routes.
 5. **Frontend Client App**: Multi-page client application built on React 19 and TanStack Start, loading routes and prefetching details.
+6. **Design System & UI**: Custom OKLCH design token architecture with warm porcelain light theme, OLED obsidian dark theme, blocking script hydration for flash-free theme reloads, sticky full-height desktop navigation sidebar, and left-to-right directional wave shimmer skeleton loaders.
 
 ---
 
 ## 3. Current Progress
 
-**Completion Estimate**: ~65% Complete
+**Completion Estimate**: ~70% Complete
 
 ### Implemented
 - Complete async database layer with SQLAlchemy 2.0 and Alembic migrations.
@@ -37,6 +38,10 @@ The application runs a divided architecture:
 - Standardized system skill catalog (`skills.csv`, `skills.ts`) with combobox autocomplete in `ResumeInsights`.
 - Standardized profile suggestion options (`profile-options.ts`, `search-combobox.tsx`) for job titles, locations, roles, and experience levels.
 - Optimistic UI updates with cache rollback for resume removals.
+- Complete platform-wide UI & theme redesign: warm porcelain light mode, OLED obsidian dark mode, wave shimmer skeleton loading system, and responsive auth flows with restored OAuth logins.
+- Sticky full-height sidebar layout (`sticky top-0 h-screen`) for desktop and independent main content scrolling.
+- Blocking `<head>` theme script preventing flash-of-unstyled-content (FOUC) on page reload.
+- Full 12-column responsive Profile view pairing the Identity/Preferences form with Experience & Seniority and live `ResumeInsights`.
 
 ### Remaining
 - FastAPI routers for job lists, detail queries, recommendations, saves, and application endpoints.
@@ -60,6 +65,8 @@ The application runs a divided architecture:
 | **Resume Processing** | `backend/routes/resume.py`, `backend/storage/r2.py`, `backend/workers/resume_worker.py` | Private R2 PDF storage, in-memory text extraction, RQ/Gemini parsing, and profile skill synchronization |
 | **User Profile Sync** | `backend/utils/auth.py` | Verifies JWTs, fetches Auth0 details, syncs profile database rows |
 | **Vite App Shell** | `frontend/src/routes/` | Authenticated routes, layouts, and pages rendering |
+| **Design System & Theme** | `frontend/src/styles.css`, `frontend/src/hooks/use-theme.tsx` | OKLCH tokens, shimmer keyframes, theme persistence, FOUC prevention |
+| **Profile & Insights UI** | `frontend/src/components/profile/` | Combobox search, resume skill extractor editor, experience level bindings |
 | **API Client** | `frontend/src/lib/api/` | Fetches session, user, and job details |
 
 ---
@@ -81,6 +88,10 @@ The application runs a divided architecture:
 
 ### 5.4 Database Transaction Boundary
 - Background task processes must invoke session rollback triggers when exceptions occur, marking processing status as `failed` to prevent database locks or corrupted transaction states.
+
+### 5.5 Theme Persistence & Hydration Invariant
+- Theme initialization must occur synchronously in `<head>` before HTML render to prevent light/dark flash during page reloads.
+- Color variables in `styles.css` must remain strictly structured under `:root` (light mode porcelain canvas) and `.dark` (OLED obsidian canvas) using `oklch`.
 
 ---
 

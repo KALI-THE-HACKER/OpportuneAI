@@ -14,6 +14,7 @@
 **Frontend** (`frontend/src/hooks/use-auth.tsx`, `frontend/src/routes/auth.*`):
 - `@auth0/auth0-react` SPA authentication with PKCE
 - Sign in, sign up, callback, forgot password, reset password, verify email routes
+- Multi-provider social login: Google, GitHub, LinkedIn
 - Token persistence in localStorage with auto-refresh
 - Syncs auth token to API client (`setApiAuthToken`)
 
@@ -58,102 +59,65 @@
 
 **Repositories** (`backend/database/repositories/`):
 - `UserRepository`, `RawJobRepository`, `ProcessedJobRepository`
-- Async SQLAlchemy with asyncpg
 
-**Migrations** (`backend/migrations/versions/`):
-- `a028d6f2e27e_create_users_table.py`
-- `33911cca3577_create_raw_jobs.py`
-- `68cc82b16b5f_create_processed_jobs.py`
+**Migrations** (`backend/alembic/versions/`):
+- Initial schema: users, raw_jobs, processed_jobs
 
-**Status**: ✅ Complete with migrations
+**Status**: ✅ Complete with tests
 
 ---
 
-### 5. FastAPI REST API
-**Routes** (`backend/routes/auth.py`):
-- Authentication endpoints (login, register, me, update)
-- Ready for job/user/resume/admin routes (stubs exist in frontend API client)
+### 5. Private Resume Storage & Async LLM Parsing
+**Backend** (`backend/routes/resume.py`, `backend/storage/r2.py`, `backend/workers/resume_worker.py`):
+- Direct multi-part resume upload via `POST /api/resume/upload`
+- In-memory PDF text extraction via `pypdf` with strict size/type validations
+- Private document archival via Cloudflare R2 bucket integration (`boto3`)
+- Secure time-limited pre-signed download URLs via `GET /api/resume/download-url`
+- Background RQ worker (`resume_worker.py`) running asynchronous LLM resume extraction
+- Extracts `extracted_skills`, `experience_level`, `years_total`, and `confidence` score
+- Synchronizes extracted skills directly to the user's profile table row upon parse completion
+- Complete lifecycle management with soft/hard deletion endpoint `DELETE /api/resume`
 
-**Status**: 🟡 Auth complete; other endpoints need implementation
+**Frontend** (`frontend/src/routes/app.resume.tsx`, `frontend/src/lib/api/resume.ts`):
+- Resume management interface with interactive drop zone and drag & drop support
+- Live status polling for background AI extraction
+- Live pre-signed resume download link handling
 
----
-
-### 6. Frontend Application Shell
-**Framework**: TanStack Start (React 19, file-based routing)
-**UI**: Radix UI + Tailwind CSS + Lucide icons
-**State**: @tanstack/react-query for server state
-
-**Routes implemented** (`frontend/src/routes/`):
-- `/` → redirects to `/app/dashboard`
-- `/app/dashboard` - Stats, recommendations, activity, system pipeline
-- `/app/jobs` - Job listing with filters (index + detail `$jobId`)
-- `/app/recommendations` - AI-matched jobs
-- `/app/applied` - Application tracking
-- `/app/saved` - Saved jobs
-- `/app/resume` - Resume upload/parsing
-- `/app/profile` - User profile management
-- `/app/settings` - Settings
-- `/app/admin` - Admin dashboard (pipeline stats)
-- Auth routes: sign-in, sign-up, callback, forgot/reset password, verify email
-
-**Components** (`frontend/src/components/`):
-- shadcn/ui component library (30+ components)
-- Shared business components: JobCard, PageHeader, StatCard, StateViews
-- Auth shell, layouts (app/public)
-
-**Status**: ✅ UI complete; uses mock API layer
+**Status**: ✅ Complete with unit test coverage
 
 ---
 
-### 7. API Client Layer (Frontend)
-**Location**: `frontend/src/lib/api/`
-- `client.ts` - fetch wrapper with auth token, error handling
-- `auth.ts` - signIn, signUp, signOut, session persistence
-- `jobs.ts`, `user.ts`, `resume.ts`, `notifications.ts`, `admin.ts` - typed API calls
-- `resume.ts` uses the live FastAPI endpoints; remaining modules use mock data with simulated latency (`API_LATENCY_MS = 350`)
+### 6. AI Resume Extraction Prompt Tuning
+**Backend** (`backend/ai/extraction/resume_prompts.py`, `backend/ai/schemas.py`):
+- Strict prompt rules extracting high-signal, relevant technical proficiencies
+- Excludes office suite utilities (Word, Excel, Slack, Zoom) and unmeasurable generic soft buzzwords
+- Normalizes and standardizes synonyms to canonical industry names
 
-**Status**: 🟡 Resume integration is live; the remaining modules are mock-backed
-
----
-
-### 8. Resume Processing
-**Backend** (`backend/resume/`, `backend/routes/resume.py`, `backend/workers/resume_worker.py`):
-- Stores source PDFs privately in Cloudflare R2 and tracks the opaque object key on `users`
-- Extracts PDF text in memory, stores metadata/text on `users`, then parses it asynchronously through RQ and Gemini
-- Merges AI-extracted skills into `users.skills`; exposes upload, status, and deletion endpoints
-- Writes rotating feature logs to `backend/logs/` (`resume.log`, `api.log`, `worker.log`, `ingestion.log`)
-
-**Frontend** (`frontend/src/routes/app.resume.tsx`):
-- Upload UI with drag-and-drop
-- Parsing trigger
-
-**Status**: ✅ R2-backed upload and AI parsing path implemented; requires R2 credentials and migration
+**Status**: ✅ Complete with unit tests
 
 ---
 
-### 9. Testing Infrastructure
-**Backend** (`backend/tests/`):
-- pytest with async support
-- Unit tests: auth, repositories, providers, AI factory, AI providers, job extractor
-- Integration tests: RQ queue
+### 7. Frontend UI, Theming & Design System
+**Frontend** (`frontend/src/styles.css`, `frontend/src/components/`, `frontend/src/routes/`):
+- Custom OKLCH design token architecture with warm porcelain light theme and OLED obsidian dark theme.
+- Directional wave shimmer skeleton loading system (`skeleton-shimmer`, `state-views.tsx`) moving smoothly from left to right.
+- Polished component suite: `StatCard`, `JobCard`, `PageHeader`, `ThemeToggle` with cross-fade animation, `Logo`, `AuthShell`, and `Sonner` toasts.
+- Sticky full-height desktop navigation sidebar (`sticky top-0 h-screen`) with independent main content scrolling.
+- Blocking `<head>` theme script preventing flash-of-unstyled-content (FOUC) during page reload.
+- Fully typed TanStack Router route views with zero build errors.
 
-**Frontend**: No tests yet
-
-**Status**: 🟡 Backend has test structure; coverage incomplete
+**Status**: ✅ Complete and production-ready
 
 ---
 
-### 10. Profile & Resume Intelligence UI
+### 8. Profile & Resume Intelligence UI
 **Frontend** (`frontend/src/components/profile/`, `frontend/src/routes/app.profile.tsx`, `frontend/src/routes/app.resume.tsx`):
+- Full 12-column responsive layout pairing the Identity & Job Preferences form with Experience & Seniority and live `ResumeInsights`.
 - `ResumeInsights`: Dedicated component for AI-extracted skills with verification against a standardized system catalog.
 - System Skills Catalog (`frontend/src/lib/data/skills.csv`, `skills.ts`): Categorized catalog of standard technical skills with fuzzy/prefix matching and canonicalization.
 - `SearchCombobox` & `MultiSearchCombobox`: Autocomplete search inputs for target job title, location, experience levels, preferred roles, and preferred locations.
 - Standardized Profile Options (`frontend/src/lib/data/profile-options.ts`): Comprehensive catalogs covering internships, specialty engineering tracks, tech hubs, and seniority levels.
 - Optimistic resume removal: Instantly clears cache on client with automatic rollback and user notification on backend failure.
-
-**Backend** (`backend/ai/extraction/resume_prompts.py`, `backend/ai/schemas.py`):
-- Strict prompt rules extracting high-signal, relevant technical proficiencies.
-- Excludes office suite utilities (Word, Excel, Slack, Zoom) and unmeasurable generic soft buzzwords.
 
 **Status**: ✅ Complete and verified with tests
 
@@ -162,9 +126,9 @@
 ## In Progress
 
 ### 1. Real API Integration (Frontend → Backend)
-- **Completed**: API client structure, auth token management, live resume upload/status/delete calls, profile CRUD calls
+- **Completed**: API client structure, auth token management, live resume upload/status/delete calls, profile CRUD calls (`userApi.get`, `userApi.update`)
 - **Missing**: Replace mock implementations in `frontend/src/lib/api/jobs.ts`, `notifications.ts`, `admin.ts` with real fetch calls
-- **Blockers**: Backend job and admin endpoints are not fully implemented
+- **Blockers**: Backend job and admin endpoints need implementation
 
 ### 2. Job Search & Filtering API
 - **Completed**: Database models, repositories, processed_jobs table
@@ -184,8 +148,6 @@
 ---
 
 ## Not Yet Implemented
-
-Based on codebase analysis (TODOs, stubs, missing routes, comments):
 
 ### Backend
 - [ ] `GET /api/jobs` - Paginated job search with filters (skills, location, salary, experience)
@@ -214,6 +176,8 @@ Based on codebase analysis (TODOs, stubs, missing routes, comments):
 - [x] Optimistic updates for resume removal
 - [x] Resume upload to backend (multipart/form-data)
 - [x] Standardized skills and profile combobox autocomplete search
+- [x] Flash-free theme hydration script
+- [x] Full-height sticky sidebar with independent scrolling
 - [ ] Real-time notifications (WebSocket/SSE)
 - [ ] PWA offline support (service worker registered but not configured)
 - [ ] E2E tests (Playwright/Cypress)
@@ -257,4 +221,4 @@ Based on codebase analysis (TODOs, stubs, missing routes, comments):
    - Affected: FastAPI middleware, new routes
 
 ---
-*Last updated: 2026-08-15*
+*Last updated: 2026-08-16*

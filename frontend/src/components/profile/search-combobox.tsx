@@ -89,7 +89,7 @@ export function SearchCombobox({
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="w-full h-9 px-3 pr-8 rounded-md bg-background ring-1 ring-border text-sm outline-none focus:ring-2 focus:ring-accent transition-all"
+          className="w-full h-9 px-3 pr-8 rounded-lg bg-background border border-input text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all shadow-sm"
         />
         <button
           type="button"
@@ -106,7 +106,7 @@ export function SearchCombobox({
 
       {/* Autocomplete Dropdown */}
       {isOpen && suggestions.length > 0 && (
-        <div className="absolute z-50 mt-1 w-full max-h-52 overflow-y-auto rounded-md bg-popover ring-1 ring-border shadow-lg p-1 space-y-0.5 text-xs animate-in fade-in-0 zoom-in-95">
+        <div className="absolute z-50 mt-1 w-full max-h-52 overflow-y-auto rounded-xl bg-popover border border-border shadow-dropdown p-1 space-y-0.5 text-xs animate-in fade-in-0 zoom-in-95">
           {suggestions.map((option, index) => {
             const isSelected = index === activeIndex;
             const isCurrent = option.toLowerCase() === value.toLowerCase();

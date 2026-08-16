@@ -21,7 +21,7 @@ Use PostgreSQL as the primary transactional database, with SQLAlchemy 2.0 as the
 
 ## 2. Background Worker System: Redis & Python RQ
 ### Decision
-Use Python RQ (Redis Queue) with a Redis broker as the background worker system for processing raw scraped jobs.
+Use Python RQ (Redis Queue) with a Redis broker as the background worker system for processing raw scraped jobs and parsing uploaded resumes.
 
 ### Reason
 - **Simplicity**: Python RQ is lightweight, easy to understand, and integrates seamlessly with Redis. It avoids the large dependency stack and setup overhead of Celery.
@@ -75,3 +75,32 @@ Build the web application using React 19 and TanStack Start, which wraps TanStac
 
 ### Tradeoffs
 - **Bleeding Edge**: React 19 and TanStack Start are relatively new frameworks. Docs and packages can occasionally undergo changes or require specific configurations.
+
+---
+
+## 6. Private Document Storage: Cloudflare R2 + In-Memory Text Extraction
+### Decision
+Store user resume PDF documents in private Cloudflare R2 object storage with S3-compatible APIs (`boto3`) and perform PDF text extraction directly in-memory using `pypdf` before background parsing.
+
+### Reason
+- **Zero Egress Fees**: Cloudflare R2 does not charge egress fees for object retrieval.
+- **Security & Privacy**: Resumes contain sensitive PII. The bucket is strictly private; downloads are generated through short-lived pre-signed URLs (`GET /api/resume/download-url`).
+- **Stateless Web Nodes**: In-memory text extraction avoids writing temporary files to server disk.
+
+### Tradeoffs
+- **Memory Footprint**: Multi-page PDFs reside in memory during upload text extraction (mitigated by a strict 5MB upload size limit).
+
+---
+
+## 7. Frontend Design System: OKLCH Semantic Tokens & Flash-Free Theme Architecture
+### Decision
+Implement a custom design token architecture utilizing OKLCH color spaces, semantic CSS variables, a directional shimmer skeleton system, and a blocking `<head>` theme script.
+
+### Reason
+- **Perceptual Uniformity**: OKLCH provides uniform lightness and chroma scaling, eliminating muddy color transitions in dark mode.
+- **Porcelain & Obsidian Visual Tone**: Tailored warm porcelain light canvas (`oklch(0.985 0.003 95)`) and deep OLED obsidian dark canvas (`oklch(0.10 0.005 275)`).
+- **Zero Flash on Reload (FOUC)**: A tiny inline script executed in `<head>` applies `.dark` before HTML painting occurs, completely eliminating light theme flash during SSR/hydration.
+- **Fixed Shell Ergonomics**: Desktop navigation sidebar uses `sticky top-0 h-screen` with independent main content scrolling to prevent viewport jitter.
+
+### Tradeoffs
+- **Browser Compatibility**: OKLCH requires modern browser engines (supported in all evergreen browsers since 2023).

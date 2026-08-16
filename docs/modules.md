@@ -6,12 +6,12 @@ This document explains the purpose, responsibilities, dependencies, public APIs,
 
 ## 1. AI Extraction Layer (`backend/ai/`)
 ### Purpose
-Processes raw text from job descriptions to extract structured, standardized metadata using large language models.
+Processes raw text from job descriptions and resumes to extract structured, standardized metadata using large language models.
 
 ### Responsibilities
-- Define target validation structure for parsed metadata (`JobExtraction`).
+- Define target validation structure for parsed metadata (`JobExtraction`, `ResumeExtraction`).
 - Cycle API keys across requests to balance free tier rate limits.
-- Render system/human prompting templates to format the job descriptions.
+- Render system/human prompting templates to format the job and resume descriptions.
 - Construct type-safe provider interfaces and fallback models.
 
 ### Dependencies
@@ -31,7 +31,7 @@ Processes raw text from job descriptions to extract structured, standardized met
 
 ### Internal Implementation Notes
 - **Thread-safe Key Pool**: Uses a standard threading `Lock` to synchronize request counters and cycling indexes.
-- **Strict Parsing**: The prompt templates instruct the model to avoid guessing or hallucinating properties not explicitly stated in descriptions.
+- **Strict Parsing**: Prompt templates instruct the model to avoid guessing or hallucinating properties not explicitly stated in descriptions.
 
 ---
 
@@ -41,7 +41,7 @@ Handles asynchronous connection pool management, maps relational schemas, and is
 
 ### Responsibilities
 - Create asynchronous SQLAlchemy engines and local session makers.
-- Map ORM definitions for users, raw scraping data, and structured extraction tables.
+- Map ORM definitions for users, raw scraping data, structured extraction tables, and resume metadata.
 - Encapsulate CRUD logic to avoid database queries in router logic.
 
 ### Dependencies
@@ -58,62 +58,53 @@ Handles asynchronous connection pool management, maps relational schemas, and is
   - `create(...)`: Insert a new user.
   - `update(user, **kwargs)`: Commit updates to existing records.
 - **`database.repositories.raw_job_repository.RawJobRepository(db)`**:
-  - `get_existing_hashes()`: Retrieve all unique content hashes.
-  - `save_many(jobs)`: Bulk insert raw scraped jobs.
+  - `get_by_content_hash(hash)`: Check if job content was previously scraped.
+  - `create(job)`: Write raw scrape payloads.
+  - `get_pending_jobs()`: Retrieve queued records.
 - **`database.repositories.processed_job_repository.ProcessedJobRepository(db)`**:
-  - `create(raw_job_id, extraction)`: Construct a processed job record.
-  - `get_by_id(id)`: Fetch by primary key.
-  - `get_by_raw_job_id(raw_job_id)`: Fetch processed data matching a raw job ID.
-
-### Internal Implementation Notes
-- **Cascading Deletes**: `ProcessedJob` points to `RawJob` via a foreign key constraint containing `ondelete="CASCADE"`. Deleting a raw job automatically purges processed results.
-- **Session Commits**: Repository functions call `db.commit()` and `db.refresh(model)` directly, which requires calling routines to handle session lifetimes.
+  - `create(...)`: Commit structured LLM extraction outputs.
 
 ---
 
-## 3. Job Board Providers (`backend/providers/`)
+## 3. Scraping Ingestion Engine (`backend/scrapers/`, `backend/providers/`)
 ### Purpose
-Adapts custom scrapers and API integrations to output normalized Pydantic job models.
+Orchestrates web crawling across LinkedIn, Naukri, Wellfound, and RemoteOK.
 
 ### Responsibilities
-- Read criteria variables from the central YAML config.
-- Fetch raw inputs from providers.
-- Hash details and format normalized data objects.
+- Fetch postings according to search filters in `config.yml`.
+- Normalize provider schemas into standardized `ScrapedJob` objects.
+- Compute content hashes to eliminate duplicate entries before saving.
 
 ### Dependencies
-- `scrapers` (execution utilities)
-- `pydantic` (metadata structure validation)
-- `utils.hashing` (fingerprint generation)
-- `httpx` (JSON endpoints communication)
+- `selenium` / `linkedin-jobs-scraper`
+- `undetected-chromedriver` / `beautifulsoup4`
+- `playwright` / `firecrawl-py`
+- `httpx` (RemoteOK REST API client)
 
 ### Public APIs
-- **`providers.base.BaseProvider`**: Abstract interface specifying:
-  - `fetch_jobs() -> list[RawJobData]`
-- **`providers.linkedin_provider.LinkedInProvider`**: Web search adapter for LinkedIn.
-- **`providers.naukri_provider.NaukriProvider`**: Web search adapter for Naukri.
-- **`providers.wellfound_provider.WellfoundProvider`**: Web search adapter for Wellfound.
-- **`providers.remoteOK_provider.RemoteOKProvider`**: REST endpoint client adapter for RemoteOK.
+- **`providers.base.BaseProvider`**: Abstract interface defining `fetch_jobs()`.
+- **`ingestion.pipeline.IngestionPipeline`**:
+  - `run()`: Executes crawling sequence across all active providers.
 
 ---
 
-## 4. Crawling & Parsing Algorithms (`backend/scrapers/`)
+## 4. Resume Storage & Processing (`backend/storage/`, `backend/routes/resume.py`)
 ### Purpose
-Contains standalone selenium browsers and parser components to extract site markup.
+Handles private document archival, in-memory PDF extraction, and asynchronous resume parsing.
 
 ### Responsibilities
-- Bypass crawler detection configurations.
-- Parse DOM blocks to retrieve titles, companies, locations, and descriptions.
-- Translate page structures to markdown text.
+- Upload PDF documents to private Cloudflare R2 bucket.
+- Extract raw text in-memory via `pypdf`.
+- Enqueue resume parsing jobs to Redis RQ.
+- Generate secure pre-signed download URLs.
 
 ### Dependencies
-- `selenium` & `undetected-chromedriver` (Naukri scraping browser)
-- `linkedin-jobs-scraper` (Playwright automation library)
-- `firecrawl` (Markdown extraction API client)
-- `beautifulsoup4` (HTML parser)
+- `boto3` (Cloudflare R2 S3 adapter)
+- `pypdf` (In-memory PDF text extraction)
 
-### Internal Implementation Notes
-- **Akamai/Cloudflare Bypass**: Naukri scraping requires `undetected-chromedriver` to pass automation checks, which requires a local Chrome browser.
-- **Firecrawl**: Wellfound scraping fetches pages via Firecrawl markdown conversion, parsing structure text using regular expressions.
+### Public APIs
+- **`storage.r2.R2Client`**: `upload_file()`, `get_download_url()`, `delete_file()`.
+- **`routes.resume`**: `POST /api/resume/upload`, `GET /api/resume`, `DELETE /api/resume`, `GET /api/resume/download-url`.
 
 ---
 
@@ -123,7 +114,7 @@ Runs background processes to perform heavy AI parsing tasks asynchronously.
 
 ### Responsibilities
 - Establish connections to Redis.
-- Define worker queues.
+- Define worker queues (`ai-processing`, `resume-processing`).
 - Synchronize database transaction states.
 
 ### Dependencies
@@ -132,11 +123,10 @@ Runs background processes to perform heavy AI parsing tasks asynchronously.
 - `asyncio` (async task executor)
 
 ### Public APIs
-- **`workers.queue.ai_processing_queue`**: Target queue instance.
-- **`workers.ai_worker.process_raw_job(raw_job_id)`**: Task entrypoint for the RQ worker.
-
-### Internal Implementation Notes
-- **Context Isolation**: Since RQ executes tasks in synchronous processes, `process_raw_job` runs the asynchronous pipeline using `asyncio.run()`, creating standalone database sessions on each job run.
+- **`workers.queue.ai_processing_queue`**: Target queue for raw job processing.
+- **`workers.queue.resume_processing_queue`**: Target queue for resume parsing.
+- **`workers.ai_worker.process_raw_job(raw_job_id)`**: Entrypoint for job metadata extraction.
+- **`workers.resume_worker.process_resume_job(user_id)`**: Entrypoint for resume skill parsing.
 
 ---
 
@@ -178,7 +168,20 @@ Types and coordinates HTTP requests from the React client to the REST backend.
 ### Public APIs
 - **`lib.api.client.apiCall()`**: Fetch wrapper providing headers, tokens, and errors formatting.
 - **`lib.api.auth.authApi`**: Register and login calls.
-- **`lib.api.user.userApi`**: Get and put user settings.
-- **`lib.api.jobs.jobsApi`**: Fetch, save, and apply to job entries (mock-only).
-- **`lib.api.resume.resumeApi`**: Document parsing (mock-only).
-- **`lib.api.admin.adminApi`**: Stats and scheduler control (mock-only).
+- **`lib.api.user.userApi`**: Get and update user profile settings (`userApi.get`, `userApi.update`).
+- **`lib.api.jobs.jobsApi`**: Fetch, save, and apply to job entries.
+- **`lib.api.resume.resumeApi`**: Document parsing and download URL requests.
+- **`lib.api.admin.adminApi`**: Telemetry and stats.
+
+---
+
+## 8. Frontend Shell, Theming & UI (`frontend/src/components/`, `frontend/src/styles.css`)
+### Purpose
+Provides the design system, persistent navigation shell, theme state management, and profile combobox autocomplete components.
+
+### Responsibilities
+- Manage OKLCH semantic color tokens for light (porcelain) and dark (OLED obsidian) palettes.
+- Deliver wave shimmer skeleton loaders (`skeleton-shimmer`).
+- Maintain a sticky full-height sidebar (`sticky top-0 h-screen`) with independent main content scrolling.
+- Eliminate FOUC on page reloads with blocking `<head>` script.
+- Provide standardized combobox search for job titles, locations, roles, and system skill catalogs.

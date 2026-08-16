@@ -21,8 +21,8 @@ export function ResumeInsights({ userSkills, className = "" }: ResumeInsightsPro
 
   if (resumeQ.isLoading) {
     return (
-      <section className={`bg-card ring-1 ring-border rounded-lg p-6 ${className}`}>
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
+      <section className={`bg-card border border-border rounded-xl shadow-card p-6 ${className}`}>
+        <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-4">
           Resume insights
         </h2>
         <p className="text-xs text-muted-foreground">Loading…</p>
@@ -32,13 +32,13 @@ export function ResumeInsights({ userSkills, className = "" }: ResumeInsightsPro
 
   if (!resumeQ.data) {
     return (
-      <section className={`bg-card ring-1 ring-border rounded-lg p-6 ${className}`}>
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
+      <section className={`bg-card border border-border rounded-xl shadow-card p-6 ${className}`}>
+        <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-4">
           Resume insights
         </h2>
-        <p className="text-xs text-muted-foreground italic">
+        <p className="text-xs text-muted-foreground">
           No resume uploaded yet.{" "}
-          <a href="/app/resume" className="text-accent underline underline-offset-2">
+          <a href="/app/resume" className="font-semibold text-accent hover:underline">
             Upload one
           </a>{" "}
           to auto-extract your skills and experience.
@@ -49,8 +49,8 @@ export function ResumeInsights({ userSkills, className = "" }: ResumeInsightsPro
 
   if (resumeQ.data.status === "processing") {
     return (
-      <section className={`bg-card ring-1 ring-border rounded-lg p-6 ${className}`}>
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
+      <section className={`bg-card border border-border rounded-xl shadow-card p-6 ${className}`}>
+        <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-4">
           Resume insights
         </h2>
         <div className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-300">
@@ -137,10 +137,10 @@ export function InsightsEditor({
   const confidencePct = Math.round(resumeData.confidence * 100);
 
   return (
-    <section className="bg-card ring-1 ring-border rounded-lg p-6 space-y-5">
+    <section className="bg-card border border-border rounded-xl shadow-card p-6 space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
           Resume insights
         </h2>
         {confidencePct > 0 && (
@@ -177,7 +177,7 @@ export function InsightsEditor({
           </span>
         </div>
 
-        <div className="flex flex-wrap gap-1.5 min-h-12 p-2.5 rounded-md bg-background/60 ring-1 ring-border/80">
+        <div className="flex flex-wrap gap-1.5 min-h-12 p-2.5 rounded-lg bg-background border border-border/80">
           {skills.map((s, i) => (
             <span
               key={`${s}-${i}`}
