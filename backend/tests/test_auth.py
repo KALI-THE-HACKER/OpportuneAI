@@ -54,6 +54,7 @@ async def test_auth_and_profile_sync(dispose_db_engine):
         db_user = await repo.get_by_auth0_sub("auth0|test-sub-999")
         assert db_user is not None
         assert db_user.id == user.id
+        assert db_user.role == "user"
 
         # 3. Test get_me endpoint business logic
         profile_res = await get_me(user=user)
@@ -61,6 +62,7 @@ async def test_auth_and_profile_sync(dispose_db_engine):
         assert profile_res.email == "pm@opportune.ai"
         assert profile_res.name == "Pam PM"
         assert profile_res.avatarUrl == "https://example.com/pam.jpg"
+        assert profile_res.role == "user"
 
         # 4. Test update_me endpoint business logic
         update_data = UserProfileUpdateSchema(
@@ -97,15 +99,33 @@ async def test_auth_and_profile_sync(dispose_db_engine):
         login_res = await login(data=login_data, db=db)
         assert login_res.token.startswith("mock-")
         assert login_res.user.email == "pm@opportune.ai"
+        assert login_res.user.role == "user"
 
-        # 6. Test register route function in mock mode
+        # 6. Test register route function in mock mode (defaults to user role)
+        existing_new_user = await repo.get_by_email("newuser@opportune.ai")
+        if existing_new_user:
+            await db.delete(existing_new_user)
+            await db.commit()
+
         register_data = RegisterInputSchema(
             name="New User", email="newuser@opportune.ai", password="somepassword"
         )
         register_res = await register(data=register_data, db=db)
-        assert register_res.token.startswith("mock-")
+        assert register_res.token is None
+        assert "verify" in (register_res.message or "").lower()
         assert register_res.user.email == "newuser@opportune.ai"
         assert register_res.user.name == "New User"
+        assert register_res.user.role == "user"
+
+        # 7. Test admin role determination for configured admin emails
+        admin_mock_token = "mock-auth0|admin-sub-1;admin@opportuneai.com;Admin User;https://example.com/admin.jpg"
+        admin_user = await get_current_user(token=admin_mock_token, db=db)
+        assert admin_user.role == "admin"
+
+        # Clean up admin user
+        db_admin_user = await repo.get_by_auth0_sub("auth0|admin-sub-1")
+        if db_admin_user:
+            await db.delete(db_admin_user)
 
         # Clean up new user
         db_new_user = await repo.get_by_email("newuser@opportune.ai")

@@ -1,11 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { adminApi } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { LoadingState, ErrorState } from "@/components/shared/state-views";
 import {
-  ShieldCheck,
+  ShieldAlert,
   Database,
   Cpu,
   Activity,
@@ -13,6 +14,7 @@ import {
   Server,
   RefreshCcw,
   TrendingUp,
+  ArrowLeft,
 } from "lucide-react";
 
 export const Route = createFileRoute("/app/admin")({
@@ -21,11 +23,38 @@ export const Route = createFileRoute("/app/admin")({
 });
 
 function AdminPage() {
+  const { user, isLoading: isAuthLoading } = useAuth();
   const q = useQuery({
     queryKey: ["admin-stats"],
     queryFn: () => adminApi.stats(),
+    enabled: user?.role === "admin",
     refetchInterval: 15_000,
   });
+
+  if (isAuthLoading) {
+    return <LoadingState variant="stats" count={4} />;
+  }
+
+  if (user?.role !== "admin") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="size-16 rounded-2xl bg-destructive/10 text-destructive grid place-items-center mb-4 border border-destructive/20 shadow-sm">
+          <ShieldAlert className="size-8" />
+        </div>
+        <h2 className="text-xl font-bold text-foreground">Access Denied</h2>
+        <p className="text-sm text-muted-foreground max-w-md mt-2 mb-6">
+          This section is restricted to administrators. You do not have permission to view system telemetry or pipeline administration tools.
+        </p>
+        <Link
+          to="/app/dashboard"
+          className="inline-flex items-center gap-2 px-4 h-9 rounded-lg bg-brand text-brand-foreground text-sm font-medium hover:bg-brand/90 transition-colors shadow-sm"
+        >
+          <ArrowLeft className="size-4" />
+          Back to Dashboard
+        </Link>
+      </div>
+    );
+  }
 
   if (q.isLoading) return <LoadingState variant="stats" count={4} />;
   if (q.isError || !q.data) return <ErrorState onRetry={() => q.refetch()} />;

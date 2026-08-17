@@ -3,7 +3,8 @@ import { useState, useEffect, type FormEvent } from "react";
 import { z } from "zod";
 import { AuthShell, FormField, inputClass, primaryButtonClass } from "@/components/auth/auth-shell";
 import { useAuth } from "@/hooks/use-auth";
-import { Github, Linkedin, AlertCircle, ArrowRight } from "lucide-react";
+import { authApi } from "@/lib/api/auth";
+import { Github, Linkedin, AlertCircle, ArrowRight, CheckCircle2, RefreshCw } from "lucide-react";
 
 const searchSchema = z.object({ redirect: z.string().optional() });
 
@@ -25,6 +26,8 @@ function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -36,6 +39,7 @@ function SignInPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setResendStatus(null);
     setBusy(true);
     try {
       await signIn(email.trim(), password);
@@ -47,8 +51,23 @@ function SignInPage() {
     }
   }
 
+  async function handleResend() {
+    if (!email.trim()) return;
+    setResending(true);
+    setResendStatus(null);
+    try {
+      const res = await authApi.resendVerification(email.trim());
+      setResendStatus(res.message || "Verification email sent. Check your inbox.");
+    } catch {
+      setResendStatus("Failed to send verification email. Try again later.");
+    } finally {
+      setResending(false);
+    }
+  }
+
   async function handleSocialSignIn(provider: "google-oauth2" | "github" | "linkedin") {
     setError(null);
+    setResendStatus(null);
     setBusy(true);
     try {
       await signInWithSocial(provider);
@@ -59,6 +78,8 @@ function SignInPage() {
       setBusy(false);
     }
   }
+
+  const isUnverifiedError = error && error.toLowerCase().includes("verify your email");
 
   return (
     <AuthShell
@@ -103,9 +124,32 @@ function SignInPage() {
         </FormField>
 
         {error && (
-          <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/8 p-3 rounded-lg border border-destructive/20 animate-in fade-in slide-in-from-top-1 duration-250">
-            <AlertCircle className="size-4 shrink-0" />
-            <span>{error}</span>
+          <div className="space-y-2 p-3 rounded-lg border border-destructive/20 bg-destructive/8 animate-in fade-in slide-in-from-top-1 duration-250">
+            <div className="flex items-center gap-2 text-xs text-destructive">
+              <AlertCircle className="size-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+            {isUnverifiedError && (
+              <div className="pt-1.5 border-t border-destructive/15 flex items-center justify-between">
+                <span className="text-[11px] text-muted-foreground">Didn't receive verification email?</span>
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  className="text-xs font-semibold text-accent hover:underline inline-flex items-center gap-1 cursor-pointer"
+                >
+                  {resending ? <RefreshCw className="size-3 animate-spin" /> : null}
+                  Resend email
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {resendStatus && (
+          <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 p-3 rounded-lg border border-emerald-200 dark:border-emerald-500/20">
+            <CheckCircle2 className="size-4 shrink-0" />
+            <span>{resendStatus}</span>
           </div>
         )}
 

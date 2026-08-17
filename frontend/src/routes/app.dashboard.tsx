@@ -31,7 +31,11 @@ function DashboardPage() {
   });
   const apps = useQuery({ queryKey: ["applications"], queryFn: () => jobsApi.applications() });
   const notifs = useQuery({ queryKey: ["notifications"], queryFn: () => notificationsApi.list() });
-  const stats = useQuery({ queryKey: ["admin-stats"], queryFn: () => adminApi.stats() });
+  const stats = useQuery({
+    queryKey: ["admin-stats"],
+    queryFn: () => adminApi.stats(),
+    enabled: user?.role === "admin",
+  });
   const resume = useQuery({
     queryKey: ["resume"],
     queryFn: () => resumeApi.get(),
@@ -166,33 +170,35 @@ function DashboardPage() {
             </Link>
           </div>
 
-          {/* System pipeline widget */}
-          <div className="p-5 bg-card border border-border rounded-xl shadow-card">
-            <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-4">
-              System pipeline
-            </h3>
-            <div className="space-y-2.5 text-xs">
-              <Row label="Worker nodes" value={`${12} active`} />
-              <Row
-                label="Queue latency"
-                value={`${stats.data?.pipelineLatencyMs ?? "—"} ms`}
-              />
-              <Row label="Uptime" value={`${stats.data?.uptimePct ?? "—"}%`} />
-            </div>
-            <div className="mt-3 pt-3 border-t border-border">
-              <div className="flex items-center gap-1.5 text-xs text-accent font-medium">
-                <Zap className="size-3" />
-                <span>All systems operational</span>
+          {/* System pipeline widget (admin only) */}
+          {user?.role === "admin" && (
+            <div className="p-5 bg-card border border-border rounded-xl shadow-card">
+              <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-4">
+                System pipeline
+              </h3>
+              <div className="space-y-2.5 text-xs">
+                <Row label="Worker nodes" value={`${12} active`} />
+                <Row
+                  label="Queue latency"
+                  value={`${stats.data?.pipelineLatencyMs ?? "—"} ms`}
+                />
+                <Row label="Uptime" value={`${stats.data?.uptimePct ?? "—"}%`} />
               </div>
+              <div className="mt-3 pt-3 border-t border-border">
+                <div className="flex items-center gap-1.5 text-xs text-accent font-medium">
+                  <Zap className="size-3" />
+                  <span>All systems operational</span>
+                </div>
+              </div>
+              <Link
+                to="/app/admin"
+                className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-foreground hover:text-accent transition-colors"
+              >
+                Open admin
+                <ArrowRight className="size-3" />
+              </Link>
             </div>
-            <Link
-              to="/app/admin"
-              className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-foreground hover:text-accent transition-colors"
-            >
-              Open admin
-              <ArrowRight className="size-3" />
-            </Link>
-          </div>
+          )}
         </aside>
       </div>
     </>

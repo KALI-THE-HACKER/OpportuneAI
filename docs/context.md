@@ -42,6 +42,7 @@ The application runs a divided architecture:
 - Sticky full-height sidebar layout (`sticky top-0 h-screen`) for desktop and independent main content scrolling.
 - Blocking `<head>` theme script preventing flash-of-unstyled-content (FOUC) on page reload.
 - Full 12-column responsive Profile view pairing the Identity/Preferences form with Experience & Seniority and live `ResumeInsights`.
+- Role-based Access Control (RBAC): database `role` column (`admin` | `user`), YAML-driven `admin_config.admin_emails` in `config.yml` (plus env fallback), `require_admin` FastAPI dependency (HTTP 403 Forbidden for non-admins), protected `/api/admin/*` endpoints, and dynamic frontend protection (sidebar navigation filtering, dashboard pipeline widget guarding, and `/app/admin` route access denial).
 
 ### Remaining
 - FastAPI routers for job lists, detail queries, recommendations, saves, and application endpoints.

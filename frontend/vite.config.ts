@@ -21,6 +21,12 @@ export default defineConfig({
   vite: {
     server: {
       allowedHosts: ["opportuneai.luckyverma.dev"],
+      proxy: {
+        "/api": {
+          target: "http://127.0.0.1:8000",
+          changeOrigin: true,
+        },
+      },
     },
     plugins: [
       ...(useSsl ? [basicSsl()] : []),

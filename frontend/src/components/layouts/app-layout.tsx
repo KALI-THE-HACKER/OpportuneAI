@@ -30,7 +30,7 @@ const NAV = [
   { to: "/app/profile", label: "Profile", icon: User },
   { to: "/app/notifications", label: "Notifications", icon: Bell },
   { to: "/app/settings", label: "Settings", icon: Settings },
-  { to: "/app/admin", label: "Admin", icon: ShieldCheck },
+  { to: "/app/admin", label: "Admin", icon: ShieldCheck, adminOnly: true },
 ] as const;
 
 function NavItem({
@@ -99,7 +99,7 @@ export function AppLayout() {
 
       {/* Nav links */}
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {NAV.map((item) => {
+        {NAV.filter((item) => !("adminOnly" in item && item.adminOnly) || user?.role === "admin").map((item) => {
           const active = pathname === item.to || pathname.startsWith(item.to + "/");
           return (
             <NavItem
@@ -230,8 +230,8 @@ export function AppLayout() {
    AppLayoutLoading — Full skeleton of the shell
 ────────────────────────────────────────────────────────────── */
 export function AppLayoutLoading() {
-  function Sh({ className = "" }: { className?: string }) {
-    return <div className={`skeleton-shimmer rounded-md ${className}`} />;
+  function Sh({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
+    return <div className={`skeleton-shimmer rounded-md ${className}`} style={style} />;
   }
 
   return (

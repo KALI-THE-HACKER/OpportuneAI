@@ -8,3 +8,8 @@ scraper_config:
     - INTERNSHIP
   limit: 20
   headless: true
+
+admin_config:
+  admin_emails:
+    - "admin@luckylinux.dev"
+    - "luckyverma.dev@gmail.com"

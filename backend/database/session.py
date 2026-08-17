@@ -6,12 +6,21 @@ from sqlalchemy.ext.asyncio import (
 
 from config.settings import settings
 
+connect_args = {}
+if (
+    "supabase" in settings.database_url
+    or ":6543" in settings.database_url
+    or "pooler" in settings.database_url
+):
+    connect_args["statement_cache_size"] = 0
+
 engine = create_async_engine(
     settings.database_url,
     echo=False,
     pool_size=20,
     max_overflow=10,
     pool_pre_ping=True,
+    connect_args=connect_args,
 )
 
 AsyncSessionLocal = async_sessionmaker(

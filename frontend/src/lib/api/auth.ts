@@ -87,8 +87,11 @@ export const authApi = {
   async verifyEmail(token: string): Promise<void> {
     throw new Error("Email verification is managed via Auth0");
   },
-  async resendVerification(): Promise<void> {
-    throw new Error("Email verification is managed via Auth0");
+  async resendVerification(email: string): Promise<{ message: string }> {
+    return apiCall<{ message: string }>("/api/auth/resend-verification", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
   },
 };
 export { persistSession as persist };

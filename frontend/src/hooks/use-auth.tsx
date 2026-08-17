@@ -58,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           id: auth0User.sub || "auth0-user",
           name: auth0User.name || auth0User.nickname || "Authenticated User",
           email: auth0User.email || "",
+          role: "user",
           avatarUrl: auth0User.picture,
           title: "",
           location: "",

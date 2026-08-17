@@ -5,18 +5,22 @@
 ### 1. User Authentication (Backend + Frontend)
 **Backend** (`backend/routes/auth.py`, `backend/utils/auth.py`):
 - Auth0 integration with password realm grant (email/password login)
-- Auth0 DB connection signup flow
+- Auth0 DB connection signup flow with mandatory email verification (auto-login disabled on registration)
+- Email verification enforcement: `POST /api/auth/login` checks `email_verified` and returns 403 Forbidden until verified
+- Resend verification endpoint: `POST /api/auth/resend-verification` via Auth0 Management API
 - JWT verification with JWKS caching
 - User synchronization: Auth0 → PostgreSQL `users` table
 - Mock mode for local development (`AUTH0_CLIENT_ID=mock_client_id`)
 - Profile CRUD: GET `/api/auth/me`, PUT `/api/users/me`
+- Role-based Access Control (RBAC): `role` column (`admin` | `user`, default `user`), YAML-driven `admin_config.admin_emails` in `backend/config/config.yml` (plus env override), `require_admin` dependency guard, protected `/api/admin/*` endpoints (`/stats`, `/providers`, `/workers`, `/queue`)
 
-**Frontend** (`frontend/src/hooks/use-auth.tsx`, `frontend/src/routes/auth.*`):
+**Frontend** (`frontend/src/hooks/use-auth.tsx`, `frontend/src/routes/auth.*`, `frontend/src/components/layouts/app-layout.tsx`, `frontend/src/routes/app.admin.tsx`):
 - `@auth0/auth0-react` SPA authentication with PKCE
 - Sign in, sign up, callback, forgot password, reset password, verify email routes
 - Multi-provider social login: Google, GitHub, LinkedIn
 - Token persistence in localStorage with auto-refresh
 - Syncs auth token to API client (`setApiAuthToken`)
+- Role-based conditional UI: Admin sidebar item and dashboard pipeline widget hidden for normal users; `/app/admin` route guarded with Access Denied view
 
 **Status**: ✅ Functional with mock mode; real Auth0 needs credentials
 

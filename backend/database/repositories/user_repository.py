@@ -29,6 +29,7 @@ class UserRepository:
         email: str,
         name: str | None = None,
         avatar_url: str | None = None,
+        role: str = "user",
         email_verified: bool = False,
     ) -> User:
         """Create a new user in the database."""
@@ -37,6 +38,7 @@ class UserRepository:
             email=email,
             name=name,
             avatar_url=avatar_url,
+            role=role,
             email_verified=email_verified,
         )
         self.db.add(user)

@@ -9,7 +9,7 @@ from config.settings import settings
 from database.models.user import User
 from database.repositories.user_repository import UserRepository
 from database.session import get_db
-from utils.auth import get_current_user
+from utils.auth import determine_user_role, get_current_user
 
 router = APIRouter()
 
@@ -49,6 +49,7 @@ class UserProfileSchema(BaseModel):
     id: str
     name: str | None = None
     email: str
+    role: str = "user"
     title: str = ""
     location: str = ""
     avatarUrl: str | None = None
@@ -67,6 +68,7 @@ class UserProfileSchema(BaseModel):
             id=user.auth0_sub,
             name=user.name,
             email=user.email,
+            role=user.role or "user",
             title=user.title,
             location=user.location,
             avatarUrl=user.avatar_url,
@@ -167,8 +169,11 @@ async def login(data: LoginInputSchema, db: AsyncSession = Depends(get_db)):
                 auth0_sub=f"auth0|mock-{data.email.split('@')[0]}",
                 email=data.email,
                 name=data.email.split("@")[0].capitalize(),
+                role=determine_user_role(data.email),
                 email_verified=True,
             )
+        elif determine_user_role(data.email) == "admin" and user.role != "admin":
+            user = await repo.update(user, role="admin")
         token = (
             f"mock-auth0|{user.auth0_sub};{user.email};{user.name};{user.avatar_url}"
         )
@@ -212,9 +217,14 @@ async def login(data: LoginInputSchema, db: AsyncSession = Depends(get_db)):
             expires_in = resp_data.get("expires_in", 86400)
 
             # Synchronize user profile locally
-            from utils.auth import get_current_user
-
             user = await get_current_user(token=access_token, db=db)
+
+            # Enforce email verification
+            if not user.email_verified:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Please verify your email address before signing in. Check your inbox for the verification link.",
+                )
 
             expires_at = int(
                 (datetime.utcnow() + timedelta(seconds=expires_in)).timestamp() * 1000
@@ -240,16 +250,14 @@ async def register(data: RegisterInputSchema, db: AsyncSession = Depends(get_db)
             auth0_sub=f"auth0|mock-{data.email.split('@')[0]}",
             email=data.email,
             name=data.name,
+            role=determine_user_role(data.email),
             email_verified=False,
         )
-        token = (
-            f"mock-auth0|{user.auth0_sub};{user.email};{user.name};{user.avatar_url}"
-        )
-        expires_at = int((datetime.utcnow() + timedelta(days=7)).timestamp() * 1000)
         return SessionSchema(
-            token=token,
+            token=None,
             user=UserProfileSchema.from_orm_model(user),
-            expiresAt=expires_at,
+            expiresAt=None,
+            message="Registration succeeded! Please check your email to verify your account, then sign in.",
         )
 
     # Real Auth0 DB signup flow
@@ -277,7 +285,7 @@ async def register(data: RegisterInputSchema, db: AsyncSession = Depends(get_db)
                     print(f"[AUTH0 SIGNUP PARSE ERROR] {e}")
                 raise HTTPException(status_code=resp.status_code, detail=detail)
 
-            # Sync the created user immediately to our local PostgreSQL database
+            # Sync the created user immediately to our local PostgreSQL database with email_verified=False
             resp_data = resp.json()
             auth0_id = resp_data.get("_id") or resp_data.get("id") or ""
             auth0_sub = (
@@ -291,60 +299,66 @@ async def register(data: RegisterInputSchema, db: AsyncSession = Depends(get_db)
                     auth0_sub=auth0_sub,
                     email=data.email,
                     name=data.name,
+                    role=determine_user_role(data.email),
                     email_verified=False,
                 )
 
-            # Attempt auto-login
-            login_url = f"https://{settings.auth0_domain}/oauth/token"
-            login_payload = {
-                "grant_type": "http://auth0.com/oauth/grant-type/password-realm",
-                "username": data.email,
-                "password": data.password,
-                "audience": settings.auth0_api_audience,
-                "scope": "openid profile email",
-                "client_id": settings.auth0_client_id,
-                "client_secret": settings.auth0_client_secret,
-                "realm": settings.auth0_connection,
-            }
-
-            try:
-                login_resp = await client.post(login_url, json=login_payload)
-                if login_resp.status_code != 200:
-                    print(
-                        f"[AUTH0 REGISTRATION AUTO-LOGIN FAILED] Status: {login_resp.status_code}, Payload: {login_resp.text}"
-                    )
-                    return SessionSchema(
-                        token=None,
-                        user=UserProfileSchema.from_orm_model(user),
-                        expiresAt=None,
-                        message="Registration succeeded! Please check your email to verify your account, then sign in.",
-                    )
-
-                login_data = login_resp.json()
-                access_token = login_data["access_token"]
-                expires_in = login_data.get("expires_in", 86400)
-
-                from utils.auth import get_current_user
-
-                user = await get_current_user(token=access_token, db=db)
-
-                expires_at = int(
-                    (datetime.utcnow() + timedelta(seconds=expires_in)).timestamp()
-                    * 1000
-                )
-                return SessionSchema(
-                    token=access_token,
-                    user=UserProfileSchema.from_orm_model(user),
-                    expiresAt=expires_at,
-                    message="Success",
-                )
-            except Exception as e:
-                print(f"[AUTH0 REGISTRATION AUTO-LOGIN EXCEPTION] {e}")
-                return SessionSchema(
-                    token=None,
-                    user=UserProfileSchema.from_orm_model(user),
-                    expiresAt=None,
-                    message="Registration succeeded! Please check your email to verify your account, then sign in.",
-                )
+            return SessionSchema(
+                token=None,
+                user=UserProfileSchema.from_orm_model(user),
+                expiresAt=None,
+                message="Registration succeeded! Please check your email to verify your account, then sign in.",
+            )
     except httpx.HTTPError as e:
         raise HTTPException(status_code=500, detail=f"Auth0 service error: {str(e)}")
+
+
+class ResendVerificationInputSchema(BaseModel):
+    email: str
+
+
+@router.post("/api/auth/resend-verification")
+async def resend_verification(
+    data: ResendVerificationInputSchema, db: AsyncSession = Depends(get_db)
+):
+    """Resend Auth0 email verification link."""
+    repo = UserRepository(db)
+    user = await repo.get_by_email(data.email)
+    if not user:
+        return {
+            "message": "If an account exists with this email, a verification link has been sent."
+        }
+
+    if user.email_verified:
+        return {"message": "Email is already verified. You can sign in."}
+
+    if (
+        settings.auth0_domain
+        and settings.auth0_client_id
+        and settings.auth0_client_secret
+    ):
+        try:
+            # Fetch Auth0 Management API token
+            token_url = f"https://{settings.auth0_domain}/oauth/token"
+            token_payload = {
+                "grant_type": "client_credentials",
+                "client_id": settings.auth0_client_id,
+                "client_secret": settings.auth0_client_secret,
+                "audience": f"https://{settings.auth0_domain}/api/v2/",
+            }
+            async with httpx.AsyncClient() as client:
+                token_resp = await client.post(token_url, json=token_payload)
+                if token_resp.status_code == 200:
+                    mgmt_token = token_resp.json().get("access_token")
+                    job_url = f"https://{settings.auth0_domain}/api/v2/jobs/verification-email"
+                    await client.post(
+                        job_url,
+                        json={"user_id": user.auth0_sub},
+                        headers={"Authorization": f"Bearer {mgmt_token}"},
+                    )
+        except Exception as e:
+            print(f"[AUTH0 RESEND VERIFICATION ERROR] {e}")
+
+    return {
+        "message": "If an account exists with this email, a verification link has been sent."
+    }

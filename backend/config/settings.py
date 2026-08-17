@@ -1,8 +1,28 @@
 from pathlib import Path
 
+import yaml
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def get_default_admin_emails() -> list[str]:
+    """Read admin emails list from config/config.yml if available."""
+    config_path = BASE_DIR / "config" / "config.yml"
+    if config_path.exists():
+        try:
+            with open(config_path, "r") as f:
+                data = yaml.safe_load(f) or {}
+                emails = data.get("admin_config", {}).get("admin_emails")
+                if emails and isinstance(emails, list):
+                    return emails
+        except Exception:
+            pass
+    return [
+        "admin@luckylinux.dev",
+        "luckyverma.dev@gmail.com",
+    ]
 
 
 class Settings(BaseSettings):
@@ -38,6 +58,9 @@ class Settings(BaseSettings):
     auth0_client_id: str = ""
     auth0_client_secret: str = ""
     auth0_connection: str = "Username-Password-Authentication"
+
+    # Admin Settings
+    admin_emails: list[str] = Field(default_factory=get_default_admin_emails)
 
     # Cloudflare R2 resume storage (S3-compatible API)
     r2_account_id: str | None = None

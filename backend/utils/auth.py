@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config.settings import settings
+from config.settings import get_default_admin_emails, settings
 from database.models.user import User
 from database.repositories.user_repository import UserRepository
 from database.session import get_db
@@ -101,6 +101,16 @@ async def verify_auth0_token(token: str) -> dict:
         raise credentials_exception
 
 
+def determine_user_role(email: str | None) -> str:
+    """Determine if a user should have 'admin' or 'user' role based on configuration."""
+    if not email:
+        return "user"
+    clean_email = email.strip().lower()
+    admin_list = {e.strip().lower() for e in (settings.admin_emails or [])}
+    admin_list.update(e.strip().lower() for e in get_default_admin_emails())
+    return "admin" if clean_email in admin_list else "user"
+
+
 async def get_current_user(
     token: str | None = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
@@ -155,6 +165,8 @@ async def get_current_user(
     if not name:
         name = email.split("@")[0]
 
+    expected_role = determine_user_role(email)
+
     repo = UserRepository(db)
     user = await repo.get_by_auth0_sub(sub)
     if not user:
@@ -162,13 +174,15 @@ async def get_current_user(
         user = await repo.get_by_email(email)
         if user:
             # Sync Auth0 sub to match the existing email account
-            user = await repo.update(
-                user,
-                auth0_sub=sub,
-                name=name or user.name,
-                avatar_url=picture or user.avatar_url,
-                email_verified=email_verified,
-            )
+            update_kwargs = {
+                "auth0_sub": sub,
+                "name": name or user.name,
+                "avatar_url": picture or user.avatar_url,
+                "email_verified": email_verified,
+            }
+            if expected_role == "admin" and user.role != "admin":
+                update_kwargs["role"] = "admin"
+            user = await repo.update(user, **update_kwargs)
         else:
             # Auto-register user in our local database
             user = await repo.create(
@@ -176,6 +190,7 @@ async def get_current_user(
                 email=email,
                 name=name,
                 avatar_url=picture,
+                role=expected_role,
                 email_verified=email_verified,
             )
     else:
@@ -196,8 +211,26 @@ async def get_current_user(
         )
         if is_real_email and user.email != email:
             update_data["email"] = email
+            new_role = determine_user_role(email)
+            if new_role != user.role:
+                update_data["role"] = new_role
+        elif expected_role == "admin" and user.role != "admin":
+            update_data["role"] = "admin"
 
         if update_data:
             user = await repo.update(user, **update_data)
 
+    return user
+
+
+async def require_admin(user: User = Depends(get_current_user)) -> User:
+    """
+    FastAPI dependency that enforces admin role access.
+    Raises 403 Forbidden if the authenticated user is not an admin.
+    """
+    if user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required",
+        )
     return user

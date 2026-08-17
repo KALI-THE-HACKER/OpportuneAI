@@ -15,8 +15,8 @@ export type LoadingVariant =
 /* ──────────────────────────────────────────────────────────────
    Shared shimmer block helper
 ────────────────────────────────────────────────────────────── */
-function Sh({ className = "" }: { className?: string }) {
-  return <div className={`skeleton-shimmer rounded-md ${className}`} />;
+function Sh({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
+  return <div className={`skeleton-shimmer rounded-md ${className}`} style={style} />;
 }
 
 /* ──────────────────────────────────────────────────────────────

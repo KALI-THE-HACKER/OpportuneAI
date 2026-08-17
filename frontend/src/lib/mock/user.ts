@@ -2,6 +2,7 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
+  role?: "admin" | "user";
   title: string;
   location: string;
   avatarUrl?: string;
@@ -19,6 +20,7 @@ export const MOCK_USER: UserProfile = {
   id: "user-1",
   name: "Alex Chen",
   email: "alex@example.com",
+  role: "user",
   title: "Senior Product Designer",
   location: "New York, NY",
   bio: "Designer-engineer hybrid focused on tools for technical teams. 8 years shipping design systems, AI products, and developer infrastructure.",

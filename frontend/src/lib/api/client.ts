@@ -35,8 +35,7 @@ export function setApiAuthToken(token: string | null) {
 // Local development (including a local production preview) runs FastAPI on
 // port 8000. Deployments must set VITE_API_URL to their public API origin.
 // Using an empty production fallback would send `/api/*` back to the frontend
-// server, so the backend would never see an upload request.
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const BASE_URL = import.meta.env.VITE_API_URL || "";
 
 export async function apiCall<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers || {});
