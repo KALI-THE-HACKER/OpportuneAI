@@ -235,7 +235,7 @@ function LandingPage() {
           >
             <div>
               <img
-                src="https://cdn.luckylinux.dev/opportuneai-assets/card-2-astro-image.mp4"
+                src="https://cdn.luckylinux.dev/opportuneai-assets/card-2-astro-image.webp"
                 alt="AI-Ranked Matches Icon"
                 className="w-10 h-10 sm:w-12 sm:h-12 rounded object-cover mb-6"
               />
@@ -279,7 +279,7 @@ function LandingPage() {
           >
             <div>
               <img
-                src="https://cdn.luckylinux.dev/opportuneai-assets/card-3-astro-image.mp4"
+                src="https://cdn.luckylinux.dev/opportuneai-assets/card-3-astro-image.webp"
                 alt="Skill-Gap Analytics Icon"
                 className="w-10 h-10 sm:w-12 sm:h-12 rounded object-cover mb-6"
               />
@@ -323,7 +323,7 @@ function LandingPage() {
           >
             <div>
               <img
-                src="https://cdn.luckylinux.dev/opportuneai-assets/card-4-astro-image.mp4"
+                src="https://cdn.luckylinux.dev/opportuneai-assets/card-4-astro-image.webp"
                 alt="Application Tracker Icon"
                 className="w-10 h-10 sm:w-12 sm:h-12 rounded object-cover mb-6"
               />
