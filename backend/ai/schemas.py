@@ -2,14 +2,22 @@ from pydantic import BaseModel, Field
 
 
 class JobExtraction(BaseModel):
-    job_title: str
-    company: str
-    skills: list[str]
-    location: str
+    data_sufficient: bool = Field(
+        default=True,
+        description="False if key fields (title, company, job_description) cannot be determined from the input.",
+    )
+    failure_reason: str | None = Field(
+        default=None,
+        description="Short human-readable explanation of why data is insufficient. Populate only when data_sufficient=false.",
+    )
+    job_title: str = Field(default="")
+    company: str = Field(default="")
+    skills: list[str] = Field(default_factory=list)
+    location: str = Field(default="")
     salary: str | None = None
-    experience_years: int | None
-    employment_type: str | None
-    job_description: str
+    experience_years: int | None = None
+    employment_type: str | None = None
+    job_description: str = Field(default="")
 
 
 class ResumeExtraction(BaseModel):

@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Any
 
-from ai.extraction.extractor import JobExtractor
+from ai.extraction.extractor import InsufficientJobDataError, JobExtractor
 from ai.providers.factory import get_llm
 from database.models.raw_job import ProcessingStatus, RawJob
 from database.repositories.processed_job_repository import ProcessedJobRepository
@@ -43,6 +43,17 @@ async def _process_raw_job(raw_job_id: Any) -> None:
             raw_job.processing_status = ProcessingStatus.PROCESSED
             await db.commit()
             logger.info("Successfully processed raw job %s", raw_job_id)
+
+        except InsufficientJobDataError as e:
+            # LLM explicitly flagged missing critical data — mark FAILED cleanly.
+            logger.warning(
+                "RawJob %s marked FAILED — insufficient data: %s",
+                raw_job_id,
+                e.reason,
+            )
+            await db.rollback()
+            raw_job.processing_status = ProcessingStatus.FAILED
+            await db.commit()
 
         except Exception as e:
             logger.error(

@@ -93,7 +93,7 @@ class LinkedInProvider(BaseProvider):
                     job.get("date_posted", ""),
                     job.get("location", ""),
                 ),
-                raw_payload=job.get("description"),
+                raw_payload={"description": job.get("description") or ""},
             )
             for job in jobs
         ]
