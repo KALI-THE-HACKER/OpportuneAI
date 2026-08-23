@@ -44,37 +44,44 @@ flowchart TD
         AI_WORKER["AI Background Worker"]
         GEMINI_POOL["Gemini Client Pool\n(Key Cycling & Cooldowns)"]
         GEMINI["Gemini 2.5 Flash LLM"]
-        PROCESSED[("PostgreSQL\nprocessed_jobs")]
+        EMBED_GEN["Gemini Embeddings\n(models/gemini-embedding-001)"]
+        PROCESSED[("PostgreSQL\nprocessed_jobs + pgvector")]
 
         RAW --> RQ_AI --> AI_WORKER
         AI_WORKER --> GEMINI_POOL --> GEMINI
         GEMINI -->|"Structured Metadata"| PROCESSED
+        AI_WORKER --> EMBED_GEN -->|"Vector(768)"| PROCESSED
     end
 
     %% 3. Candidate Profile & Resume Engine
-    subgraph S3 ["3. Candidate Profile & Resume Intelligence"]
+    subgraph S3 ["3. Candidate Profile & User Embeddings"]
         direction TB
         RESUME_IN["Resume PDF Upload"]
         R2_STORE[("Cloudflare R2\nPrivate Storage")]
         RESUME_WORKER["Resume AI Worker"]
-        USER_PROFILE[("PostgreSQL\nusers profile")]
+        USER_PROFILE[("PostgreSQL\nusers profile + pgvector")]
+        USER_EMBED["User Preference Vector\n(Profile + Resume Skills)"]
 
         RESUME_IN --> R2_STORE
         RESUME_IN --> RESUME_WORKER --> GEMINI_POOL
         RESUME_WORKER -->|"Extracted Skills"| USER_PROFILE
+        USER_PROFILE --> USER_EMBED -->|"Vector(768)"| USER_PROFILE
     end
 
-    %% 4. Feed & Scoring Engine
-    subgraph S4 ["4. ML Match Scoring & Feed Generation"]
+    %% 4. Hybrid Feed & Scoring Engine
+    subgraph S4 ["4. Two-Stage Hybrid Recommendation Engine"]
         direction TB
-        SCORING["Weighted Match Scorer\n(Skills 35%, Roles 30%, Loc 15%, Exp 10%, Type 10%)"]
+        STAGE1["Stage 1: Semantic Candidate Retrieval\n(pgvector Cosine Distance, Top 200)"]
+        STAGE2["Stage 2: Structured Reranking\n(ScoringEngine: Skills, Roles, Loc, Exp)"]
+        HYBRID_SCORE["Hybrid Combiner\n(40% Semantic + 60% Structured)"]
         REDIS_CACHE[("Redis Feed Cache\nfeed:user:id (1h TTL)")]
         FEED_API["FastAPI Feed Router"]
 
-        PROCESSED & USER_PROFILE --> SCORING
-        SCORING -->|"Ranked Job IDs"| REDIS_CACHE
+        USER_PROFILE & PROCESSED --> STAGE1
+        STAGE1 --> STAGE2 --> HYBRID_SCORE
+        HYBRID_SCORE -->|"Ranked Job IDs"| REDIS_CACHE
         REDIS_CACHE -->|"Ordered Slice"| FEED_API
-        FEED_API -->|"Batch Fetch"| PROCESSED
+        FEED_API -->|"Single Batch Fetch"| PROCESSED
     end
 
     %% 5. User Interaction & Notifications
@@ -100,41 +107,67 @@ flowchart TD
 
 ---
 
-## 🧠 Job Ranking & Feed Generation Logic
+## 🧠 Two-Stage Hybrid Job Recommendation Engine
 
-The personalized feed generation pipeline (`backend/services/scoring.py` and `backend/services/feed_service.py`) calculates match compatibility between candidate profiles and processed jobs using a weighted multi-factor scoring algorithm.
+The personalized recommendation system (`backend/ai/embeddings/`, `backend/services/scoring.py`, and `backend/services/feed_service.py`) combines dense vector semantic candidate retrieval with deterministic structured reranking.
 
-### 1. Weighted Scoring Model
-Each job is evaluated against the candidate's preferences across 5 weighted dimensions:
+```
+Candidate Profile / Resume
+           ↓
+Canonical User Preference Text
+           ↓
+Google Gemini Embeddings (768-dim)
+           ↓
+[Stage 1] pgvector Cosine Distance Retrieval (Top 200 unexpired jobs)
+           ↓
+[Stage 2] Deterministic ScoringEngine Reranking (Skills, Roles, Loc, Mode, Exp)
+           ↓
+Hybrid Final Score = 0.40 × (Semantic × 100) + 0.60 × Structured Score
+           ↓
+Ranked Job IDs cached in Redis (feed:user:{id}, 1h TTL)
+           ↓
+1 Batch PostgreSQL Query (WHERE id IN (...)) for paginated page delivery
+```
+
+### 1. Stage 1 — Semantic Candidate Retrieval (pgvector)
+- **Precomputed Job Embeddings**: During job ingestion (`ai_worker.py`), a canonical representation (Title, Company, Skills, Location, Work Mode, Employment Type, Experience, Description) is embedded once via Google Gemini (`models/gemini-embedding-001`, dim 768) and persisted in PostgreSQL `processed_jobs.embedding`.
+- **Dynamic User Preference Vectors**: Generated from profile skills, resume-extracted skills, preferred roles, target locations, and seniority.
+- **Database-Side Vector Search**: Computes cosine distance directly in PostgreSQL using pgvector `<=>` operator over unexpired listings:
+  ```sql
+  SELECT * FROM processed_jobs 
+  WHERE embedding IS NOT NULL AND (last_date_to_apply IS NULL OR last_date_to_apply >= NOW())
+  ORDER BY embedding <=> :user_embedding 
+  LIMIT 200;
+  ```
+
+### 2. Stage 2 — Structured Reranking (`ScoringEngine`)
+Candidates from Stage 1 are reranked against explicit user constraints across 5 dimensions:
 
 | Dimension | Weight | Evaluation Method |
 | :--- | :---: | :--- |
 | **Technical Skills** | **35%** | Variable-length normalized intersection between candidate proficiencies and required job skills. |
-| **Target Roles** | **30%** | Substring / keyword fuzzy matching between user preferred titles and job title. |
+| **Target Roles** | **30%** | Substring / token fuzzy matching between preferred roles and job title. |
 | **Location & Work Mode** | **15%** | Preferred cities matching + work style alignment (`remote`, `hybrid`, `onsite`). |
 | **Experience & Seniority** | **10%** | Experience level comparison (`entry`, `mid`, `senior`, `lead`) with numeric year tolerances. |
 | **Employment Type** | **10%** | Match on contract/full-time/internship preferences. |
 
-### 2. Variable-Length Skill Overlap Normalization
-To prevent large skill lists from dominating and fairly reward dense relevance, the skill similarity score uses geometric mean normalization with a scaling factor:
+### 3. Hybrid Score Combination
+Semantic relevance and explicit preference alignment are combined using centralized, configurable weights:
 
-$$\text{Skill Score} = \min\left(1.0, \frac{|S_{\text{candidate}} \cap S_{\text{job}}|}{\sqrt{|S_{\text{candidate}}| \times |S_{\text{job}}|}} \times 1.25\right)$$
+$$\text{Final Score} = 0.40 \times (\text{Cosine Similarity} \times 100) + 0.60 \times \text{Structured Score}$$
 
-- Exact and case-insensitive canonical tokens are reconciled against standard technical vocabularies.
-- Soft buzzwords and generic office tools are excluded from the denominator.
+### 4. Cold-Start Fallback Ranking
+For users without sufficient profile or resume data:
+- System bypasses semantic candidate retrieval and falls back to deterministic quality scoring based on recency, salary transparency, and completeness.
 
-### 3. Cold-Start Fallback Ranking
-For users without explicit skill lists or newly registered profiles:
-- System transitions to a recency-weighted completeness fallback.
-- Computes rank scores based on posting freshness, salary transparency, and description completeness.
-
-### 4. Feed Caching & Two-Tier Invalidation (Redis + PostgreSQL)
-1. **Redis Ranking Cache**: High-scoring candidate feeds are computed once and stored in Redis under `feed:user:{user_id}` (1-hour TTL) as ordered lists of job IDs.
-2. **Order-Preserving Batch Queries**: Pagination reads job IDs from Redis (`ZRANGE` / sliced list), and retrieves full job payloads from PostgreSQL with a single `WHERE id IN (...)` query, re-sorted in-memory to preserve rank sequence.
-3. **Event-Driven Cache Invalidation**: The feed cache is automatically cleared and recalculated when:
-   - Candidate updates profile skills or target preferences (`PUT /api/users/me`).
-   - Resume AI extraction completes (`resume_worker.py`).
-   - Candidate performs interaction events (`save`, `unsave`, `apply`, `dismiss`, `not_interested` via `POST /api/v1/events/jobs`).
+### 5. Feed Caching & Invalidation (Redis + PostgreSQL)
+1. **Redis Ranking Cache**: Ranked job ID arrays are cached under `feed:user:{user_id}` (1-hour TTL).
+2. **Order-Preserving Batch Queries**: Pagination slices job IDs from Redis and retrieves full job records in **1 single batch query** (`WHERE id IN (...)`), re-sorted in-memory to preserve rank order. Zero N+1 queries.
+3. **Event-Driven Invalidation**: Feed cache is cleared and preference vector refreshed on:
+   - Profile preference edits (`PUT /api/users/me`).
+   - Resume AI parse completion (`resume_worker.py`).
+   - Resume deletion (`DELETE /api/resume`).
+   - Significant interaction events (`save`, `unsave`, `apply`, `dismiss`, `not_interested`).
 
 ---
 
@@ -156,6 +189,7 @@ For users without explicit skill lists or newly registered profiles:
 OpportuneAI/
 ├── backend/
 │   ├── ai/                      # Gemini LLM extractors, prompt templates & client pools
+│   │   ├── embeddings/          # Vector embedding service & canonical text builders
 │   │   ├── extraction/          # Job & resume parsing prompts
 │   │   ├── pools/               # Thread-safe multi-key Gemini pooling
 │   │   └── schemas.py           # Pydantic extraction output schemas
@@ -165,13 +199,13 @@ OpportuneAI/
 │   │   ├── repositories/        # Database CRUD encapsulation classes
 │   │   └── seed.py              # Realistic sample data seed generator
 │   ├── ingestion/               # Scraping orchestrator & deduplication pipeline
-│   ├── migrations/              # Alembic database migration revisions
+│   ├── migrations/              # Alembic database migration revisions (incl. pgvector)
 │   ├── providers/               # Platform adapter interfaces (LinkedIn, Naukri, Wellfound, RemoteOK)
 │   ├── routes/                  # FastAPI routers (auth, feed, jobs, events, notifications, resume, admin)
-│   ├── services/                # Feed service & deterministic scoring engine
+│   ├── services/                # Feed service, ScoringEngine, UserEmbeddingService & backfill
 │   ├── storage/                 # Cloudflare R2 S3-compatible client wrappers
 │   ├── workers/                 # Background RQ worker consumers (ai_worker, resume_worker)
-│   └── tests/                   # Complete pytest suite (unit, integration, API)
+│   └── tests/                   # Complete pytest suite (unit, integration, API, embeddings)
 ├── frontend/
 │   ├── src/
 │   │   ├── components/          # UI primitives (JobCard, StatCard, SearchCombobox, Layouts)
@@ -191,10 +225,10 @@ OpportuneAI/
 
 ### Backend
 - **Language & Framework**: Python 3.11+, FastAPI, Uvicorn
-- **ORM & Migrations**: SQLAlchemy 2.0 (asyncio + asyncpg), Alembic
+- **ORM & Database**: PostgreSQL 17, pgvector extension, SQLAlchemy 2.0 (asyncio + asyncpg), Alembic
 - **Background Tasks**: Redis, Python RQ (Redis Queue)
-- **AI & LLM**: Google Gemini (`gemini-2.5-flash`), LangChain, OpenRouter
-- **Storage**: PostgreSQL, Redis, Cloudflare R2 (`boto3`)
+- **AI & Embeddings**: Google Gemini (`gemini-2.5-flash`, `models/gemini-embedding-001`), LangChain, OpenRouter
+- **Storage**: PostgreSQL + pgvector, Redis, Cloudflare R2 (`boto3`)
 - **Scraping**: Firecrawl API, `undetected-chromedriver`, Selenium, BeautifulSoup4
 
 ### Frontend
@@ -210,7 +244,7 @@ OpportuneAI/
 ### 1. Prerequisites
 - **Python 3.11+**
 - **Node.js 20+** & **npm**
-- **PostgreSQL 15+**
+- **PostgreSQL 15+** with **pgvector**
 - **Redis 7+**
 - **Google Chrome** (for undetected-chromedriver crawler)
 
@@ -241,17 +275,22 @@ OpportuneAI/
    alembic upgrade head
    ```
 
-5. **(Optional) Seed demo jobs**:
+5. **(Optional) Backfill embeddings for existing jobs**:
+   ```bash
+   python -m services.backfill_embeddings
+   ```
+
+6. **(Optional) Seed demo jobs**:
    ```bash
    python database/seed.py
    ```
 
-6. **Start the FastAPI backend server**:
+7. **Start the FastAPI backend server**:
    ```bash
    uvicorn app:app --reload --port 8000
    ```
 
-7. **Start background workers (in separate terminal tabs)**:
+8. **Start background workers (in separate terminal tabs)**:
    ```bash
    # AI Job Processing Worker
    rq worker ai-processing
