@@ -118,6 +118,9 @@ async def test_auth_and_profile_sync(dispose_db_engine):
         assert register_res.user.role == "user"
 
         # 7. Test admin role determination for configured admin emails
+        original_admin_emails = settings.admin_emails
+        settings.admin_emails = ["admin@opportuneai.com"]
+
         admin_mock_token = "mock-auth0|admin-sub-1;admin@opportuneai.com;Admin User;https://example.com/admin.jpg"
         admin_user = await get_current_user(token=admin_mock_token, db=db)
         assert admin_user.role == "admin"
@@ -135,5 +138,7 @@ async def test_auth_and_profile_sync(dispose_db_engine):
         # Clean up database test record
         await db.delete(db_user_after)
         await db.commit()
+
+        settings.admin_emails = original_admin_emails
 
     settings.auth0_client_id = original_client_id

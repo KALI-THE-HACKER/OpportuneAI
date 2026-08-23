@@ -17,6 +17,7 @@ import asyncio
 
 from ai.extraction.resume_extractor import ResumeExtractor
 from ai.providers.factory import get_llm
+from database.repositories.activity_repository import ActivityRepository
 from database.repositories.user_repository import UserRepository
 from database.session import AsyncSessionLocal
 from utils.logging_config import configure_logging, get_feature_logger
@@ -53,6 +54,29 @@ async def _process_resume(user_id: int) -> None:
                 years_total=result.years_total or None,
                 confidence=result.confidence or None,
             )
+
+            try:
+                activity_repo = ActivityRepository(db)
+                conf_pct = int((result.confidence or 0.85) * 100)
+                level_str = (
+                    f" ({result.experience_level})" if result.experience_level else ""
+                )
+                await activity_repo.create(
+                    user_id=user_id,
+                    activity_type="resume",
+                    title="Resume analysis complete",
+                    body=f"Profile updated with {len(result.skills)} skills extracted{level_str} at {conf_pct}% confidence.",
+                )
+            except Exception:
+                pass
+
+            try:
+                from services.feed_service import FeedService
+
+                FeedService(db).invalidate_feed(user_id)
+            except Exception:
+                pass
+
             logger.info(
                 "Resume processed for user %s: %d skills, level=%s, years=%s, confidence=%.2f",
                 user_id,

@@ -65,8 +65,11 @@ function JobExplorer() {
   }
 
   async function toggleSave(id: string) {
-    await jobsApi.toggleSave(id);
+    await jobsApi.toggleSave(id, "search");
     qc.invalidateQueries({ queryKey: ["jobs"] });
+    qc.invalidateQueries({ queryKey: ["feed"] });
+    qc.invalidateQueries({ queryKey: ["saved"] });
+    qc.invalidateQueries({ queryKey: ["notifications"] });
   }
 
   const totalPages = query.data

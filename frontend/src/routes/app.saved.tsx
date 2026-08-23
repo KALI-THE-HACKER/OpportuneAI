@@ -16,8 +16,10 @@ function SavedPage() {
   const q = useQuery({ queryKey: ["saved"], queryFn: () => jobsApi.saved() });
 
   async function toggleSave(id: string) {
-    await jobsApi.toggleSave(id);
+    await jobsApi.toggleSave(id, "feed");
     qc.invalidateQueries({ queryKey: ["saved"] });
+    qc.invalidateQueries({ queryKey: ["feed"] });
+    qc.invalidateQueries({ queryKey: ["notifications"] });
   }
 
   return (

@@ -21,7 +21,7 @@ export interface Job {
   matchScore: number;
   missingSkills: string[];
   matchedSkills: string[];
-  aiExplanation: string;
+  aiExplanation?: string;
   experienceLevel: "Entry" | "Mid" | "Senior" | "Lead" | "Principal";
   saved?: boolean;
 }

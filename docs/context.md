@@ -43,12 +43,13 @@ The application runs a divided architecture:
 - Blocking `<head>` theme script preventing flash-of-unstyled-content (FOUC) on page reload.
 - Full 12-column responsive Profile view pairing the Identity/Preferences form with Experience & Seniority and live `ResumeInsights`.
 - Role-based Access Control (RBAC): database `role` column (`admin` | `user`), YAML-driven `admin_config.admin_emails` in `config.yml` (plus env fallback), `require_admin` FastAPI dependency (HTTP 403 Forbidden for non-admins), protected `/api/admin/*` endpoints, and dynamic frontend protection (sidebar navigation filtering, dashboard pipeline widget guarding, and `/app/admin` route access denial).
+- Personalized Job Feed v1: Deterministic scoring engine with centralized weights (Skills 35%, Roles 30%, Location 15%, Work Mode 10%, Experience 10%), variable-length skill overlap normalization, cold-start fallback ranking, Redis feed cache (`feed:user:{id}` with 1-hour TTL), single batch PostgreSQL queries with ranking order preservation, cursor pagination, feed invalidation on profile/resume/event mutations, and complete frontend integration for Dashboard, Recommendations, Job Explorer, and Job Details.
+- Real Activity & Notification System: PostgreSQL `user_activities` table, `ActivityRepository`, `/api/notifications` routes mounted in FastAPI, event hooks on job save/apply (`/api/v1/events/jobs`), resume upload and AI parsing, profile updates, and dynamic frontend Dashboard widget, Notifications page with filter tabs, and navbar unread sync.
 
 ### Remaining
-- FastAPI routers for job lists, detail queries, recommendations, saves, and application endpoints.
 - Ingestion scheduler system to automate scraper execution.
-- Match score recalculation tasks triggered upon user profile updates.
-- Real REST backend integration within the remaining frontend API client modules.
+- Advanced behavioral learning and ML reranking.
+- Real REST backend integration for admin stats and application management.
 
 ---
 

@@ -1,18 +1,19 @@
-import { delay } from "./client";
-import { MOCK_NOTIFICATIONS, type NotificationItem } from "../mock/user";
-
-let items = [...MOCK_NOTIFICATIONS];
+import { apiCall } from "./client";
+import type { NotificationItem } from "../mock/user";
 
 export const notificationsApi = {
   async list(): Promise<NotificationItem[]> {
-    return delay(items);
+    return apiCall<NotificationItem[]>("/api/notifications");
   },
   async markRead(id: string): Promise<void> {
-    items = items.map((n) => (n.id === id ? { ...n, read: true } : n));
-    return delay(undefined, 100);
+    await apiCall<{ success: boolean }>(`/api/notifications/${id}/read`, {
+      method: "POST",
+    });
   },
   async markAllRead(): Promise<void> {
-    items = items.map((n) => ({ ...n, read: true }));
-    return delay(undefined, 150);
+    await apiCall<{ updated: number }>("/api/notifications/read-all", {
+      method: "POST",
+    });
   },
 };
+

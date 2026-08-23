@@ -1,8 +1,12 @@
+import os
+import sys
+
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 from config.settings import settings
 
@@ -14,14 +18,24 @@ if (
 ):
     connect_args["statement_cache_size"] = 0
 
-engine = create_async_engine(
-    settings.database_url,
-    echo=False,
-    pool_size=20,
-    max_overflow=10,
-    pool_pre_ping=True,
-    connect_args=connect_args,
-)
+is_testing = "pytest" in sys.modules or os.getenv("TESTING") == "1"
+
+if is_testing:
+    engine = create_async_engine(
+        settings.database_url,
+        echo=False,
+        poolclass=NullPool,
+        connect_args=connect_args,
+    )
+else:
+    engine = create_async_engine(
+        settings.database_url,
+        echo=False,
+        pool_size=20,
+        max_overflow=10,
+        pool_pre_ping=True,
+        connect_args=connect_args,
+    )
 
 AsyncSessionLocal = async_sessionmaker(
     engine,

@@ -15,3 +15,20 @@ export function timeAgo(iso: string): string {
   const mo = Math.floor(d / 30);
   return `${mo}mo ago`;
 }
+
+export function formatApplyDeadline(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (isNaN(date.getTime())) return null;
+
+  const now = new Date();
+  const diffMs = date.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return "Expired";
+  if (diffDays === 0) return "Apply today";
+  if (diffDays === 1) return "Apply by tomorrow";
+  if (diffDays <= 7) return `Apply in ${diffDays}d`;
+
+  return `Apply by ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+}

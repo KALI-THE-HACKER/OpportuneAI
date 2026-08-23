@@ -127,36 +127,62 @@
 
 ---
 
+### 9. Personalized Job Feed & Scoring Engine (v1)
+**Backend** (`backend/services/scoring.py`, `backend/services/feed_service.py`, `backend/routes/feed.py`, `backend/database/repositories/processed_job_repository.py`):
+- Deterministic scoring engine with centralized weights: Skills (35%), Roles (30%), Location/Work Mode (15%), Experience (10%), Employment Type (10%).
+- Variable-length skill overlap normalization (`overlap / sqrt(len(job_skills) * len(user_skills)) * 1.25`) to prevent large skill lists from dominating.
+- Cold start fallback ranking based on recency and metadata completeness.
+- Job eligibility and expiry filtering directly using `processed_jobs.last_date_to_apply`.
+- Redis feed cache key `feed:user:{id}` with 1-hour TTL storing ranked job IDs.
+- Single-query batch PostgreSQL job fetching (`WHERE id IN (...)`) preserving Redis rank order in-memory.
+- Automatic feed cache invalidation on profile updates (`PUT /api/users/me`), resume extraction completion, resume deletion, and significant interaction events (`save`, `unsave`, `apply`, `dismiss`, `not_interested`).
+- Database seed mechanism (`backend/database/seed.py`) with 12 diverse, realistic job postings.
+- Endpoints: `GET /api/feed` (cursor-paginated) and `GET /api/jobs/{job_id}` (individual job detail).
+
+**Frontend** (`frontend/src/lib/api/jobs.ts`, `frontend/src/routes/app.dashboard.tsx`, `frontend/src/routes/app.recommendations.tsx`, `frontend/src/routes/app.jobs.index.tsx`, `frontend/src/routes/app.jobs.$jobId.tsx`):
+- Real backend API integration via `jobsApi.feed()`, `jobsApi.get()`, `jobsApi.recommendations()`, and `jobsApi.list()`.
+- Coordinated TanStack Query cache keys (`["feed", { limit: 4 }]` for Dashboard, `["feed", { limit: 12 }]` for Recommendations).
+- Interaction tracking wired to `POST /api/v1/events/jobs` with automatic cache invalidation.
+
+**Status**: ✅ Complete with unit and integration tests
+
+---
+
+### 10. Real User Activity & Notification System
+**Backend** (`backend/database/models/activity.py`, `backend/database/repositories/activity_repository.py`, `backend/routes/notifications.py`, `backend/routes/events.py`, `backend/routes/resume.py`, `backend/workers/resume_worker.py`, `backend/routes/auth.py`):
+- `user_activities` table in PostgreSQL mapped to `UserActivity` model.
+- `ActivityRepository` handling creation, listing per user, single item mark-as-read, and mark-all-as-read.
+- Endpoints: `GET /api/notifications`, `POST /api/notifications/{activity_id}/read`, `POST /api/notifications/read-all`.
+- Automatic activity generation on:
+  - Job bookmarks/saves (`activity_type="save"`)
+  - Applications submitted (`activity_type="application"`)
+  - Resume upload and AI extraction completion (`activity_type="resume"`)
+  - Profile preference updates (`activity_type="system"`)
+- 3 unit/integration tests in `backend/tests/test_notifications.py`.
+
+**Frontend** (`frontend/src/lib/api/notifications.ts`, `frontend/src/routes/app.dashboard.tsx`, `frontend/src/routes/app.notifications.tsx`, `frontend/src/components/layouts/app-layout.tsx`):
+- Live `notificationsApi` backed by `apiCall`.
+- Dashboard "Recent activity" widget upgraded with rich color-coded category badges (`Send`, `Bookmark`, `Sparkles`, `Zap`, `Bell`), relative timestamps, and empty state.
+- Notifications page with "All" and "Unread" filter tabs, mark-as-read actions, and empty states.
+- AppLayout navbar Bell icon and sidebar navigation badge dynamically synced to unread notification count.
+
+**Status**: ✅ Complete with tests and production build verification
+
+---
+
 ## In Progress
 
 ### 1. Real API Integration (Frontend → Backend)
-- **Completed**: API client structure, auth token management, live resume upload/status/delete calls, profile CRUD calls (`userApi.get`, `userApi.update`)
-- **Missing**: Replace mock implementations in `frontend/src/lib/api/jobs.ts`, `notifications.ts`, `admin.ts` with real fetch calls
-- **Blockers**: Backend job and admin endpoints need implementation
-
-### 2. Job Search & Filtering API
-- **Completed**: Database models, repositories, processed_jobs table
-- **Missing**: FastAPI routes for `/api/jobs` (search, filter, paginate), `/api/recommendations`
-- **Blockers**: Need to implement route handlers
-
-### 3. Match Score Recalculation
-- **Completed**: Initial match scoring at AI processing time
-- **Missing**: Recalculate when user updates profile; background job for periodic refresh
-- **Blockers**: No scheduler implemented
-
-### 4. Scheduled Ingestion
-- **Completed**: IngestionPipeline class, all providers
-- **Missing**: Cron/APScheduler to run pipeline periodically
-- **Blockers**: Not prioritized yet
+- **Completed**: Auth, profiles, resume, feed, job details, interaction events, notifications and user activity.
+- **Missing**: Replace mock implementations in `admin.ts` and `jobs.ts` applications tracking.
 
 ---
 
 ## Not Yet Implemented
 
 ### Backend
-- [ ] `GET /api/jobs` - Paginated job search with filters (skills, location, salary, experience)
-- [ ] `GET /api/jobs/{job_id}` - Job detail with match score
-- [ ] `GET /api/recommendations` - User-matched jobs (with pagination)
+- [x] `GET /api/feed` - Personalized, cached job feed with cursor pagination
+- [x] `GET /api/jobs/{job_id}` - Single job detail with match scoring
 - [ ] `GET /api/applied` - User applications with status
 - [ ] `POST /api/applied` - Apply to job
 - [ ] `GET /api/saved` - Saved jobs

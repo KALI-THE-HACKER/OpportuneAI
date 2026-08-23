@@ -13,6 +13,7 @@ import {
   Briefcase,
   DollarSign,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
 import { jobsApi, recordEvent } from "@/lib/api";
 import { LoadingState, ErrorState, EmptyState } from "@/components/shared/state-views";
@@ -21,62 +22,60 @@ import { formatSalary, timeAgo } from "@/lib/format";
 
 export const Route = createFileRoute("/app/jobs/$jobId")({
   head: () => ({ meta: [{ title: "Job details · OpportuneAI" }] }),
-  component: JobDetailsPage,
+  component: JobDetailPage,
 });
 
-function JobDetailsPage() {
+function JobDetailPage() {
   const { jobId } = useParams({ from: "/app/jobs/$jobId" });
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["job", jobId], queryFn: () => jobsApi.get(jobId) });
+  const viewedRef = useRef(false);
+  const startTimeRef = useRef<number>(Date.now());
 
-  // Track view duration — fire "view" event when user leaves after ≥2 s
-  const viewStartRef = useRef<number | null>(null);
+  const q = useQuery({
+    queryKey: ["job", jobId],
+    queryFn: () => jobsApi.get(jobId),
+  });
 
+  // Record 'view' event once on load with duration on unmount
   useEffect(() => {
-    if (!q.data?.dbId) return;
-    viewStartRef.current = Date.now();
+    if (!q.data?.dbId || viewedRef.current) return;
+    viewedRef.current = true;
+    startTimeRef.current = Date.now();
+
+    void recordEvent({
+      jobId: q.data.dbId,
+      eventType: "view",
+      source: "job_detail",
+    });
 
     return () => {
-      const dbId = q.data?.dbId;
-      if (!dbId || viewStartRef.current === null) return;
-      const duration = Math.round((Date.now() - viewStartRef.current) / 1000);
-      if (duration < 2) return; // ignore accidental flash navigations
-      void recordEvent({
-        jobId: dbId,
-        eventType: "view",
-        source: "job_detail",
-        metadata: { duration_seconds: duration },
-      });
+      const durationSeconds = Math.round((Date.now() - startTimeRef.current) / 1000);
+      if (q.data?.dbId && durationSeconds > 0) {
+        void recordEvent({
+          jobId: q.data.dbId,
+          eventType: "view",
+          source: "job_detail",
+          metadata: { duration_seconds: durationSeconds },
+        });
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q.data?.dbId]);
 
   const apply = useMutation({
-    mutationFn: () => jobsApi.apply(jobId),
+    mutationFn: () => jobsApi.apply(jobId, "job_detail"),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["applications"] });
-      if (q.data?.dbId) {
-        void recordEvent({
-          jobId: q.data.dbId,
-          eventType: "apply",
-          source: "job_detail",
-        });
-      }
+      qc.invalidateQueries({ queryKey: ["job", jobId] });
     },
   });
 
   const save = useMutation({
-    mutationFn: () => jobsApi.toggleSave(jobId),
-    onSuccess: (isSaved) => {
+    mutationFn: () => jobsApi.toggleSave(jobId, "job_detail"),
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["job", jobId] });
       qc.invalidateQueries({ queryKey: ["saved"] });
-      if (q.data?.dbId) {
-        void recordEvent({
-          jobId: q.data.dbId,
-          eventType: isSaved ? "save" : "unsave",
-          source: "job_detail",
-        });
-      }
+      qc.invalidateQueries({ queryKey: ["feed"] });
     },
   });
 
@@ -203,7 +202,12 @@ function JobDetailsPage() {
                 transition-all duration-150 shadow-sm cursor-pointer
               "
             >
-              {apply.isSuccess ? (
+              {apply.isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Applying…
+                </>
+              ) : apply.isSuccess ? (
                 <>
                   <CheckCircle2 className="size-4" />
                   Application sent
@@ -218,17 +222,28 @@ function JobDetailsPage() {
 
             <button
               onClick={() => save.mutate()}
+              disabled={save.isPending}
               className="
                 w-full h-10 inline-flex items-center justify-center gap-2
                 rounded-lg border border-border bg-surface text-sm font-medium
                 hover:bg-card hover:border-foreground/20 shadow-sm
+                disabled:opacity-60 disabled:cursor-not-allowed
                 transition-all duration-150 cursor-pointer
               "
             >
-              <Bookmark
-                className={`size-4 transition-all duration-200 ${job.saved ? "fill-accent text-accent" : ""}`}
-              />
-              {job.saved ? "Saved" : "Save for later"}
+              {save.isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin text-accent" />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  <Bookmark
+                    className={`size-4 transition-all duration-200 ${job.saved ? "fill-accent text-accent" : ""}`}
+                  />
+                  {job.saved ? "Saved" : "Save for later"}
+                </>
+              )}
             </button>
           </div>
 
@@ -241,7 +256,9 @@ function JobDetailsPage() {
               <h3 className="text-sm font-semibold">AI insight</h3>
             </div>
 
-            <p className="text-sm text-foreground/85 leading-relaxed">{job.aiExplanation}</p>
+            {job.aiExplanation && (
+              <p className="text-sm text-foreground/85 leading-relaxed">{job.aiExplanation}</p>
+            )}
 
             {/* Matched skills */}
             {job.matchedSkills.length > 0 && (

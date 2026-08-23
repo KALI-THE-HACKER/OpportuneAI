@@ -5,10 +5,11 @@ from sqlalchemy import engine_from_config, pool
 
 from config.settings import settings
 from database.base import Base
-from database.models.processed_job import ProcessedJob  # noqa: F401
-from database.models.raw_job import RawJob  # noqa: F401
 
 # Import all models here so they register on Base.metadata for autogenerate
+from database.models.activity import UserActivity  # noqa: F401
+from database.models.processed_job import ProcessedJob  # noqa: F401
+from database.models.raw_job import RawJob  # noqa: F401
 from database.models.user import User  # noqa: F401
 
 # this is the Alembic Config object, which provides

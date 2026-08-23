@@ -15,14 +15,15 @@ export const Route = createFileRoute("/app/recommendations")({
 function RecommendationsPage() {
   const qc = useQueryClient();
   const q = useQuery({
-    queryKey: ["recommendations", "all"],
+    queryKey: ["feed", { limit: 12 }],
     queryFn: () => jobsApi.recommendations(12),
   });
 
   async function toggleSave(id: string) {
-    await jobsApi.toggleSave(id);
-    qc.invalidateQueries({ queryKey: ["recommendations"] });
+    await jobsApi.toggleSave(id, "recommendation");
+    qc.invalidateQueries({ queryKey: ["feed"] });
     qc.invalidateQueries({ queryKey: ["saved"] });
+    qc.invalidateQueries({ queryKey: ["notifications"] });
   }
 
   return (

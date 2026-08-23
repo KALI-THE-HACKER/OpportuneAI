@@ -1,4 +1,5 @@
 import { Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   Sparkles,
@@ -19,6 +20,7 @@ import { useState } from "react";
 import { Logo } from "@/components/shared/logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
+import { notificationsApi } from "@/lib/api";
 
 const NAV = [
   { to: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -38,12 +40,14 @@ function NavItem({
   label,
   icon: Icon,
   active,
+  badge,
   onClick,
 }: {
   to: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   active: boolean;
+  badge?: React.ReactNode;
   onClick?: () => void;
 }) {
   return (
@@ -66,6 +70,7 @@ function NavItem({
         }`}
       />
       <span className="truncate">{label}</span>
+      {badge}
       {active && <ChevronRight className="size-3 ml-auto opacity-60" />}
     </Link>
   );
@@ -76,6 +81,12 @@ export function AppLayout() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const notifs = useQuery({
+    queryKey: ["notifications"],
+    queryFn: () => notificationsApi.list(),
+  });
+  const unreadCount = (notifs.data ?? []).filter((n) => !n.read).length;
 
   async function handleSignOut() {
     await signOut();
@@ -103,6 +114,13 @@ export function AppLayout() {
           (item) => !("adminOnly" in item && item.adminOnly) || user?.role === "admin",
         ).map((item) => {
           const active = pathname === item.to || pathname.startsWith(item.to + "/");
+          const isNotifs = item.to === "/app/notifications";
+          const badge =
+            isNotifs && unreadCount > 0 ? (
+              <span className="ml-auto px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-accent text-accent-foreground">
+                {unreadCount}
+              </span>
+            ) : null;
           return (
             <NavItem
               key={item.to}
@@ -110,6 +128,7 @@ export function AppLayout() {
               label={item.label}
               icon={item.icon}
               active={active}
+              badge={badge}
               onClick={onNavClick}
             />
           );
@@ -201,7 +220,9 @@ export function AppLayout() {
                 aria-label="View notifications"
               >
                 <Bell className="size-4" />
-                <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-accent border-2 border-background" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-accent border-2 border-background animate-pulse" />
+                )}
               </Link>
 
               {/* Theme toggle */}
