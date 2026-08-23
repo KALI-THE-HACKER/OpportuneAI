@@ -17,6 +17,10 @@ class JobExtraction(BaseModel):
     salary: str | None = None
     experience_years: int | None = None
     employment_type: str | None = None
+    last_date_to_apply: str | None = Field(
+        default=None,
+        description="Application deadline or last date to apply if explicitly stated in the job posting (e.g. YYYY-MM-DD or date string). Set to null if not explicitly mentioned.",
+    )
     job_description: str = Field(default="")
 
 

@@ -62,11 +62,13 @@ async def test_create_and_retrieve_processed_job(dispose_db_engine):
         assert processed_job.job_title == "Software Engineer"
         assert processed_job.skills == ["Python"]
         assert processed_job.experience_years == 3
+        assert processed_job.last_date_to_apply is not None
 
         # 4. Retrieve by id
         retrieved = await processed_repo.get_by_id(processed_job.id)
         assert retrieved is not None
         assert retrieved.job_title == "Software Engineer"
+        assert retrieved.last_date_to_apply is not None
 
         # 5. Retrieve by raw_job_id
         retrieved_by_raw = await processed_repo.get_by_raw_job_id(raw_job.id)
@@ -80,3 +82,48 @@ async def test_create_and_retrieve_processed_job(dispose_db_engine):
         # The processed job should now be deleted as well due to foreign key CASCADE
         deleted_processed = await processed_repo.get_by_id(processed_job.id)
         assert deleted_processed is None
+
+
+@pytest.mark.anyio
+async def test_create_processed_job_with_explicit_expiry(dispose_db_engine):
+    async with AsyncSessionLocal() as db:
+        raw_repo = RawJobRepository(db)
+        processed_repo = ProcessedJobRepository(db)
+
+        test_job = RawJobData(
+            source="test",
+            external_id=f"ext-{uuid.uuid4()}",
+            title="Senior Engineer",
+            company="Test Company",
+            date_posted=None,
+            location="Remote",
+            link="https://example.com/job-exp",
+            content_hash=f"test-exp-{uuid.uuid4()}",
+            raw_payload={"description": "Apply before Oct 15, 2026."},
+        )
+
+        saved = await raw_repo.save_many([test_job])
+        raw_job = saved[0]
+
+        extraction = JobExtraction(
+            job_title="Senior Engineer",
+            company="Test Company",
+            skills=["Go"],
+            location="Remote",
+            job_description="Apply before Oct 15, 2026.",
+            last_date_to_apply="2026-10-15T00:00:00",
+        )
+
+        processed = await processed_repo.create(
+            raw_job_id=raw_job.id,
+            extraction=extraction,
+            scraped_at=raw_job.scraped_at,
+        )
+
+        assert processed.last_date_to_apply is not None
+        assert processed.last_date_to_apply.year == 2026
+        assert processed.last_date_to_apply.month == 10
+        assert processed.last_date_to_apply.day == 15
+
+        await db.delete(raw_job)
+        await db.commit()

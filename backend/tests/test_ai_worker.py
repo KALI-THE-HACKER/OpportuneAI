@@ -73,6 +73,7 @@ async def test_worker_success(mock_get_llm, dispose_db_engine) -> None:
         assert processed_job is not None
         assert processed_job.job_title == "AI Engineer"
         assert processed_job.skills == ["Python", "PyTorch"]
+        assert processed_job.last_date_to_apply is not None
 
         # Clean up
         await db.delete(raw_job_check)

@@ -25,10 +25,30 @@ def get_default_admin_emails() -> list[str]:
     ]
 
 
+def get_default_job_expiry_days() -> int:
+    """Read default job expiry days from config/config.yml if available."""
+    config_path = BASE_DIR / "config" / "config.yml"
+    if config_path.exists():
+        try:
+            with open(config_path, "r") as f:
+                data = yaml.safe_load(f) or {}
+                days = data.get("job_config", {}).get("default_expiry_days")
+                if days is not None and isinstance(days, int):
+                    return days
+        except Exception:
+            pass
+    return 30
+
+
 class Settings(BaseSettings):
     env: str
     debug: bool
     api_port: int
+
+    default_job_expiry_days: int = Field(
+        default_factory=get_default_job_expiry_days,
+        validation_alias="DEFAULT_JOB_EXPIRY_DAYS",
+    )
 
     database_url: str
     alembic_database_url: str

@@ -1,3 +1,6 @@
+job_config:
+  default_expiry_days: 30
+
 scraper_config:
   job_title: "Software Engineer Intern"
   locations:

@@ -27,6 +27,7 @@ class ProcessedJob(Base):
     salary: Mapped[str | None] = mapped_column(String(100), nullable=True)
     experience_years: Mapped[int | None] = mapped_column(Integer, nullable=True)
     employment_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    last_date_to_apply: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     job_description: Mapped[str] = mapped_column(Text, nullable=False)
     processed_at: Mapped[datetime] = mapped_column(
         DateTime,

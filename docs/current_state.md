@@ -59,7 +59,7 @@
 **Models** (`backend/database/models/`):
 - `User` - Auth0-synced profile with preferences (skills, roles, locations, salary)
 - `RawJob` - Scraped data with content_hash for deduplication
-- `ProcessedJob` - AI-extracted structured data with 1:1 link to RawJob
+- `ProcessedJob` - AI-extracted structured data with 1:1 link to RawJob (includes `last_date_to_apply` with fallback from `job_config.default_expiry_days` / `DEFAULT_JOB_EXPIRY_DAYS`)
 
 **Repositories** (`backend/database/repositories/`):
 - `UserRepository`, `RawJobRepository`, `ProcessedJobRepository`

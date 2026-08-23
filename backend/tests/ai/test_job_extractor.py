@@ -19,6 +19,7 @@ async def test_extract_invokes_llm_and_returns_schema() -> None:
         experience_years=0,
         location="Remote",
         employment_type="Internship",
+        last_date_to_apply="2026-09-30",
     )
 
     llm.invoke.return_value = expected

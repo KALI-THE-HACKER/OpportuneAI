@@ -15,7 +15,7 @@ OpportuneAI is an AI-powered job discovery and application tracking copilot. It 
 The application runs a divided architecture:
 1. **Scraping Ingestion Pipeline**: Runs crawlers (Selenium, Playwright, Firecrawl API, REST) based on parameters in `config.yml`. It computes content hashes for raw listings, checking them against PostgreSQL records to bypass duplicates, saving new raw records as `pending`.
 2. **Task Queue Worker**: For each raw insertion, a job is dispatched to a Redis Queue (RQ) named `ai-processing`. Standalone process workers pull jobs from Redis and start AI extraction.
-3. **AI Structured Processing**: The worker uses `GeminiClientPool` to query Gemini models using system prompts. It returns Pydantic validation outputs mapping details (skills, salary, experience, employment type) and inserts them into `processed_jobs`.
+3. **AI Structured Processing**: The worker uses `GeminiClientPool` to query Gemini models using system prompts. It returns Pydantic validation outputs mapping details (skills, salary, experience, employment type, last_date_to_apply) and inserts them into `processed_jobs`, resolving expiry date via `config.yml`/`DEFAULT_JOB_EXPIRY_DAYS` fallback.
 4. **REST API Service**: FastAPI app verifying identity tokens statelessly via Auth0 JWKS caching, checking local profiles, and exposing CRUD routes.
 5. **Frontend Client App**: Multi-page client application built on React 19 and TanStack Start, loading routes and prefetching details.
 6. **Design System & UI**: Custom OKLCH design token architecture with warm porcelain light theme, OLED obsidian dark theme, blocking script hydration for flash-free theme reloads, sticky full-height desktop navigation sidebar, and left-to-right directional wave shimmer skeleton loaders.

@@ -35,7 +35,11 @@ async def _process_raw_job(raw_job_id: Any) -> None:
 
             # 4. Save processed job.
             processed_repo = ProcessedJobRepository(db)
-            await processed_repo.create(raw_job_id=raw_job.id, extraction=extraction)
+            await processed_repo.create(
+                raw_job_id=raw_job.id,
+                extraction=extraction,
+                scraped_at=raw_job.scraped_at,
+            )
 
             # TODO: Generate embeddings.
 
