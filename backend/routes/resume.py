@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models.user import User
+from database.repositories.activity_repository import ActivityRepository
 from database.repositories.user_repository import UserRepository
 from database.session import get_db
 from resume.extractors.pdf import extract_text_from_pdf
@@ -221,6 +222,16 @@ async def upload_resume(
             resume_text=resume_text,
             status="processing",
         )
+        try:
+            activity_repo = ActivityRepository(db)
+            await activity_repo.create(
+                user_id=user.id,
+                activity_type="resume",
+                title="Resume uploaded",
+                body=f"Resume '{file_name}' uploaded and queued for AI analysis.",
+            )
+        except Exception:
+            pass
     except Exception as exc:
         logger.exception(
             "Database update failed for user_id=%s storage_key=%s",
@@ -312,6 +323,12 @@ async def delete_resume(
 
     repo = UserRepository(db)
     await repo.clear_resume(user)
+    try:
+        from services.feed_service import FeedService
+
+        FeedService(db).invalidate_feed(user.id)
+    except Exception:
+        pass
     logger.info("Resume deleted for user_id=%s", user.id)
 
 

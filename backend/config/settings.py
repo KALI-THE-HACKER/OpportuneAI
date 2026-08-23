@@ -89,8 +89,11 @@ class Settings(BaseSettings):
     r2_bucket_name: str | None = None
     r2_endpoint_url: str | None = None
 
+    feed_cache_ttl: int = 3600
+
     model_config = SettingsConfigDict(
         env_file=".env",
+        extra="ignore",
     )
 
 

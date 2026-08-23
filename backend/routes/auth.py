@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import settings
 from database.models.user import User
+from database.repositories.activity_repository import ActivityRepository
 from database.repositories.user_repository import UserRepository
 from database.session import get_db
 from utils.auth import determine_user_role, get_current_user
@@ -154,7 +155,38 @@ async def update_me(
     if data.minSalary is not None:
         update_data["min_salary"] = data.minSalary
 
+    ranking_fields = {
+        "title",
+        "location",
+        "years_of_experience",
+        "skills",
+        "preferred_roles",
+        "preferred_locations",
+        "work_modes",
+        "min_salary",
+    }
+    if any(k in ranking_fields for k in update_data.keys()):
+        try:
+            from services.feed_service import FeedService
+
+            FeedService(db).invalidate_feed(user.id)
+        except Exception:
+            pass
+
     updated_user = await repo.update(user, **update_data)
+
+    if update_data:
+        try:
+            activity_repo = ActivityRepository(db)
+            await activity_repo.create(
+                user_id=user.id,
+                activity_type="system",
+                title="Profile updated",
+                body="Your career preferences and target roles were updated.",
+            )
+        except Exception:
+            pass
+
     return UserProfileSchema.from_orm_model(updated_user)
 
 

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
   Activity,
@@ -9,6 +9,9 @@ import {
   Loader2,
   CheckCircle2,
   Zap,
+  Bookmark,
+  Bell,
+  Inbox,
 } from "lucide-react";
 import { jobsApi, adminApi, notificationsApi, resumeApi } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -23,10 +26,46 @@ export const Route = createFileRoute("/app/dashboard")({
   component: DashboardPage,
 });
 
+function getActivityMeta(type: string) {
+  switch (type) {
+    case "application":
+      return {
+        icon: Send,
+        badgeClass:
+          "bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+      };
+    case "save":
+    case "bookmark":
+      return {
+        icon: Bookmark,
+        badgeClass:
+          "bg-amber-500/10 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20",
+      };
+    case "resume":
+      return {
+        icon: Sparkles,
+        badgeClass:
+          "bg-violet-500/10 dark:bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/20",
+      };
+    case "match":
+      return {
+        icon: Zap,
+        badgeClass:
+          "bg-cyan-500/10 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
+      };
+    default:
+      return {
+        icon: Bell,
+        badgeClass: "bg-accent/10 text-accent border-accent/20",
+      };
+  }
+}
+
 function DashboardPage() {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const recs = useQuery({
-    queryKey: ["recommendations"],
+    queryKey: ["feed", { limit: 4 }],
     queryFn: () => jobsApi.recommendations(4),
   });
   const apps = useQuery({ queryKey: ["applications"], queryFn: () => jobsApi.applications() });
@@ -42,7 +81,22 @@ function DashboardPage() {
     refetchInterval: (query) => (query.state.data?.status === "processing" ? 2000 : false),
   });
 
+  async function toggleSave(id: string) {
+    await jobsApi.toggleSave(id);
+    qc.invalidateQueries({ queryKey: ["feed"] });
+    qc.invalidateQueries({ queryKey: ["saved"] });
+    qc.invalidateQueries({ queryKey: ["notifications"] });
+  }
+
   const firstName = user?.name?.split(" ")[0] ?? "there";
+
+  const avgMatchRate =
+    recs.data && recs.data.length > 0
+      ? Math.round(
+          recs.data.reduce((acc, job) => acc + (job.matchScore || 0), 0) /
+            recs.data.length,
+        )
+      : null;
 
   return (
     <>
@@ -83,8 +137,8 @@ function DashboardPage() {
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
           label="Match rate"
-          value={`${stats.data?.avgMatchScore.toFixed(1) ?? "—"}%`}
-          progress={stats.data?.avgMatchScore}
+          value={avgMatchRate !== null ? `${avgMatchRate}%` : "—"}
+          progress={avgMatchRate ?? undefined}
           icon={<Activity className="size-3.5" />}
         />
         <StatCard
@@ -127,7 +181,7 @@ function DashboardPage() {
           ) : (
             <div className="space-y-3.5">
               {recs.data!.map((j) => (
-                <JobCard key={j.id} job={j} />
+                <JobCard key={j.id} job={j} onToggleSave={toggleSave} />
               ))}
             </div>
           )}
@@ -137,40 +191,87 @@ function DashboardPage() {
         <aside className="space-y-4">
           {/* Recent activity */}
           <div className="p-5 bg-card border border-border rounded-xl shadow-card">
-            <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-4">
-              Recent activity
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                Recent activity
+              </h3>
+              {(notifs.data ?? []).some((n) => !n.read) && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-accent/10 text-accent border border-accent/20">
+                  <span className="size-1.5 rounded-full bg-accent animate-pulse" />
+                  New
+                </span>
+              )}
+            </div>
+
             {notifs.isLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="space-y-1">
-                    <div className="skeleton-shimmer h-3.5 rounded w-4/5" />
-                    <div className="skeleton-shimmer h-2.5 rounded w-1/3" />
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="skeleton-shimmer size-7 rounded-lg shrink-0" />
+                    <div className="space-y-1.5 flex-1">
+                      <div className="skeleton-shimmer h-3.5 rounded w-4/5" />
+                      <div className="skeleton-shimmer h-2.5 rounded w-1/3" />
+                    </div>
                   </div>
                 ))}
               </div>
+            ) : (notifs.data ?? []).length === 0 ? (
+              <div className="text-center py-6 px-2">
+                <div className="size-9 rounded-xl bg-surface border border-border grid place-items-center text-muted-foreground mx-auto mb-2.5">
+                  <Inbox className="size-4 opacity-70" />
+                </div>
+                <p className="text-xs font-semibold text-foreground">No recent activity</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Interactions and updates will appear here.
+                </p>
+              </div>
             ) : (
-              <ul className="space-y-3.5">
-                {(notifs.data ?? []).slice(0, 4).map((n) => (
-                  <li key={n.id} className="text-sm">
-                    <div className="text-foreground font-medium text-sm leading-tight">
-                      {n.title}
-                    </div>
-                    <div className="text-muted-foreground text-xs mt-0.5">
-                      {timeAgo(n.createdAt)}
-                    </div>
-                  </li>
-                ))}
-                {(notifs.data ?? []).length === 0 && (
-                  <li className="text-xs text-muted-foreground italic">No recent activity</li>
-                )}
+              <ul className="space-y-3">
+                {(notifs.data ?? []).slice(0, 4).map((n) => {
+                  const meta = getActivityMeta(n.type);
+                  const Icon = meta.icon;
+                  return (
+                    <li
+                      key={n.id}
+                      className="group flex items-start gap-3 p-2 -mx-2 rounded-lg hover:bg-surface/60 transition-colors"
+                    >
+                      <div
+                        className={`size-7 rounded-lg grid place-items-center shrink-0 border ${meta.badgeClass}`}
+                      >
+                        <Icon className="size-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span
+                            className={`text-xs font-medium truncate ${
+                              n.read ? "text-foreground/90" : "font-semibold text-foreground"
+                            }`}
+                          >
+                            {n.title}
+                          </span>
+                          {!n.read && (
+                            <span className="size-1.5 rounded-full bg-accent shrink-0" />
+                          )}
+                        </div>
+                        {n.body && (
+                          <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
+                            {n.body}
+                          </p>
+                        )}
+                        <div className="text-[10px] text-muted-foreground/80 font-mono mt-1">
+                          {timeAgo(n.createdAt)}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
             <Link
               to="/app/notifications"
-              className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-foreground hover:text-accent transition-colors"
+              className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground hover:text-accent transition-colors"
             >
-              All notifications
+              <span>View all notifications</span>
               <ArrowRight className="size-3" />
             </Link>
           </div>
