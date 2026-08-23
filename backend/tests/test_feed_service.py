@@ -208,3 +208,106 @@ async def test_feed_service_personalized_ranking_and_caching(dispose_db_engine):
         expired_check_res = await feed_service.get_feed(user=user, limit=10)
         expired_ids = [item["id"] for item in expired_check_res["items"]]
         assert str(pj_py.id) not in expired_ids
+
+
+@pytest.mark.anyio
+async def test_feed_service_hybrid_ranking_with_embeddings(dispose_db_engine):
+    mock_redis = MockRedis()
+
+    async with AsyncSessionLocal() as db:
+        user_repo = UserRepository(db)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+        # Create user with preference embedding
+        # User vector: high on first dimension [1.0, 0.0, ...]
+        user_embedding = [0.0] * 768
+        user_embedding[0] = 1.0
+
+        user = await user_repo.create(
+            auth0_sub=f"auth0|hybrid-{uuid.uuid4()}",
+            email=f"hybrid_{uuid.uuid4().hex[:6]}@opportune.ai",
+            name="Hybrid User",
+        )
+        await user_repo.update(
+            user,
+            skills=["Python", "FastAPI"],
+            preferred_roles=["Backend Engineer"],
+            years_of_experience=3,
+        )
+        user.preference_embedding = user_embedding
+        user.preference_embedding_model = "models/gemini-embedding-001"
+        await db.commit()
+
+        # Job 1: High semantic similarity vector (0.98 similarity)
+        job1_vec = [0.0] * 768
+        job1_vec[0] = 0.98
+
+        raw1 = RawJob(
+            source="test",
+            title="FastAPI Cloud Engineer",
+            company="CloudHQ",
+            link="https://example.com/j1",
+            content_hash=f"hash-{uuid.uuid4()}",
+            raw_payload={},
+            scraped_at=now,
+            processing_status=ProcessingStatus.PROCESSED,
+        )
+        db.add(raw1)
+        await db.flush()
+
+        pj1 = ProcessedJob(
+            raw_job_id=raw1.id,
+            job_title="FastAPI Cloud Engineer",
+            company="CloudHQ",
+            skills=["Python", "FastAPI"],
+            location="Remote",
+            experience_years=3,
+            employment_type="full-time",
+            job_description="FastAPI cloud engineering.",
+            processed_at=now,
+            embedding=job1_vec,
+            embedding_model="models/gemini-embedding-001",
+        )
+        db.add(pj1)
+
+        # Job 2: Low semantic similarity vector (orthogonal vector)
+        job2_vec = [0.0] * 768
+        job2_vec[1] = 1.0
+
+        raw2 = RawJob(
+            source="test",
+            title="Graphic Designer",
+            company="DesignHQ",
+            link="https://example.com/j2",
+            content_hash=f"hash-{uuid.uuid4()}",
+            raw_payload={},
+            scraped_at=now,
+            processing_status=ProcessingStatus.PROCESSED,
+        )
+        db.add(raw2)
+        await db.flush()
+
+        pj2 = ProcessedJob(
+            raw_job_id=raw2.id,
+            job_title="Graphic Designer",
+            company="DesignHQ",
+            skills=["Photoshop", "Illustrator"],
+            location="New York, NY",
+            experience_years=3,
+            employment_type="full-time",
+            job_description="Design high quality brand visuals.",
+            processed_at=now,
+            embedding=job2_vec,
+            embedding_model="models/gemini-embedding-001",
+        )
+        db.add(pj2)
+        await db.commit()
+
+        feed_service = FeedService(db, redis=mock_redis)
+        feed_res = await feed_service.get_feed(user=user, limit=10)
+
+        # High similarity job must rank first
+        assert len(feed_res["items"]) >= 2
+        items = feed_res["items"]
+        assert items[0]["id"] == str(pj1.id)
+        assert items[0]["matchScore"] > items[1]["matchScore"]

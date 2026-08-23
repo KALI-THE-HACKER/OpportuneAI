@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -29,6 +30,8 @@ class ProcessedJob(Base):
     employment_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     last_date_to_apply: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     job_description: Mapped[str] = mapped_column(Text, nullable=False)
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(768), nullable=True)
+    embedding_model: Mapped[str | None] = mapped_column(String(100), nullable=True)
     processed_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,

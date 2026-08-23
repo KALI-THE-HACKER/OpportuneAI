@@ -67,6 +67,13 @@ class Settings(BaseSettings):
     # Gemini Settings
     gemini_api_keys: list[str]
     gemini_model: str = "gemini-2.5-flash"
+    gemini_embedding_model: str = "models/gemini-embedding-001"
+    embedding_dimension: int = 768
+
+    # Hybrid Recommendation Engine Settings
+    hybrid_semantic_weight: float = 0.40
+    hybrid_structured_weight: float = 0.60
+    candidate_pool_size: int = 200
 
     # OpenRouter Settings
     openrouter_api_key: str | None = None

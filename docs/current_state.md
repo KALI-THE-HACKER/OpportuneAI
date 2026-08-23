@@ -127,16 +127,17 @@
 
 ---
 
-### 9. Personalized Job Feed & Scoring Engine (v1)
-**Backend** (`backend/services/scoring.py`, `backend/services/feed_service.py`, `backend/routes/feed.py`, `backend/database/repositories/processed_job_repository.py`):
-- Deterministic scoring engine with centralized weights: Skills (35%), Roles (30%), Location/Work Mode (15%), Experience (10%), Employment Type (10%).
-- Variable-length skill overlap normalization (`overlap / sqrt(len(job_skills) * len(user_skills)) * 1.25`) to prevent large skill lists from dominating.
-- Cold start fallback ranking based on recency and metadata completeness.
+### 9. Hybrid Personalized Job Feed & Scoring Engine (v2)
+**Backend** (`backend/ai/embeddings/`, `backend/services/feed_service.py`, `backend/services/user_embedding_service.py`, `backend/services/backfill_embeddings.py`, `backend/database/models/processed_job.py`, `backend/database/models/user.py`, `backend/database/repositories/processed_job_repository.py`):
+- Two-stage hybrid recommendation pipeline:
+  1. **Stage 1 (Semantic Candidate Retrieval)**: Generates 768-dim embeddings with Google Gemini (`models/gemini-embedding-001`). Precomputes and persists `embedding` in PostgreSQL `processed_jobs` via `Vector(768)` on job ingestion. Computes `preference_embedding` on user profile / resume updates. Retrieves top $N$ candidates (`candidate_pool_size=200`) using database-side pgvector cosine distance (`ProcessedJob.embedding.cosine_distance(user_embedding)`).
+  2. **Stage 2 (Structured Reranking)**: Uses deterministic `ScoringEngine` to compute explicit constraint match scores across skills, roles, location, work mode, and experience. Combines scores into final hybrid score: `hybrid_score = (0.40 * semantic_score_100) + (0.60 * structured_score)`.
+- Resumable/idempotent backfill script (`services/backfill_embeddings.py`) for offline batch generation.
+- Cold start fallback ranking based on recency and metadata completeness for users with empty preference representations.
 - Job eligibility and expiry filtering directly using `processed_jobs.last_date_to_apply`.
 - Redis feed cache key `feed:user:{id}` with 1-hour TTL storing ranked job IDs.
 - Single-query batch PostgreSQL job fetching (`WHERE id IN (...)`) preserving Redis rank order in-memory.
-- Automatic feed cache invalidation on profile updates (`PUT /api/users/me`), resume extraction completion, resume deletion, and significant interaction events (`save`, `unsave`, `apply`, `dismiss`, `not_interested`).
-- Database seed mechanism (`backend/database/seed.py`) with 12 diverse, realistic job postings.
+- Automatic feed cache invalidation and preference embedding refresh on profile updates (`PUT /api/users/me`), resume extraction completion, resume deletion, and significant interaction events (`save`, `unsave`, `apply`, `dismiss`, `not_interested`).
 - Endpoints: `GET /api/feed` (cursor-paginated) and `GET /api/jobs/{job_id}` (individual job detail).
 
 **Frontend** (`frontend/src/lib/api/jobs.ts`, `frontend/src/routes/app.dashboard.tsx`, `frontend/src/routes/app.recommendations.tsx`, `frontend/src/routes/app.jobs.index.tsx`, `frontend/src/routes/app.jobs.$jobId.tsx`):

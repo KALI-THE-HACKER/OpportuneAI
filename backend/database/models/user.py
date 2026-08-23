@@ -1,9 +1,14 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.base import Base
+
+if TYPE_CHECKING:
+    from database.models.activity import UserActivity
 
 
 class User(Base):
@@ -42,6 +47,14 @@ class User(Base):
     )
     min_salary: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
+    # Preference Embedding fields for Hybrid Recommendation
+    preference_embedding: Mapped[list[float] | None] = mapped_column(
+        Vector(768), nullable=True
+    )
+    preference_embedding_model: Mapped[str | None] = mapped_column(
+        String(100), nullable=True
+    )
+
     # Resume fields
     resume_file_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
     resume_storage_key: Mapped[str | None] = mapped_column(String(1024), nullable=True)
@@ -68,4 +81,11 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    activities: Mapped[list["UserActivity"]] = relationship(
+        "UserActivity",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )

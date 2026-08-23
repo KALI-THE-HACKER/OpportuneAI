@@ -36,6 +36,20 @@ def get_redis_client() -> Redis:
     return _redis_client
 
 
+def compute_cosine_similarity(
+    vec1: list[float] | None, vec2: list[float] | None
+) -> float | None:
+    """Compute cosine similarity between two float vectors."""
+    if not vec1 or not vec2 or len(vec1) != len(vec2):
+        return None
+    dot = sum(a * b for a, b in zip(vec1, vec2))
+    norm1 = sum(a * a for a in vec1) ** 0.5
+    norm2 = sum(b * b for b in vec2) ** 0.5
+    if norm1 == 0 or norm2 == 0:
+        return 0.0
+    return max(0.0, min(1.0, dot / (norm1 * norm2)))
+
+
 class FeedService:
     def __init__(self, db: AsyncSession, redis: Redis | None = None):
         self.db = db
@@ -58,15 +72,53 @@ class FeedService:
             )
 
     async def generate_feed(self, user: User | None) -> list[int]:
-        """Fetch eligible jobs, score with user preferences, sort, and cache in Redis."""
-        eligible_jobs = await self.repo.get_all_eligible(limit=1000)
-        if not eligible_jobs:
-            return []
+        """Generate personalized hybrid-ranked feed.
 
+        Stage 1 (Candidate Retrieval):
+            - If user has preference_embedding: retrieve top N semantically similar candidates using pgvector.
+            - If no preference_embedding or empty candidates: fallback to eligible jobs (cold start).
+        Stage 2 (Structured Reranking):
+            - Score candidates using ScoringEngine.score_job()
+            - Calculate hybrid score:
+                hybrid_score = SEMANTIC_WEIGHT * (semantic_similarity * 100.0) + STRUCTURED_WEIGHT * structured_score
+            - Sort deterministically: (final_score, processed_at, id) desc.
+        Stage 3 (Caching):
+            - Store ranked IDs in Redis under feed:user:{user_id}.
+        """
         scored_jobs: list[tuple[ProcessedJob, float]] = []
-        for job in eligible_jobs:
-            score, _, _ = ScoringEngine.score_job(user, job)
-            scored_jobs.append((job, score))
+        has_preference_embedding = bool(user and user.preference_embedding is not None)
+
+        # Stage 1: Candidate Retrieval
+        if has_preference_embedding and user:
+            user_vec = list(user.preference_embedding)  # type: ignore[union-attr]
+            candidates = await self.repo.get_semantic_candidates(
+                user_embedding=user_vec,
+                limit=settings.candidate_pool_size,
+            )
+
+            if candidates:
+                # Stage 2: Structured Reranking for semantic candidates
+                for job, semantic_similarity in candidates:
+                    structured_score, _, _ = ScoringEngine.score_job(user, job)
+                    semantic_score_100 = semantic_similarity * 100.0
+
+                    hybrid_score = (
+                        settings.hybrid_semantic_weight * semantic_score_100
+                        + settings.hybrid_structured_weight * structured_score
+                    )
+                    scored_jobs.append((job, hybrid_score))
+
+        # Fallback / Cold Start (user is guest, empty profile, or no semantic candidates)
+        if not scored_jobs:
+            eligible_jobs = await self.repo.get_all_eligible(
+                limit=settings.candidate_pool_size
+            )
+            if not eligible_jobs:
+                return []
+
+            for job in eligible_jobs:
+                score, _, _ = ScoringEngine.score_job(user, job)
+                scored_jobs.append((job, score))
 
         # Deterministic sorting: score desc, processed_at desc, id desc
         scored_jobs.sort(
@@ -93,10 +145,11 @@ class FeedService:
                 )
                 self.redis.set(cache_key, payload, ex=settings.feed_cache_ttl)
                 logger.info(
-                    "Cached %d ranked jobs for user %s in Redis (TTL: %ds)",
+                    "Cached %d ranked jobs for user %s in Redis (TTL: %ds, hybrid=%s)",
                     len(ranked_job_ids),
                     user.id,
                     settings.feed_cache_ttl,
+                    has_preference_embedding,
                 )
             except Exception as e:
                 logger.warning("Redis cache write failed for user %s: %s", user.id, e)
@@ -128,7 +181,21 @@ class FeedService:
         job: ProcessedJob, user: User | None = None, is_saved: bool = False
     ) -> dict:
         """Format a ProcessedJob into the complete job card representation expected by the frontend."""
-        score, matched_skills, missing_skills = ScoringEngine.score_job(user, job)
+        structured_score, matched_skills, missing_skills = ScoringEngine.score_job(
+            user, job
+        )
+
+        final_score = structured_score
+        if user and user.preference_embedding is not None and job.embedding is not None:
+            user_vec = list(user.preference_embedding)
+            job_vec = list(job.embedding)
+            sim = compute_cosine_similarity(user_vec, job_vec)
+            if sim is not None:
+                final_score = (
+                    settings.hybrid_semantic_weight * (sim * 100.0)
+                    + settings.hybrid_structured_weight * structured_score
+                )
+
         salary_min, salary_max, currency = parse_salary_range(job.salary)
         work_mode = infer_work_mode(job.location, job.employment_type)
         experience_lvl = infer_experience_level(job.experience_years)
@@ -161,6 +228,8 @@ class FeedService:
             else ["Demonstrated experience in technical stack"]
         )
 
+        clamped_match_score = max(5, min(99, int(round(final_score))))
+
         return {
             "id": str(job.id),
             "title": job.job_title,
@@ -177,7 +246,7 @@ class FeedService:
             "responsibilities": responsibilities,
             "requirements": requirements,
             "skills": job.skills or [],
-            "matchScore": int(round(score)),
+            "matchScore": clamped_match_score,
             "missingSkills": missing_skills,
             "matchedSkills": matched_skills,
             "experienceLevel": experience_lvl,

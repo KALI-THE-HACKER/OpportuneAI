@@ -19,6 +19,7 @@ langchain-openrouter
 pymupdf
 python-multipart
 boto3
+pgvector
 
 
 #DEV DEPENDENCIES
