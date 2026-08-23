@@ -163,7 +163,10 @@ function ProfilePage() {
             <Row label="Work mode preference">
               <div className="flex flex-wrap gap-4 pt-1">
                 {(["remote", "hybrid", "on-site"] as const).map((m) => (
-                  <label key={m} className="text-sm flex items-center gap-2 cursor-pointer select-none">
+                  <label
+                    key={m}
+                    className="text-sm flex items-center gap-2 cursor-pointer select-none"
+                  >
                     <div
                       className={`size-4 rounded flex items-center justify-center border transition-all duration-150 shrink-0 cursor-pointer ${
                         form.workModes.includes(m)
@@ -180,7 +183,11 @@ function ProfilePage() {
                       }
                     >
                       {form.workModes.includes(m) && (
-                        <svg className="size-2.5 text-brand-foreground" viewBox="0 0 10 10" fill="none">
+                        <svg
+                          className="size-2.5 text-brand-foreground"
+                          viewBox="0 0 10 10"
+                          fill="none"
+                        >
                           <path
                             d="M1.5 5L4 7.5L8.5 2.5"
                             stroke="currentColor"
@@ -266,10 +273,7 @@ function ProfilePage() {
           </Card>
 
           {/* Resume insights — skills management */}
-          <ResumeInsights
-            userSkills={q.data?.skills ?? []}
-            className="w-full shadow-card"
-          />
+          <ResumeInsights userSkills={q.data?.skills ?? []} className="w-full shadow-card" />
         </div>
       </div>
     </>

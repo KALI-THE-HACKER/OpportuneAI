@@ -120,7 +120,9 @@ function LandingPage() {
                   transition={{ duration: 0.8, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
                   className="text-primary/70 text-xs sm:text-sm md:text-base leading-[1.2] text-left"
                 >
-                  OpportuneAI matches your resume with relevant jobs, analyzes the company and job description, and prepares personalized recruiter emails for you — ready to review and send.
+                  OpportuneAI matches your resume with relevant jobs, analyzes the company and job
+                  description, and prepares personalized recruiter emails for you — ready to review
+                  and send.
                 </motion.p>
 
                 <motion.div

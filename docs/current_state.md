@@ -225,4 +225,21 @@
    - Affected: FastAPI middleware, new routes
 
 ---
-*Last updated: 2026-08-16*
+
+### 7. User–Job Event Tracking
+**Backend** (`backend/database/models/user_job_event.py`, `backend/database/repositories/user_job_event_repository.py`, `backend/routes/events.py`):
+- Append-only `user_job_events` table in PostgreSQL (JSONB metadata, integer FKs to `users` + `processed_jobs`)
+- 8 controlled event types via `JobEventType` `StrEnum`: `impression`, `click`, `view`, `save`, `unsave`, `apply`, `dismiss`, `not_interested`
+- 6 controlled source values via `JobEventSource` `StrEnum`: `feed`, `search`, `job_detail`, `recommendation`, `notification`, `other`
+- `POST /api/v1/events/jobs` — JWT-authenticated, validates job existence, returns lightweight receipt (id + event_type + created_at)
+- Metadata stored as JSONB; `view` events validate non-negative `duration_seconds`; position validated ≥ 0
+- Indexes: `user_id`, `job_id`, `event_type`, `(user_id, created_at)`, `(user_id, job_id)` — optimized for user history queries and per-job analytics
+- Migration: `82b73f5f5378_add_user_job_events_table` (reversible)
+- 11 passing unit tests in `tests/test_user_job_events.py`
+
+**Future**: A background worker will consume events via `process_user_event(event_id)` to update user preferences and invalidate feed caches.
+
+**Status**: ✅ Implemented, migrated, tested
+
+---
+*Last updated: 2026-08-23*

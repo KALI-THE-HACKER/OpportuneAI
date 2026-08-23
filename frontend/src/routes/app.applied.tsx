@@ -29,13 +29,11 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   },
   rejected: {
     label: "Rejected",
-    className:
-      "bg-surface text-muted-foreground border border-border",
+    className: "bg-surface text-muted-foreground border border-border",
   },
   saved: {
     label: "Saved",
-    className:
-      "bg-surface text-muted-foreground border border-border",
+    className: "bg-surface text-muted-foreground border border-border",
   },
 };
 
@@ -49,9 +47,7 @@ function AppliedPage() {
         description="Track every role you've applied to — all in one place."
         actions={
           q.data && q.data.length > 0 ? (
-            <span className="text-xs text-muted-foreground font-medium">
-              {q.data.length} total
-            </span>
+            <span className="text-xs text-muted-foreground font-medium">{q.data.length} total</span>
           ) : undefined
         }
       />
@@ -71,14 +67,18 @@ function AppliedPage() {
             <table className="w-full text-left text-sm">
               <thead className="bg-surface/70 border-b border-border text-muted-foreground">
                 <tr>
-                  <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest">Role</th>
+                  <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest">
+                    Role
+                  </th>
                   <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest">
                     Company
                   </th>
                   <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest hidden md:table-cell">
                     Applied
                   </th>
-                  <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest">Status</th>
+                  <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest">
+                    Status
+                  </th>
                   <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest text-right" />
                 </tr>
               </thead>

@@ -227,3 +227,47 @@ Triggered when the request lacks a valid token or uses an expired token.
     "detail": "Could not validate credentials"
   }
   ```
+
+---
+
+## 6. Events Endpoints
+
+### 6.1 Record a User–Job Interaction Event
+- **Endpoint**: `POST /api/v1/events/jobs`
+- **Authentication Required**: Yes (Bearer JWT)
+- **Request Body (`CreateUserJobEventRequest`)**:
+  ```json
+  {
+    "job_id": 42,
+    "event_type": "click",
+    "source": "feed",
+    "position": 3,
+    "session_id": "sess-abc123",
+    "metadata": {}
+  }
+  ```
+- **Fields**:
+  | Field | Type | Required | Notes |
+  |---|---|---|---|
+  | `job_id` | int | ✅ | Must reference an existing `processed_jobs.id` |
+  | `event_type` | enum | ✅ | `impression` / `click` / `view` / `save` / `unsave` / `apply` / `dismiss` / `not_interested` |
+  | `source` | enum | ✅ | `feed` / `search` / `job_detail` / `recommendation` / `notification` / `other` |
+  | `position` | int ≥ 0 | ❌ | Card position in the list |
+  | `session_id` | string | ❌ | Opaque frontend session identifier |
+  | `metadata` | object | ❌ | Event-specific JSONB payload. `view` events may include `duration_seconds` (≥ 0) |
+- **Response** (`201 Created`):
+  ```json
+  {
+    "id": 1001,
+    "event_type": "click",
+    "created_at": "2026-08-22T18:00:00"
+  }
+  ```
+- **Notes**:
+  - `user_id` is derived from the JWT — cannot be supplied by the client.
+  - The table is append-only; events are never modified.
+  - Designed for high-frequency writes: no LLM calls, no feed regeneration.
+- **Errors**:
+  - `401` — missing or invalid token
+  - `404` — `job_id` does not exist in `processed_jobs`
+  - `422` — invalid `event_type`, `source`, negative `position`, or invalid metadata

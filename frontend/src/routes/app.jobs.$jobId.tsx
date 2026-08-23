@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import {
   ArrowLeft,
   Bookmark,
@@ -13,7 +14,7 @@ import {
   DollarSign,
   ExternalLink,
 } from "lucide-react";
-import { jobsApi } from "@/lib/api";
+import { jobsApi, recordEvent } from "@/lib/api";
 import { LoadingState, ErrorState, EmptyState } from "@/components/shared/state-views";
 import { MatchBadge } from "@/components/shared/job-card";
 import { formatSalary, timeAgo } from "@/lib/format";
@@ -28,15 +29,54 @@ function JobDetailsPage() {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["job", jobId], queryFn: () => jobsApi.get(jobId) });
 
+  // Track view duration — fire "view" event when user leaves after ≥2 s
+  const viewStartRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!q.data?.dbId) return;
+    viewStartRef.current = Date.now();
+
+    return () => {
+      const dbId = q.data?.dbId;
+      if (!dbId || viewStartRef.current === null) return;
+      const duration = Math.round((Date.now() - viewStartRef.current) / 1000);
+      if (duration < 2) return; // ignore accidental flash navigations
+      void recordEvent({
+        jobId: dbId,
+        eventType: "view",
+        source: "job_detail",
+        metadata: { duration_seconds: duration },
+      });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q.data?.dbId]);
+
   const apply = useMutation({
     mutationFn: () => jobsApi.apply(jobId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["applications"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["applications"] });
+      if (q.data?.dbId) {
+        void recordEvent({
+          jobId: q.data.dbId,
+          eventType: "apply",
+          source: "job_detail",
+        });
+      }
+    },
   });
+
   const save = useMutation({
     mutationFn: () => jobsApi.toggleSave(jobId),
-    onSuccess: () => {
+    onSuccess: (isSaved) => {
       qc.invalidateQueries({ queryKey: ["job", jobId] });
       qc.invalidateQueries({ queryKey: ["saved"] });
+      if (q.data?.dbId) {
+        void recordEvent({
+          jobId: q.data.dbId,
+          eventType: isSaved ? "save" : "unsave",
+          source: "job_detail",
+        });
+      }
     },
   });
 
@@ -147,7 +187,9 @@ function JobDetailsPage() {
           <div className="p-5 bg-card border border-border rounded-xl shadow-card space-y-3">
             <div className="flex items-center justify-between">
               <MatchBadge score={job.matchScore} />
-              <span className="text-xs text-muted-foreground font-medium">{job.experienceLevel}</span>
+              <span className="text-xs text-muted-foreground font-medium">
+                {job.experienceLevel}
+              </span>
             </div>
 
             <button

@@ -124,7 +124,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "https://cdn.luckylinux.dev/opportuneai-assets/OpportuneAI-logo.png",
       },
       { rel: "manifest", href: "/manifest.webmanifest" },
-      { rel: "apple-touch-icon", href: "https://cdn.luckylinux.dev/opportuneai-assets/OpportuneAI-logo.png" },
+      {
+        rel: "apple-touch-icon",
+        href: "https://cdn.luckylinux.dev/opportuneai-assets/OpportuneAI-logo.png",
+      },
     ],
   }),
   shellComponent: RootShell,

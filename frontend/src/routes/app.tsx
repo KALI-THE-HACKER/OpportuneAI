@@ -18,8 +18,7 @@ function AuthGate() {
       const isProfileIncomplete =
         !user.title && (!user.preferredRoles || user.preferredRoles.length === 0);
       const sessionRedirected =
-        typeof window !== "undefined" &&
-        sessionStorage.getItem("onboarding_redirected") === "true";
+        typeof window !== "undefined" && sessionStorage.getItem("onboarding_redirected") === "true";
 
       // If they just logged in and profile is empty, redirect to profile with onboarding flag
       if (

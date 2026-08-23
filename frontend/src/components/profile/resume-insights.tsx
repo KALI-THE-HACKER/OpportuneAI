@@ -15,8 +15,7 @@ export function ResumeInsights({ userSkills, className = "" }: ResumeInsightsPro
   const resumeQ = useQuery({
     queryKey: ["resume"],
     queryFn: () => resumeApi.get(),
-    refetchInterval: (query) =>
-      query.state.data?.status === "processing" ? 3000 : false,
+    refetchInterval: (query) => (query.state.data?.status === "processing" ? 3000 : false),
   });
 
   if (resumeQ.isLoading) {
@@ -82,11 +81,7 @@ export interface InsightsEditorProps {
   onSaved: () => void;
 }
 
-export function InsightsEditor({
-  resumeData,
-  userSkills,
-  onSaved,
-}: InsightsEditorProps) {
+export function InsightsEditor({ resumeData, userSkills, onSaved }: InsightsEditorProps) {
   const qc = useQueryClient();
 
   const seedSkills = userSkills.length > 0 ? userSkills : resumeData.extractedSkills;
@@ -162,19 +157,16 @@ export function InsightsEditor({
       {/* System skill search bar combobox */}
       <div className="space-y-1.5">
         <label className="text-xs font-medium text-foreground block">Add skills from catalog</label>
-        <SkillSearchBar
-          existingSkills={skills}
-          onSelectSkill={handleAddSkill}
-        />
+        <SkillSearchBar existingSkills={skills} onSelectSkill={handleAddSkill} />
       </div>
 
       {/* Skills chips */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-medium text-foreground block">Extracted & added skills</label>
-          <span className="text-[11px] text-muted-foreground">
-            {skills.length} selected
-          </span>
+          <label className="text-xs font-medium text-foreground block">
+            Extracted & added skills
+          </label>
+          <span className="text-[11px] text-muted-foreground">{skills.length} selected</span>
         </div>
 
         <div className="flex flex-wrap gap-1.5 min-h-12 p-2.5 rounded-lg bg-background border border-border/80">

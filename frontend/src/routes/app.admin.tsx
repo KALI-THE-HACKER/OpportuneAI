@@ -43,7 +43,8 @@ function AdminPage() {
         </div>
         <h2 className="text-xl font-bold text-foreground">Access Denied</h2>
         <p className="text-sm text-muted-foreground max-w-md mt-2 mb-6">
-          This section is restricted to administrators. You do not have permission to view system telemetry or pipeline administration tools.
+          This section is restricted to administrators. You do not have permission to view system
+          telemetry or pipeline administration tools.
         </p>
         <Link
           to="/app/dashboard"

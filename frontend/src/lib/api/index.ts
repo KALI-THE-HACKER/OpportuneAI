@@ -1,10 +1,12 @@
 export { authApi, getStoredSession } from "./auth";
 export type { Session } from "./auth";
 export { jobsApi } from "./jobs";
-export type { JobsQuery } from "./jobs";
+export type { JobsQuery, JobWithDbId } from "./jobs";
 export { resumeApi } from "./resume";
 export { userApi } from "./user";
 export { notificationsApi } from "./notifications";
 export { adminApi } from "./admin";
+export { recordEvent } from "./events";
+export type { JobEventType, JobEventSource } from "./events";
 export { ApiError } from "./client";
 export type { Paginated } from "./client";

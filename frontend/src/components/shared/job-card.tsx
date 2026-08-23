@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Bookmark, MapPin, Clock, ArrowUpRight } from "lucide-react";
-import type { Job } from "@/lib/mock/jobs";
+import type { JobWithDbId } from "@/lib/api";
+import { recordEvent } from "@/lib/api";
 import { formatSalary, timeAgo } from "@/lib/format";
 
 export function MatchBadge({ score }: { score: number }) {
@@ -28,13 +29,47 @@ function CompanyAvatar({ company }: { company: string }) {
   );
 }
 
-export function JobCard({ job, onToggleSave }: { job: Job; onToggleSave?: (id: string) => void }) {
+export function JobCard({
+  job,
+  onToggleSave,
+  position,
+  source = "feed",
+}: {
+  job: JobWithDbId;
+  onToggleSave?: (id: string) => void;
+  /** Zero-based position in the list, used for event context. */
+  position?: number;
+  source?: "feed" | "search" | "recommendation";
+}) {
+  function fireClick() {
+    if (job.dbId == null) return;
+    void recordEvent({
+      jobId: job.dbId,
+      eventType: "click",
+      source,
+      position,
+    });
+  }
+
+  function fireSave() {
+    if (job.dbId == null || !onToggleSave) return;
+    onToggleSave(job.id);
+    void recordEvent({
+      jobId: job.dbId,
+      eventType: job.saved ? "unsave" : "save",
+      source,
+      position,
+    });
+  }
+
   return (
-    <article className="
+    <article
+      className="
       group p-5 bg-card border border-border rounded-xl shadow-card
       hover:shadow-elevated hover:border-border/80
       transition-all duration-200 relative
-    ">
+    "
+    >
       <div className="flex justify-between items-start gap-4">
         <div className="flex gap-3.5 min-w-0 flex-1">
           <CompanyAvatar company={job.company} />
@@ -42,6 +77,7 @@ export function JobCard({ job, onToggleSave }: { job: Job; onToggleSave?: (id: s
             <Link
               to="/app/jobs/$jobId"
               params={{ jobId: job.id }}
+              onClick={fireClick}
               className="font-semibold text-foreground hover:text-accent transition-colors duration-150 truncate block text-sm leading-tight"
             >
               {job.title}
@@ -65,7 +101,7 @@ export function JobCard({ job, onToggleSave }: { job: Job; onToggleSave?: (id: s
           <MatchBadge score={job.matchScore} />
           {onToggleSave && (
             <button
-              onClick={() => onToggleSave(job.id)}
+              onClick={fireSave}
               className="text-muted-foreground hover:text-foreground transition-colors duration-150 cursor-pointer"
               aria-label={job.saved ? "Unsave job" : "Save job"}
             >
@@ -114,6 +150,7 @@ export function JobCard({ job, onToggleSave }: { job: Job; onToggleSave?: (id: s
       <Link
         to="/app/jobs/$jobId"
         params={{ jobId: job.id }}
+        onClick={fireClick}
         className="absolute bottom-4 right-4 size-7 grid place-items-center rounded-lg border border-border bg-surface text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:text-foreground hover:bg-card shadow-sm"
         aria-label="Open job details"
       >

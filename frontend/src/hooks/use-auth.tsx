@@ -1,7 +1,13 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { setApiAuthToken } from "@/lib/api/client";
-import { authApi, getStoredSession, parseJwtExp, persistSession, type Session } from "@/lib/api/auth";
+import {
+  authApi,
+  getStoredSession,
+  parseJwtExp,
+  persistSession,
+  type Session,
+} from "@/lib/api/auth";
 import { userApi } from "@/lib/api/user";
 import type { UserProfile } from "@/lib/mock/user";
 
