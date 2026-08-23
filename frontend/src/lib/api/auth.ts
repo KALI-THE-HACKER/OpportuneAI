@@ -21,7 +21,7 @@ export function parseJwtExp(token: string): number | null {
       atob(base64)
         .split("")
         .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
+        .join(""),
     );
     const payload = JSON.parse(jsonPayload);
     if (payload && typeof payload.exp === "number") {

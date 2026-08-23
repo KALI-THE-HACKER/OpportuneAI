@@ -64,7 +64,8 @@ function DashboardPage() {
                 AI is analyzing your resume
               </h4>
               <p className="text-xs text-amber-700/80 dark:text-amber-300/70 mt-0.5">
-                Extracting technical skills, years of experience, and role preferences to refine your match scores.
+                Extracting technical skills, years of experience, and role preferences to refine
+                your match scores.
               </p>
             </div>
           </div>
@@ -152,8 +153,12 @@ function DashboardPage() {
               <ul className="space-y-3.5">
                 {(notifs.data ?? []).slice(0, 4).map((n) => (
                   <li key={n.id} className="text-sm">
-                    <div className="text-foreground font-medium text-sm leading-tight">{n.title}</div>
-                    <div className="text-muted-foreground text-xs mt-0.5">{timeAgo(n.createdAt)}</div>
+                    <div className="text-foreground font-medium text-sm leading-tight">
+                      {n.title}
+                    </div>
+                    <div className="text-muted-foreground text-xs mt-0.5">
+                      {timeAgo(n.createdAt)}
+                    </div>
                   </li>
                 ))}
                 {(notifs.data ?? []).length === 0 && (
@@ -178,10 +183,7 @@ function DashboardPage() {
               </h3>
               <div className="space-y-2.5 text-xs">
                 <Row label="Worker nodes" value={`${12} active`} />
-                <Row
-                  label="Queue latency"
-                  value={`${stats.data?.pipelineLatencyMs ?? "—"} ms`}
-                />
+                <Row label="Queue latency" value={`${stats.data?.pipelineLatencyMs ?? "—"} ms`} />
                 <Row label="Uptime" value={`${stats.data?.uptimePct ?? "—"}%`} />
               </div>
               <div className="mt-3 pt-3 border-t border-border">

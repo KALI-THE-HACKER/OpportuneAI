@@ -97,7 +97,14 @@ function JobExplorer() {
             </div>
             {activeFilters > 0 && (
               <button
-                onClick={() => update({ workMode: undefined, type: undefined, level: undefined, minSalary: undefined })}
+                onClick={() =>
+                  update({
+                    workMode: undefined,
+                    type: undefined,
+                    level: undefined,
+                    minSalary: undefined,
+                  })
+                }
                 className="text-[11px] font-semibold text-accent hover:underline flex items-center gap-1"
               >
                 <X className="size-3" />
@@ -209,7 +216,15 @@ function JobExplorer() {
               description="Try widening your salary, location, or experience filters."
               action={
                 <button
-                  onClick={() => update({ workMode: undefined, type: undefined, level: undefined, minSalary: undefined, q: undefined })}
+                  onClick={() =>
+                    update({
+                      workMode: undefined,
+                      type: undefined,
+                      level: undefined,
+                      minSalary: undefined,
+                      q: undefined,
+                    })
+                  }
                   className="h-9 px-4 inline-flex items-center rounded-lg border border-border bg-card text-sm font-medium text-foreground hover:bg-surface shadow-card transition-all"
                 >
                   Clear all filters
@@ -222,8 +237,14 @@ function JobExplorer() {
                 {query.data!.total.toLocaleString()} results
               </div>
               <div className="space-y-3.5">
-                {query.data!.items.map((j) => (
-                  <JobCard key={j.id} job={j} onToggleSave={toggleSave} />
+                {query.data!.items.map((j, idx) => (
+                  <JobCard
+                    key={j.id}
+                    job={j}
+                    onToggleSave={toggleSave}
+                    position={(page - 1) * 8 + idx}
+                    source={search.q ? "search" : "feed"}
+                  />
                 ))}
               </div>
 
@@ -293,7 +314,13 @@ function FilterCheck({
       >
         {checked && (
           <svg className="size-2.5 text-brand-foreground" viewBox="0 0 10 10" fill="none">
-            <path d="M1.5 5L4 7.5L8.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path
+              d="M1.5 5L4 7.5L8.5 2.5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         )}
       </div>

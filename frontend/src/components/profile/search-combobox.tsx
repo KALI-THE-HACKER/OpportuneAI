@@ -100,7 +100,9 @@ export function SearchCombobox({
           }}
           className="absolute right-2.5 text-muted-foreground/60 hover:text-foreground transition-colors"
         >
-          <ChevronDown className={`size-4 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+          <ChevronDown
+            className={`size-4 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+          />
         </button>
       </div>
 

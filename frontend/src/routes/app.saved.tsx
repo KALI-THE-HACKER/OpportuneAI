@@ -27,9 +27,7 @@ function SavedPage() {
         description="Roles you've bookmarked to review and apply to later."
         actions={
           q.data && q.data.length > 0 ? (
-            <span className="text-xs text-muted-foreground font-medium">
-              {q.data.length} saved
-            </span>
+            <span className="text-xs text-muted-foreground font-medium">{q.data.length} saved</span>
           ) : undefined
         }
       />

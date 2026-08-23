@@ -188,7 +188,7 @@ export const STANDARD_ROLES = [
 export function filterSuggestions(
   items: readonly string[],
   query: string,
-  exclude: readonly string[] = []
+  exclude: readonly string[] = [],
 ): string[] {
   const normQuery = query.trim().toLowerCase();
   const excludeSet = new Set(exclude.map((s) => s.toLowerCase()));

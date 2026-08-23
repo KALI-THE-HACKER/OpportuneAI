@@ -113,9 +113,7 @@ function Toggle({
     <label className="flex items-start justify-between gap-4 cursor-pointer group">
       <div>
         <div className="text-sm font-medium text-foreground">{label}</div>
-        {description && (
-          <div className="text-xs text-muted-foreground mt-0.5">{description}</div>
-        )}
+        {description && <div className="text-xs text-muted-foreground mt-0.5">{description}</div>}
       </div>
       <div className="relative shrink-0 mt-0.5">
         <button

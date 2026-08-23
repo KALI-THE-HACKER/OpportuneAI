@@ -53,9 +53,7 @@ export function AuthShell({
             </div>
             {children}
           </div>
-          {footer && (
-            <div className="mt-5 text-sm text-muted-foreground text-center">{footer}</div>
-          )}
+          {footer && <div className="mt-5 text-sm text-muted-foreground text-center">{footer}</div>}
         </div>
       </div>
     </div>
@@ -75,7 +73,10 @@ export function FormField({
 }) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="text-xs font-semibold text-foreground/80 uppercase tracking-wider block">
+      <label
+        htmlFor={htmlFor}
+        className="text-xs font-semibold text-foreground/80 uppercase tracking-wider block"
+      >
         {label}
       </label>
       {children}

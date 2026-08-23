@@ -63,10 +63,14 @@ function NotificationsPage() {
                 n.read ? "" : "bg-accent/4 dark:bg-accent/6"
               }`}
             >
-              <div className={`size-2 rounded-full mt-2 shrink-0 transition-opacity ${n.read ? "opacity-0" : "bg-accent"}`} />
+              <div
+                className={`size-2 rounded-full mt-2 shrink-0 transition-opacity ${n.read ? "opacity-0" : "bg-accent"}`}
+              />
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className={`text-sm ${n.read ? "text-muted-foreground" : "font-semibold text-foreground"}`}>
+                  <span
+                    className={`text-sm ${n.read ? "text-muted-foreground" : "font-semibold text-foreground"}`}
+                  >
                     {n.title}
                   </span>
                   <span className="text-[11px] text-muted-foreground shrink-0 font-mono">

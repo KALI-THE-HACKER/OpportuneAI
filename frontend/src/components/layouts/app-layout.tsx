@@ -99,7 +99,9 @@ export function AppLayout() {
 
       {/* Nav links */}
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {NAV.filter((item) => !("adminOnly" in item && item.adminOnly) || user?.role === "admin").map((item) => {
+        {NAV.filter(
+          (item) => !("adminOnly" in item && item.adminOnly) || user?.role === "admin",
+        ).map((item) => {
           const active = pathname === item.to || pathname.startsWith(item.to + "/");
           return (
             <NavItem
@@ -250,7 +252,9 @@ export function AppLayoutLoading() {
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="flex items-center gap-2.5 px-3 h-9">
               <Sh className="size-4 rounded-sm shrink-0" />
-              <Sh className={`h-3.5 rounded ${i % 3 === 0 ? "w-28" : i % 3 === 1 ? "w-24" : "w-20"}`} />
+              <Sh
+                className={`h-3.5 rounded ${i % 3 === 0 ? "w-28" : i % 3 === 1 ? "w-24" : "w-20"}`}
+              />
             </div>
           ))}
         </nav>
@@ -297,7 +301,10 @@ export function AppLayoutLoading() {
           {/* Stat cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="p-5 bg-card border border-border rounded-xl shadow-card space-y-3">
+              <div
+                key={i}
+                className="p-5 bg-card border border-border rounded-xl shadow-card space-y-3"
+              >
                 <div className="flex justify-between items-center">
                   <Sh className="h-3 w-20" />
                   <Sh className="size-7 rounded-lg" />
@@ -313,7 +320,10 @@ export function AppLayoutLoading() {
             <div className="lg:col-span-2 space-y-3.5">
               <Sh className="h-4 w-36" />
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="p-5 bg-card border border-border rounded-xl shadow-card space-y-4">
+                <div
+                  key={i}
+                  className="p-5 bg-card border border-border rounded-xl shadow-card space-y-4"
+                >
                   <div className="flex gap-3.5">
                     <Sh className="size-11 rounded-xl shrink-0" />
                     <div className="flex-1 space-y-2">

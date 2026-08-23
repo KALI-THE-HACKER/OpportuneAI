@@ -170,21 +170,25 @@ function ResumePage() {
           className={`
             p-12 rounded-xl border-2 border-dashed flex flex-col items-center justify-center text-center
             bg-card transition-all duration-200 cursor-default
-            ${dragOver
-              ? "border-accent bg-accent/5 shadow-[0_0_0_4px_theme(colors.accent/10%)]"
-              : "border-border hover:border-foreground/20"
+            ${
+              dragOver
+                ? "border-accent bg-accent/5 shadow-[0_0_0_4px_theme(colors.accent/10%)]"
+                : "border-border hover:border-foreground/20"
             }
           `}
         >
-          <div className={`
+          <div
+            className={`
             size-14 grid place-items-center rounded-2xl mb-5 transition-all duration-200
-            ${isProcessing
-              ? "bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400"
-              : dragOver
-                ? "bg-accent/15 text-accent"
-                : "bg-surface border border-border text-muted-foreground"
+            ${
+              isProcessing
+                ? "bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                : dragOver
+                  ? "bg-accent/15 text-accent"
+                  : "bg-surface border border-border text-muted-foreground"
             }
-          `}>
+          `}
+          >
             {isProcessing ? (
               <Loader2 className="size-6 animate-spin" />
             ) : (

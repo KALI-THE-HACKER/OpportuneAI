@@ -19,6 +19,12 @@ export interface JobsQuery {
   pageSize?: number;
 }
 
+/**
+ * Extended Job type — carries an optional numeric dbId for event tracking.
+ * dbId is null when using mock data; non-null when backed by a real processed_job row.
+ */
+export type JobWithDbId = Job & { dbId?: number };
+
 function applyFilters(jobs: Job[], q: JobsQuery): Job[] {
   let out = [...jobs];
   if (q.q) {
@@ -54,7 +60,7 @@ function applyFilters(jobs: Job[], q: JobsQuery): Job[] {
 const savedSet = new Set(SAVED_JOB_IDS);
 
 export const jobsApi = {
-  async list(query: JobsQuery = {}): Promise<Paginated<Job>> {
+  async list(query: JobsQuery = {}): Promise<Paginated<JobWithDbId>> {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
     const filtered = applyFilters(MOCK_JOBS, query);
@@ -68,11 +74,13 @@ export const jobsApi = {
       pageSize,
     });
   },
-  async get(id: string): Promise<Job | null> {
+
+  async get(id: string): Promise<JobWithDbId | null> {
     const job = MOCK_JOBS.find((j) => j.id === id) ?? null;
     return delay(job ? { ...job, saved: savedSet.has(job.id) } : null);
   },
-  async recommendations(limit = 6): Promise<Job[]> {
+
+  async recommendations(limit = 6): Promise<JobWithDbId[]> {
     return delay(
       [...MOCK_JOBS]
         .sort((a, b) => b.matchScore - a.matchScore)
@@ -80,22 +88,26 @@ export const jobsApi = {
         .map((j) => ({ ...j, saved: savedSet.has(j.id) })),
     );
   },
-  async saved(): Promise<Job[]> {
+
+  async saved(): Promise<JobWithDbId[]> {
     return delay(MOCK_JOBS.filter((j) => savedSet.has(j.id)).map((j) => ({ ...j, saved: true })));
   },
+
   async toggleSave(id: string): Promise<boolean> {
     if (savedSet.has(id)) savedSet.delete(id);
     else savedSet.add(id);
     return delay(savedSet.has(id), 150);
   },
-  async applications(): Promise<(ApplicationRecord & { job: Job })[]> {
+
+  async applications(): Promise<(ApplicationRecord & { job: JobWithDbId })[]> {
     return delay(
       MOCK_APPLICATIONS.map((a) => ({
         ...a,
-        job: MOCK_JOBS.find((j) => j.id === a.jobId)!,
+        job: MOCK_JOBS.find((j) => j.id === a.jobId)! as JobWithDbId,
       })),
     );
   },
+
   async apply(jobId: string): Promise<ApplicationRecord> {
     const rec: ApplicationRecord = {
       id: "app-" + Math.random().toString(36).slice(2, 7),
