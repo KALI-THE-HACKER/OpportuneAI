@@ -324,9 +324,9 @@ async def delete_resume(
     repo = UserRepository(db)
     await repo.clear_resume(user)
     try:
-        from services.feed_service import FeedService
+        from services.user_embedding_service import UserEmbeddingService
 
-        FeedService(db).invalidate_feed(user.id)
+        await UserEmbeddingService(db).sync_user_preference_embedding(user)
     except Exception:
         pass
     logger.info("Resume deleted for user_id=%s", user.id)

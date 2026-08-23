@@ -71,9 +71,9 @@ async def _process_resume(user_id: int) -> None:
                 pass
 
             try:
-                from services.feed_service import FeedService
+                from services.user_embedding_service import UserEmbeddingService
 
-                FeedService(db).invalidate_feed(user_id)
+                await UserEmbeddingService(db).sync_user_preference_embedding(user)
             except Exception:
                 pass
 

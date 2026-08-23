@@ -165,15 +165,17 @@ async def update_me(
         "work_modes",
         "min_salary",
     }
-    if any(k in ranking_fields for k in update_data.keys()):
-        try:
-            from services.feed_service import FeedService
-
-            FeedService(db).invalidate_feed(user.id)
-        except Exception:
-            pass
+    has_ranking_change = any(k in ranking_fields for k in update_data.keys())
 
     updated_user = await repo.update(user, **update_data)
+
+    if has_ranking_change:
+        try:
+            from services.user_embedding_service import UserEmbeddingService
+
+            await UserEmbeddingService(db).sync_user_preference_embedding(updated_user)
+        except Exception:
+            pass
 
     if update_data:
         try:

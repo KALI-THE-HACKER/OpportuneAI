@@ -35,15 +35,37 @@ async def _process_raw_job(raw_job_id: Any) -> None:
 
             # 4. Save processed job.
             processed_repo = ProcessedJobRepository(db)
-            await processed_repo.create(
+            processed_job = await processed_repo.create(
                 raw_job_id=raw_job.id,
                 extraction=extraction,
                 scraped_at=raw_job.scraped_at,
             )
 
-            # TODO: Generate embeddings.
+            # 5. Generate and persist job embedding.
+            try:
+                from ai.embeddings.canonical import build_job_embedding_text
+                from ai.embeddings.service import get_embedding_service
+                from config.settings import settings
 
-            # 5. Update processing_status -> PROCESSED.
+                embedding_text = build_job_embedding_text(processed_job)
+                embedding_service = get_embedding_service()
+                embedding = await embedding_service.aembed_text(embedding_text)
+                processed_job.embedding = embedding
+                processed_job.embedding_model = settings.gemini_embedding_model
+                await db.commit()
+                logger.info(
+                    "Generated embedding for processed job %s (dim=%d)",
+                    processed_job.id,
+                    len(embedding),
+                )
+            except Exception as e:
+                logger.warning(
+                    "Embedding generation failed for processed job %s: %s",
+                    processed_job.id,
+                    e,
+                )
+
+            # 6. Update processing_status -> PROCESSED.
             raw_job.processing_status = ProcessingStatus.PROCESSED
             await db.commit()
             logger.info("Successfully processed raw job %s", raw_job_id)

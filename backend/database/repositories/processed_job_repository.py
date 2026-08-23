@@ -109,6 +109,45 @@ class ProcessedJobRepository:
         )
         return list(result.scalars().all())
 
+    async def get_semantic_candidates(
+        self, user_embedding: list[float], limit: int = 200
+    ) -> list[tuple[ProcessedJob, float]]:
+        """Retrieve top N active, unexpired ProcessedJobs sorted by cosine similarity to user embedding.
+
+        Returns list of (ProcessedJob, cosine_similarity) tuples where cosine_similarity is between 0.0 and 1.0.
+        """
+        if not user_embedding:
+            return []
+
+        now = datetime.utcnow()
+        distance_col = ProcessedJob.embedding.cosine_distance(user_embedding)
+
+        stmt = (
+            select(ProcessedJob, distance_col.label("distance"))
+            .options(joinedload(ProcessedJob.raw_job))
+            .where(
+                ProcessedJob.embedding.isnot(None),
+                or_(
+                    ProcessedJob.last_date_to_apply.is_(None),
+                    ProcessedJob.last_date_to_apply >= now,
+                ),
+            )
+            .order_by(distance_col.asc())
+            .limit(limit)
+        )
+
+        result = await self.db.execute(stmt)
+        rows = result.all()
+
+        candidates: list[tuple[ProcessedJob, float]] = []
+        for job, distance in rows:
+            dist_val = float(distance) if distance is not None else 1.0
+            # Cosine distance = 1 - cosine_similarity. Similarity = max(0.0, 1.0 - dist_val)
+            similarity = max(0.0, min(1.0, 1.0 - dist_val))
+            candidates.append((job, similarity))
+
+        return candidates
+
     async def get_by_raw_job_id(self, raw_job_id: int) -> ProcessedJob | None:
         """Retrieve a ProcessedJob by its associated raw_job_id."""
         result = await self.db.execute(

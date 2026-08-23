@@ -28,4 +28,4 @@ class UserActivity(Base):
         index=True,
     )
 
-    user = relationship("User", backref="activities")
+    user = relationship("User", back_populates="activities")
