@@ -108,6 +108,8 @@ async def create_job_event(
 
                 redis_client = get_redis_client()
                 redis_client.delete(f"feed:user:{_user.id}")
+                if body.event_type == "apply":
+                    redis_client.sadd(f"user:{_user.id}:applied_jobs", str(body.job_id))
             except Exception:
                 pass
 

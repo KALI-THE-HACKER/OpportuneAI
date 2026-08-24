@@ -32,6 +32,7 @@ export interface JobsQuery {
 export type JobWithDbId = Job & { dbId?: number };
 
 const savedSet = new Set(SAVED_JOB_IDS);
+const appliedSet = new Set(APPLIED_JOB_IDS);
 
 function applyFilters(jobs: Job[], q: JobsQuery): Job[] {
   let out = [...jobs];
@@ -68,6 +69,7 @@ function applyFilters(jobs: Job[], q: JobsQuery): Job[] {
 export const jobsApi = {
   /**
    * Fetch the personalized feed with cursor pagination from the backend.
+   * Automatically excludes jobs that the user has already applied to.
    */
   async feed(params: FeedParams = {}): Promise<FeedResponse> {
     const query = new URLSearchParams();
@@ -77,17 +79,20 @@ export const jobsApi = {
     const queryString = query.toString();
     const path = `/api/feed${queryString ? `?${queryString}` : ""}`;
     const res = await apiCall<FeedResponse>(path);
+    const filteredItems = res.items.filter((j) => !appliedSet.has(j.id) && !j.applied);
+
     return {
-      items: res.items.map((j) => {
+      items: filteredItems.map((j) => {
         const parsedId = Number(j.id.replace(/^job-/, ""));
         return {
           ...j,
           dbId: !isNaN(parsedId) ? parsedId : undefined,
           saved: savedSet.has(j.id),
+          applied: appliedSet.has(j.id) || Boolean(j.applied),
         };
       }),
       next_cursor: res.next_cursor,
-      total: res.total,
+      total: Math.max(0, res.total - (res.items.length - filteredItems.length)),
     };
   },
 
@@ -102,6 +107,7 @@ export const jobsApi = {
         ...res,
         dbId: !isNaN(parsedId) ? parsedId : undefined,
         saved: savedSet.has(res.id),
+        applied: appliedSet.has(res.id) || Boolean(res.applied),
       };
     } catch {
       return null;
@@ -131,7 +137,11 @@ export const jobsApi = {
     return {
       items: filtered
         .slice(start, start + pageSize)
-        .map((j) => ({ ...j, saved: savedSet.has(j.id) })),
+        .map((j) => ({
+          ...j,
+          saved: savedSet.has(j.id),
+          applied: appliedSet.has(j.id) || Boolean(j.applied),
+        })),
       total: filtered.length,
       page,
       pageSize,
@@ -140,7 +150,13 @@ export const jobsApi = {
 
   async saved(): Promise<JobWithDbId[]> {
     const feedRes = await this.feed({ limit: 100 });
-    return feedRes.items.filter((j) => savedSet.has(j.id));
+    return feedRes.items
+      .filter((j) => savedSet.has(j.id))
+      .map((j) => ({
+        ...j,
+        saved: true,
+        applied: appliedSet.has(j.id) || Boolean(j.applied),
+      }));
   },
 
   async toggleSave(id: string, source = "feed"): Promise<boolean> {
@@ -189,6 +205,7 @@ export const jobsApi = {
       appliedAt: new Date().toISOString(),
       lastUpdate: new Date().toISOString(),
     };
+    appliedSet.add(jobId);
     if (!APPLIED_JOB_IDS.includes(jobId)) APPLIED_JOB_IDS.push(jobId);
 
     // Send user event to record interaction & invalidate feed
@@ -210,6 +227,7 @@ export const jobsApi = {
 
     return rec;
   },
+
 
   async generateOutreach(
     jobId: string,

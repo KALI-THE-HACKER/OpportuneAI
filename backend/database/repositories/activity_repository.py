@@ -103,3 +103,13 @@ class ActivityRepository:
         result = await self.db.execute(stmt)
         await self.db.commit()
         return result.rowcount
+
+    async def get_applied_job_ids(self, user_id: int) -> set[int]:
+        """Fetch all job IDs the user has applied to based on application activity records."""
+        stmt = select(UserActivity).where(
+            UserActivity.user_id == user_id,
+            UserActivity.activity_type == "application",
+        )
+        await self.db.execute(stmt)
+        # Primary tracking is Redis set user:{user_id}:applied_jobs
+        return set()

@@ -72,6 +72,10 @@ function JobDetailPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["applications"] });
       qc.invalidateQueries({ queryKey: ["job", jobId] });
+      qc.invalidateQueries({ queryKey: ["jobs"] });
+      qc.invalidateQueries({ queryKey: ["feed"] });
+      qc.invalidateQueries({ queryKey: ["saved"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 
@@ -197,7 +201,39 @@ function JobDetailPage() {
             </div>
 
             {/* Primary CTA: direct apply link > mailto contact > tracked apply button */}
-            {job.applyUrl ? (
+            {job.applied || apply.isSuccess ? (
+              job.applyUrl ? (
+                <a
+                  id="btn-apply-direct"
+                  href={job.applyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="
+                    w-full h-10 inline-flex items-center justify-center gap-2
+                    rounded-lg bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20 text-sm font-semibold
+                    hover:bg-emerald-100/70 dark:hover:bg-emerald-500/15
+                    transition-all duration-150 shadow-sm cursor-pointer
+                  "
+                >
+                  <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
+                  Applied
+                  <ExternalLink className="size-3.5 opacity-60 ml-0.5" />
+                </a>
+              ) : (
+                <button
+                  id="btn-apply-tracked"
+                  disabled
+                  className="
+                    w-full h-10 inline-flex items-center justify-center gap-2
+                    rounded-lg bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20 text-sm font-semibold
+                    transition-all duration-150 shadow-sm cursor-default
+                  "
+                >
+                  <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
+                  Applied
+                </button>
+              )
+            ) : job.applyUrl ? (
               <a
                 id="btn-apply-direct"
                 href={job.applyUrl}
@@ -220,7 +256,7 @@ function JobDetailPage() {
               <button
                 id="btn-apply-tracked"
                 onClick={() => apply.mutate()}
-                disabled={apply.isPending || apply.isSuccess}
+                disabled={apply.isPending}
                 className="
                   w-full h-10 inline-flex items-center justify-center gap-2
                   rounded-lg bg-brand text-brand-foreground text-sm font-semibold
@@ -234,11 +270,6 @@ function JobDetailPage() {
                     <Loader2 className="size-4 animate-spin" />
                     Applying…
                   </>
-                ) : apply.isSuccess ? (
-                  <>
-                    <CheckCircle2 className="size-4" />
-                    Application sent
-                  </>
                 ) : (
                   <>
                     <Send className="size-4" />
@@ -247,6 +278,7 @@ function JobDetailPage() {
                 )}
               </button>
             )}
+
 
             <button
               onClick={() => save.mutate()}

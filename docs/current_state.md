@@ -138,10 +138,13 @@
 - Redis feed cache key `feed:user:{id}` with 1-hour TTL storing ranked job IDs.
 - Single-query batch PostgreSQL job fetching (`WHERE id IN (...)`) preserving Redis rank order in-memory.
 - Automatic feed cache invalidation and preference embedding refresh on profile updates (`PUT /api/users/me`), resume extraction completion, resume deletion, and significant interaction events (`save`, `unsave`, `apply`, `dismiss`, `not_interested`).
-- Endpoints: `GET /api/feed` (cursor-paginated) and `GET /api/jobs/{job_id}` (individual job detail).
+- Applied job exclusion: When a user applies to a job, its ID is stored in the user's applied set (`user:{id}:applied_jobs` in Redis and `UserActivity`), and it is automatically excluded from subsequent feed generation and recommendation queries.
+- Endpoints: `GET /api/feed` (cursor-paginated) and `GET /api/jobs/{job_id}` (individual job detail with `applied` status).
 
-**Frontend** (`frontend/src/lib/api/jobs.ts`, `frontend/src/routes/app.dashboard.tsx`, `frontend/src/routes/app.recommendations.tsx`, `frontend/src/routes/app.jobs.index.tsx`, `frontend/src/routes/app.jobs.$jobId.tsx`):
+**Frontend** (`frontend/src/lib/api/jobs.ts`, `frontend/src/components/shared/job-card.tsx`, `frontend/src/routes/app.dashboard.tsx`, `frontend/src/routes/app.recommendations.tsx`, `frontend/src/routes/app.jobs.index.tsx`, `frontend/src/routes/app.jobs.$jobId.tsx`):
 - Real backend API integration via `jobsApi.feed()`, `jobsApi.get()`, `jobsApi.recommendations()`, and `jobsApi.list()`.
+- Applied job state tracking: `JobCard` displays an emerald `Applied` badge with `CheckCircle2` icon. The job detail CTA displays `Applied` (for both direct external links and tracked applications) instead of `Apply now`.
+- Applied jobs are excluded from the personalized feed and recommendations.
 - Coordinated TanStack Query cache keys (`["feed", { limit: 4 }]` for Dashboard, `["feed", { limit: 12 }]` for Recommendations).
 - Interaction tracking wired to `POST /api/v1/events/jobs` with automatic cache invalidation.
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Bookmark, MapPin, Clock, Calendar, ArrowUpRight, Loader2 } from "lucide-react";
+import { Bookmark, MapPin, Clock, Calendar, ArrowUpRight, Loader2, CheckCircle2 } from "lucide-react";
 import type { JobWithDbId } from "@/lib/api";
 import { recordEvent } from "@/lib/api";
 import { formatSalary, timeAgo, formatApplyDeadline } from "@/lib/format";
@@ -123,7 +123,18 @@ export function JobCard({
         </div>
 
         <div className="flex flex-col items-end gap-2 shrink-0 pointer-events-auto">
-          <MatchBadge score={job.matchScore} />
+          <div className="flex items-center gap-1.5">
+            {job.applied && (
+              <span
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ring-1 bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20"
+                title="You have applied to this role"
+              >
+                <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400" />
+                Applied
+              </span>
+            )}
+            <MatchBadge score={job.matchScore} />
+          </div>
           {onToggleSave && (
             <button
               onClick={(e) => {

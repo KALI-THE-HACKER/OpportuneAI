@@ -32,6 +32,7 @@ class JobCardSchema(BaseModel):
     matchedSkills: list[str] = []
     experienceLevel: str = "Mid"
     saved: bool = False
+    applied: bool = False
     link: str | None = None
     lastDateToApply: str | None = None
     applyUrl: str | None = None
@@ -82,5 +83,9 @@ async def get_job_detail(
             detail=f"Job {job_id} not found",
         )
 
-    job_card = FeedService.format_job_card(job, user=user)
+    feed_service = FeedService(db)
+    applied_ids = await feed_service.get_applied_job_ids(user)
+    is_applied = numeric_id in applied_ids
+
+    job_card = FeedService.format_job_card(job, user=user, is_applied=is_applied)
     return JobCardSchema(**job_card)

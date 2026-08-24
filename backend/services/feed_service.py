@@ -36,15 +36,32 @@ def get_redis_client() -> Redis:
     return _redis_client
 
 
+def to_float_vector(vec: object) -> list[float] | None:
+    """Safely convert vectors from list, string JSON, or pgvector types to a list of floats."""
+    if vec is None:
+        return None
+    if isinstance(vec, str):
+        try:
+            vec = json.loads(vec)
+        except Exception:
+            return None
+    try:
+        return [float(x) for x in vec]  # type: ignore[union-attr]
+    except Exception:
+        return None
+
+
 def compute_cosine_similarity(
     vec1: list[float] | None, vec2: list[float] | None
 ) -> float | None:
     """Compute cosine similarity between two float vectors."""
-    if not vec1 or not vec2 or len(vec1) != len(vec2):
+    v1 = to_float_vector(vec1)
+    v2 = to_float_vector(vec2)
+    if not v1 or not v2 or len(v1) != len(v2):
         return None
-    dot = sum(a * b for a, b in zip(vec1, vec2))
-    norm1 = sum(a * a for a in vec1) ** 0.5
-    norm2 = sum(b * b for b in vec2) ** 0.5
+    dot = sum(a * b for a, b in zip(v1, v2))
+    norm1 = sum(a * a for a in v1) ** 0.5
+    norm2 = sum(b * b for b in v2) ** 0.5
     if norm1 == 0 or norm2 == 0:
         return 0.0
     return max(0.0, min(1.0, dot / (norm1 * norm2)))
@@ -59,6 +76,30 @@ class FeedService:
     @staticmethod
     def get_feed_cache_key(user_id: int) -> str:
         return f"feed:user:{user_id}"
+
+    async def get_applied_job_ids(self, user: User | None) -> set[int]:
+        """Retrieve the set of job IDs the user has applied to."""
+        if not user or not user.id:
+            return set()
+
+        applied_ids: set[int] = set()
+
+        # 1. Check Redis set
+        try:
+            redis_set_key = f"user:{user.id}:applied_jobs"
+            cached_members = self.redis.smembers(redis_set_key)
+            if cached_members:
+                for item in cached_members:
+                    try:
+                        applied_ids.add(int(item))
+                    except (ValueError, TypeError):
+                        pass
+        except Exception as e:
+            logger.warning(
+                "Failed to fetch applied jobs from Redis for user %s: %s", user.id, e
+            )
+
+        return applied_ids
 
     def invalidate_feed(self, user_id: int) -> None:
         """Invalidate the cached personalized feed for a user."""
@@ -77,6 +118,7 @@ class FeedService:
         Stage 1 (Candidate Retrieval):
             - If user has preference_embedding: retrieve top N semantically similar candidates using pgvector.
             - If no preference_embedding or empty candidates: fallback to eligible jobs (cold start).
+            - Excludes any jobs the user has already applied to.
         Stage 2 (Structured Reranking):
             - Score candidates using ScoringEngine.score_job()
             - Calculate hybrid score:
@@ -87,26 +129,34 @@ class FeedService:
         """
         scored_jobs: list[tuple[ProcessedJob, float]] = []
         has_preference_embedding = bool(user and user.preference_embedding is not None)
+        applied_ids = await self.get_applied_job_ids(user)
 
         # Stage 1: Candidate Retrieval
         if has_preference_embedding and user:
-            user_vec = list(user.preference_embedding)  # type: ignore[union-attr]
-            candidates = await self.repo.get_semantic_candidates(
-                user_embedding=user_vec,
-                limit=settings.candidate_pool_size,
-            )
+            user_vec = to_float_vector(user.preference_embedding)
+            if user_vec:
+                candidates = await self.repo.get_semantic_candidates(
+                    user_embedding=user_vec,
+                    limit=settings.candidate_pool_size,
+                )
 
-            if candidates:
-                # Stage 2: Structured Reranking for semantic candidates
-                for job, semantic_similarity in candidates:
-                    structured_score, _, _ = ScoringEngine.score_job(user, job)
-                    semantic_score_100 = semantic_similarity * 100.0
+                if candidates:
+                    # Filter out applied jobs
+                    filtered_candidates = [
+                        (job, sim)
+                        for job, sim in candidates
+                        if job.id not in applied_ids
+                    ]
+                    # Stage 2: Structured Reranking for semantic candidates
+                    for job, semantic_similarity in filtered_candidates:
+                        structured_score, _, _ = ScoringEngine.score_job(user, job)
+                        semantic_score_100 = semantic_similarity * 100.0
 
-                    hybrid_score = (
-                        settings.hybrid_semantic_weight * semantic_score_100
-                        + settings.hybrid_structured_weight * structured_score
-                    )
-                    scored_jobs.append((job, hybrid_score))
+                        hybrid_score = (
+                            settings.hybrid_semantic_weight * semantic_score_100
+                            + settings.hybrid_structured_weight * structured_score
+                        )
+                        scored_jobs.append((job, hybrid_score))
 
         # Fallback / Cold Start (user is guest, empty profile, or no semantic candidates)
         if not scored_jobs:
@@ -117,6 +167,8 @@ class FeedService:
                 return []
 
             for job in eligible_jobs:
+                if job.id in applied_ids:
+                    continue
                 score, _, _ = ScoringEngine.score_job(user, job)
                 scored_jobs.append((job, score))
 
@@ -130,7 +182,7 @@ class FeedService:
             reverse=True,
         )
 
-        ranked_job_ids = [job.id for job, _ in scored_jobs]
+        ranked_job_ids = [job.id for job, _ in scored_jobs if job.id not in applied_ids]
 
         # Cache in Redis if user exists
         if user and user.id:
@@ -178,7 +230,10 @@ class FeedService:
 
     @staticmethod
     def format_job_card(
-        job: ProcessedJob, user: User | None = None, is_saved: bool = False
+        job: ProcessedJob,
+        user: User | None = None,
+        is_saved: bool = False,
+        is_applied: bool = False,
     ) -> dict:
         """Format a ProcessedJob into the complete job card representation expected by the frontend."""
         structured_score, matched_skills, missing_skills = ScoringEngine.score_job(
@@ -187,8 +242,8 @@ class FeedService:
 
         final_score = structured_score
         if user and user.preference_embedding is not None and job.embedding is not None:
-            user_vec = list(user.preference_embedding)
-            job_vec = list(job.embedding)
+            user_vec = to_float_vector(user.preference_embedding)
+            job_vec = to_float_vector(job.embedding)
             sim = compute_cosine_similarity(user_vec, job_vec)
             if sim is not None:
                 final_score = (
@@ -251,6 +306,7 @@ class FeedService:
             "matchedSkills": matched_skills,
             "experienceLevel": experience_lvl,
             "saved": is_saved,
+            "applied": is_applied,
             "link": job.raw_job.link if job.raw_job else None,
             "lastDateToApply": (
                 job.last_date_to_apply.isoformat() if job.last_date_to_apply else None
@@ -315,7 +371,13 @@ class FeedService:
             jobs_by_id[jid] for jid in target_ids if jid in jobs_by_id
         ]
 
-        items = [self.format_job_card(job, user=user) for job in ordered_jobs]
+        applied_ids = await self.get_applied_job_ids(user)
+
+        items = [
+            self.format_job_card(job, user=user, is_applied=(job.id in applied_ids))
+            for job in ordered_jobs
+            if job.id not in applied_ids
+        ]
 
         has_more = (offset + limit) < total_count
         next_cursor = self.encode_cursor(offset + limit) if has_more else None
