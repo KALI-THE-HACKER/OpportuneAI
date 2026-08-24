@@ -255,6 +255,10 @@ class FeedService:
             "lastDateToApply": (
                 job.last_date_to_apply.isoformat() if job.last_date_to_apply else None
             ),
+            "applyUrl": job.apply_url,
+            "contactEmail": job.contact_email,
+            "contactName": job.contact_name,
+            "contactRole": job.contact_role,
         }
 
     async def get_feed(

@@ -32,6 +32,12 @@ class ProcessedJob(Base):
     job_description: Mapped[str] = mapped_column(Text, nullable=False)
     embedding: Mapped[list[float] | None] = mapped_column(Vector(768), nullable=True)
     embedding_model: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # Direct application URL extracted from the job posting or raw payload
+    apply_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    # HR / Founder contact discovered by the Contact Finder Agent
+    contact_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    contact_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    contact_role: Mapped[str | None] = mapped_column(String(200), nullable=True)
     processed_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,

@@ -2,6 +2,7 @@ import asyncio
 import logging
 from typing import Any
 
+from ai.agents.contact_finder import ContactFinderAgent
 from ai.extraction.extractor import InsufficientJobDataError, JobExtractor
 from ai.providers.factory import get_llm
 from database.models.raw_job import ProcessingStatus, RawJob
@@ -9,6 +10,17 @@ from database.repositories.processed_job_repository import ProcessedJobRepositor
 from database.session import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_apply_url_from_payload(raw_payload: dict | None) -> str | None:
+    """Extract a direct application URL embedded in raw_payload by scrapers.
+
+    Currently handles:
+      - RemoteOK: raw_payload["apply_url"]
+    """
+    if not raw_payload or not isinstance(raw_payload, dict):
+        return None
+    return raw_payload.get("apply_url") or None
 
 
 async def _process_raw_job(raw_job_id: Any) -> None:
@@ -33,15 +45,19 @@ async def _process_raw_job(raw_job_id: Any) -> None:
             extractor = JobExtractor(llm)
             extraction = await extractor.extract(raw_job)
 
-            # 4. Save processed job.
+            # 4. Resolve apply URL: LLM result > raw_payload fallback > raw_job.link
+            payload_apply_url = _extract_apply_url_from_payload(raw_job.raw_payload)
+
+            # 5. Save processed job.
             processed_repo = ProcessedJobRepository(db)
             processed_job = await processed_repo.create(
                 raw_job_id=raw_job.id,
                 extraction=extraction,
                 scraped_at=raw_job.scraped_at,
+                apply_url=payload_apply_url,
             )
 
-            # 5. Generate and persist job embedding.
+            # 6. Generate and persist job embedding.
             try:
                 from ai.embeddings.canonical import build_job_embedding_text
                 from ai.embeddings.service import get_embedding_service
@@ -65,7 +81,35 @@ async def _process_raw_job(raw_job_id: Any) -> None:
                     e,
                 )
 
-            # 6. Update processing_status -> PROCESSED.
+            # 7. If no apply URL, run Contact Finder Agent to discover HR/founder email.
+            if not processed_job.apply_url:
+                try:
+                    agent = ContactFinderAgent(llm)
+                    contact = await agent.find(
+                        db=db,
+                        company=processed_job.company,
+                        job_link=raw_job.link or "",
+                        job_title=processed_job.job_title,
+                    )
+                    if contact:
+                        processed_job.contact_email = contact.contact_email
+                        processed_job.contact_name = contact.contact_name
+                        processed_job.contact_role = contact.contact_role
+                        await db.commit()
+                        logger.info(
+                            "Contact Finder enriched job %s with contact: %s <%s>",
+                            processed_job.id,
+                            contact.contact_name,
+                            contact.contact_email,
+                        )
+                except Exception as e:
+                    logger.warning(
+                        "Contact Finder Agent failed for job %s: %s",
+                        processed_job.id,
+                        e,
+                    )
+
+            # 8. Update processing_status -> PROCESSED.
             raw_job.processing_status = ProcessingStatus.PROCESSED
             await db.commit()
             logger.info("Successfully processed raw job %s", raw_job_id)

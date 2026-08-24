@@ -46,11 +46,19 @@ flowchart TD
         GEMINI["Gemini 2.5 Flash LLM"]
         EMBED_GEN["Gemini Embeddings\n(models/gemini-embedding-001)"]
         PROCESSED[("PostgreSQL\nprocessed_jobs + pgvector")]
+        APPLY_CHECK{"apply_url\nfound?"}
+        CONTACT_AGENT["Contact Finder Agent\n(DuckDuckGo + Gemini + DNS MX)"]
+        CONTACT_CACHE[("PostgreSQL\ncompany_contacts cache")]
 
         RAW --> RQ_AI --> AI_WORKER
         AI_WORKER --> GEMINI_POOL --> GEMINI
-        GEMINI -->|"Structured Metadata"| PROCESSED
+        GEMINI -->|"Structured Metadata\n+ apply_url"| PROCESSED
         AI_WORKER --> EMBED_GEN -->|"Vector(768)"| PROCESSED
+        PROCESSED --> APPLY_CHECK
+        APPLY_CHECK -->|"Yes"| PROCESSED
+        APPLY_CHECK -->|"No"| CONTACT_AGENT
+        CONTACT_AGENT --> CONTACT_CACHE
+        CONTACT_CACHE -->|"contact_email + name + role"| PROCESSED
     end
 
     %% 3. Candidate Profile & Resume Engine
@@ -88,10 +96,16 @@ flowchart TD
     subgraph S5 ["5. Client Application & Event Stream"]
         direction TB
         REACT_APP["TanStack Start + React 19 Client\n(Dashboard, Recommendations, Explorer)"]
+        CTA{"apply_url\npresent?"}
+        DIRECT["Apply Now\n(Direct External Link)"]
+        OUTREACH["Email Recruiter / Founder\n(mailto: + Cold Outreach Draft)"]
         EVENTS["User Actions\n(Save, Apply, Profile Edit)"]
         NOTIFS[("PostgreSQL\nuser_activities")]
 
         FEED_API --> REACT_APP
+        REACT_APP --> CTA
+        CTA -->|"Yes"| DIRECT
+        CTA -->|"No (contact found)"| OUTREACH
         REACT_APP --> EVENTS
         EVENTS -->|"Invalidate Feed"| REDIS_CACHE
         EVENTS -->|"Log Activity"| NOTIFS
@@ -176,6 +190,9 @@ For users without sufficient profile or resume data:
 - **Multi-Source Scraping**: Integrated scrapers for LinkedIn, Naukri, Wellfound (Firecrawl markdown), and RemoteOK.
 - **SHA-256 Job Fingerprinting**: Prevents duplicate listings across multiple crawling runs using `title|company|date_posted|location` hashing.
 - **Gemini Client Pool**: Thread-safe multi-API-key cycling with rate-limit tracking and automatic cooldown flags.
+- **Smart Apply Links**: Gemini LLM extracts direct application URLs (Greenhouse, Lever, Ashby, Workday, etc.) from job descriptions. RemoteOK `apply_url` is also read directly from the scraper payload.
+- **Autonomous Contact Finder Agent**: When no apply link is present, an autonomous AI agent searches DuckDuckGo for HR, Recruiter, Co-Founder, or Founder contacts — zero API cost. Gemini synthesizes name, role, and email from search snippets; DNS MX validation confirms deliverability. Results are cached per company in `company_contacts` to avoid redundant searches.
+- **One-Click Outreach**: Frontend renders a pre-composed cold-outreach `mailto:` button with the contact's name, role, and email when no direct apply URL is available. Includes a one-click email copy button.
 - **Resume Intelligence**: Private Cloudflare R2 PDF document storage, in-memory text parsing (`pypdf`), and async LLM skill extraction.
 - **Real Activity & Notification Feed**: Centralized `user_activities` ledger tracking job bookmarks, applications, resume processing milestones, and profile updates.
 - **Role-Based Access Control (RBAC)**: Fine-grained admin dashboard and metrics gated by JWT claims and email allowlists.
@@ -189,13 +206,14 @@ For users without sufficient profile or resume data:
 OpportuneAI/
 ├── backend/
 │   ├── ai/                      # Gemini LLM extractors, prompt templates & client pools
+│   │   ├── agents/              # Autonomous AI agents (ContactFinderAgent)
 │   │   ├── embeddings/          # Vector embedding service & canonical text builders
 │   │   ├── extraction/          # Job & resume parsing prompts
 │   │   ├── pools/               # Thread-safe multi-key Gemini pooling
-│   │   └── schemas.py           # Pydantic extraction output schemas
+│   │   └── schemas.py           # Pydantic extraction output schemas (JobExtraction, ContactInfo)
 │   ├── config/                  # Configuration loaders, settings & YAML definitions
 │   ├── database/                # SQLAlchemy models, async session & repositories
-│   │   ├── models/              # User, RawJob, ProcessedJob, UserActivity, UserJobEvent
+│   │   ├── models/              # User, RawJob, ProcessedJob, CompanyContact, UserActivity, UserJobEvent
 │   │   ├── repositories/        # Database CRUD encapsulation classes
 │   │   └── seed.py              # Realistic sample data seed generator
 │   ├── ingestion/               # Scraping orchestrator & deduplication pipeline
@@ -205,7 +223,7 @@ OpportuneAI/
 │   ├── services/                # Feed service, ScoringEngine, UserEmbeddingService & backfill
 │   ├── storage/                 # Cloudflare R2 S3-compatible client wrappers
 │   ├── workers/                 # Background RQ worker consumers (ai_worker, resume_worker)
-│   └── tests/                   # Complete pytest suite (unit, integration, API, embeddings)
+│   └── tests/                   # Complete pytest suite (unit, integration, API, embeddings, agents)
 ├── frontend/
 │   ├── src/
 │   │   ├── components/          # UI primitives (JobCard, StatCard, SearchCombobox, Layouts)
@@ -326,6 +344,38 @@ OpportuneAI/
 
 ---
 
+## 🔗 Apply Link & Autonomous Contact Finder
+
+Every job card resolves a direct application path using a three-tier priority chain:
+
+```
+1. apply_url extracted by Gemini LLM from job description
+       (Greenhouse, Lever, Ashby, Workday, careers pages, Google Forms)
+         ↓ if absent
+2. apply_url read directly from scraper raw_payload
+       (e.g. RemoteOK API returns apply_url natively)
+         ↓ if absent
+3. Autonomous Contact Finder Agent triggered:
+   ├─ Search: DuckDuckGo HTML (zero cost, no API key)
+   │    Query 1: site:linkedin.com/in "<Company>" AND ("recruiter" OR "founder" OR "HR")
+   │    Query 2: "<Company>" email "@<domain>" (contact OR careers OR hiring)
+   ├─ LLM Synthesis: Gemini extracts name, role, email or derives
+   │    email from common patterns (firstname@domain, firstname.lastname@domain)
+   ├─ DNS MX Validation: async socket check confirms domain accepts email
+   └─ Cache: stored in company_contacts table — reused for all future jobs
+              from the same company (zero repeat searches)
+```
+
+**Frontend CTA rendering:**
+
+| Condition | UI |
+|:---|:---|
+| `applyUrl` available | **Apply now** — opens direct URL in new tab, records `apply` event |
+| `contactEmail` found | **Email [Role]** — `mailto:` with pre-composed cold-outreach draft + contact card with one-click copy |
+| Neither available | Tracked apply button (fires `POST /api/v1/events/jobs`) |
+
+---
+
 ## 🧪 Testing & Code Quality
 
 ### Backend Tests & Linting
@@ -337,6 +387,10 @@ pytest
 
 # Run tests with clean output
 pytest -p no:warnings
+
+# Run a specific suite
+pytest tests/ai/test_contact_finder.py  # Contact Finder Agent tests
+pytest tests/test_apply_link.py         # Apply link extraction tests
 
 # Run Ruff linter and formatter
 ruff check .
@@ -358,3 +412,4 @@ npm run build
 - [GEMINI.md](GEMINI.md) — Multi-API-Key Pooling & Structured Output Details
 - [CLAUDE.md](CLAUDE.md) — Coding Standards & Development Guidelines
 - [docs/context.md](docs/context.md) — Architectural Memory & System Invariants
+- [docs/current_state.md](docs/current_state.md) — Feature implementation state & migration log
