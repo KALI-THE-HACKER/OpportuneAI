@@ -6,6 +6,7 @@ from routes.auth import router as auth_router
 from routes.events import router as events_router
 from routes.feed import router as feed_router
 from routes.notifications import router as notifications_router
+from routes.outreach import router as outreach_router
 from routes.resume import router as resume_router
 from utils.logging_config import configure_logging, get_feature_logger
 
@@ -36,6 +37,7 @@ app.include_router(admin_router)
 app.include_router(events_router)
 app.include_router(feed_router)
 app.include_router(notifications_router)
+app.include_router(outreach_router)
 logger.info("OpportuneAI API configured")
 
 

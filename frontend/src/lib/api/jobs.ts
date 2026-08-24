@@ -210,4 +210,20 @@ export const jobsApi = {
 
     return rec;
   },
+
+  async generateOutreach(
+    jobId: string,
+    contactName?: string | null,
+    contactRole?: string | null,
+  ): Promise<{ subject: string; body: string }> {
+    return apiCall<{ subject: string; body: string }>("/api/outreach/generate", {
+      method: "POST",
+      body: JSON.stringify({
+        job_id: jobId,
+        contact_name: contactName || undefined,
+        contact_role: contactRole || undefined,
+      }),
+    });
+  },
 };
+

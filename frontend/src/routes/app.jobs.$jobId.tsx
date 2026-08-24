@@ -347,15 +347,41 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 /** Shown when applyUrl is absent but contactEmail was discovered by the AI agent. */
 function ContactOutreach({ job }: { job: import("@/lib/mock/jobs").Job }) {
   const [copied, setCopied] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedSubject, setGeneratedSubject] = useState<string | null>(null);
+  const [generatedBody, setGeneratedBody] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
-  const subject = encodeURIComponent(`Application for ${job.title} at ${job.company}`);
-  const body = encodeURIComponent(
+  const defaultSubject = `Application for ${job.title} at ${job.company}`;
+  const defaultBody =
     `Hi ${job.contactName ?? "there"},\n\n` +
-      `I came across the ${job.title} opening at ${job.company} and I'm excited to apply.\n\n` +
-      `I believe my background aligns well with the role and I'd love the opportunity to connect.\n\n` +
-      `Looking forward to hearing from you.\n\nBest regards`
-  );
-  const mailtoHref = `mailto:${job.contactEmail}?subject=${subject}&body=${body}`;
+    `I came across the ${job.title} opening at ${job.company} and I'm excited to apply.\n\n` +
+    `I believe my background aligns well with the role and I'd love the opportunity to connect.\n\n` +
+    `Looking forward to hearing from you.\n\nBest regards`;
+
+  const activeSubject = generatedSubject ?? defaultSubject;
+  const activeBody = generatedBody ?? defaultBody;
+
+  const mailtoHref = `mailto:${job.contactEmail}?subject=${encodeURIComponent(activeSubject)}&body=${encodeURIComponent(activeBody)}`;
+
+  async function handleGenerateEmail() {
+    setIsGenerating(true);
+    try {
+      const res = await jobsApi.generateOutreach(
+        job.id,
+        job.contactName,
+        job.contactRole,
+      );
+      setGeneratedSubject(res.subject);
+      setGeneratedBody(res.body);
+      setShowModal(true);
+    } catch {
+      // If AI fails, still allow manual preview
+      setShowModal(true);
+    } finally {
+      setIsGenerating(false);
+    }
+  }
 
   function copyEmail() {
     if (!job.contactEmail) return;
@@ -365,9 +391,17 @@ function ContactOutreach({ job }: { job: import("@/lib/mock/jobs").Job }) {
     });
   }
 
+  function copyFullDraft() {
+    const draftText = `Subject: ${activeSubject}\n\n${activeBody}`;
+    void navigator.clipboard.writeText(draftText).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
   return (
     <div className="space-y-2.5">
-      {/* mailto button */}
+      {/* Primary Mailto Action */}
       <a
         id="btn-contact-email"
         href={mailtoHref}
@@ -382,7 +416,32 @@ function ContactOutreach({ job }: { job: import("@/lib/mock/jobs").Job }) {
         Email {job.contactRole ? job.contactRole : "Recruiter"}
       </a>
 
-      {/* Contact card */}
+      {/* AI Generate Personalized Pitch Button */}
+      <button
+        id="btn-generate-outreach"
+        type="button"
+        onClick={handleGenerateEmail}
+        disabled={isGenerating}
+        className="
+          w-full h-9 inline-flex items-center justify-center gap-2
+          rounded-lg bg-accent/10 hover:bg-accent/20 text-accent text-xs font-semibold
+          border border-accent/30 transition-all duration-150 cursor-pointer disabled:opacity-50
+        "
+      >
+        {isGenerating ? (
+          <>
+            <Loader2 className="size-3.5 animate-spin" />
+            Crafting tailored pitch...
+          </>
+        ) : (
+          <>
+            <Sparkles className="size-3.5" />
+            Generate tailored email with AI
+          </>
+        )}
+      </button>
+
+      {/* Contact Card */}
       <div className="p-3 bg-surface border border-border rounded-lg flex items-start gap-2.5">
         <div className="size-7 shrink-0 grid place-items-center rounded-full bg-accent/10 border border-accent/20 mt-0.5">
           <User className="size-3.5 text-accent" />
@@ -398,6 +457,7 @@ function ContactOutreach({ job }: { job: import("@/lib/mock/jobs").Job }) {
             <p className="text-[11px] text-foreground/70 truncate flex-1">{job.contactEmail}</p>
             <button
               id="btn-copy-email"
+              type="button"
               onClick={copyEmail}
               className="shrink-0 p-0.5 rounded hover:bg-accent/10 transition-colors cursor-pointer"
               title="Copy email"
@@ -415,6 +475,85 @@ function ContactOutreach({ job }: { job: import("@/lib/mock/jobs").Job }) {
       <p className="text-[10px] text-muted-foreground text-center">
         Contact discovered by AI · verify before reaching out
       </p>
+
+      {/* Generated Email Preview Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-lg bg-surface border border-border rounded-xl p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="size-4 text-accent" />
+                <h3 className="text-sm font-semibold text-foreground">
+                  Personalized Outreach Draft
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                  Subject Line
+                </label>
+                <input
+                  type="text"
+                  value={activeSubject}
+                  onChange={(e) => setGeneratedSubject(e.target.value)}
+                  className="w-full px-3 py-1.5 text-xs bg-background border border-border rounded-lg text-foreground focus:outline-hidden focus:border-accent"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                  Message Body
+                </label>
+                <textarea
+                  rows={7}
+                  value={activeBody}
+                  onChange={(e) => setGeneratedBody(e.target.value)}
+                  className="w-full p-3 text-xs bg-background border border-border rounded-lg text-foreground focus:outline-hidden focus:border-accent resize-none leading-relaxed font-sans"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2 border-t border-border">
+              <button
+                type="button"
+                onClick={copyFullDraft}
+                className="flex-1 h-9 inline-flex items-center justify-center gap-1.5 text-xs font-semibold border border-border rounded-lg hover:bg-accent/10 text-foreground transition-all cursor-pointer"
+              >
+                {copied ? (
+                  <>
+                    <Check className="size-3.5 text-emerald-500" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="size-3.5 text-muted-foreground" />
+                    Copy Draft
+                  </>
+                )}
+              </button>
+
+              <a
+                href={mailtoHref}
+                onClick={() => setShowModal(false)}
+                className="flex-1 h-9 inline-flex items-center justify-center gap-1.5 text-xs font-semibold bg-brand text-brand-foreground rounded-lg hover:opacity-90 transition-all cursor-pointer"
+              >
+                <Send className="size-3.5" />
+                Open Email Client
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
