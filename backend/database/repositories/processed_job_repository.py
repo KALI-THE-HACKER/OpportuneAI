@@ -41,12 +41,16 @@ class ProcessedJobRepository:
         raw_job_id: int,
         extraction: JobExtraction,
         scraped_at: datetime | None = None,
+        apply_url: str | None = None,
     ) -> ProcessedJob:
         """Create a new ProcessedJob record from raw_job_id and JobExtraction."""
         last_date = resolve_expiry_date(
             date_str=extraction.last_date_to_apply,
             scraped_at=scraped_at,
         )
+
+        # Resolve apply URL: prefer LLM-extracted, then caller-provided override
+        resolved_apply_url = extraction.apply_url or apply_url
 
         processed_job = ProcessedJob(
             raw_job_id=raw_job_id,
@@ -59,6 +63,7 @@ class ProcessedJobRepository:
             employment_type=extraction.employment_type,
             last_date_to_apply=last_date,
             job_description=extraction.job_description,
+            apply_url=resolved_apply_url,
         )
         self.db.add(processed_job)
         await self.db.commit()

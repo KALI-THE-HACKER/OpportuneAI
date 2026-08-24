@@ -15,10 +15,11 @@ OpportuneAI is an AI-powered job discovery and application tracking copilot. It 
 The application runs a divided architecture:
 1. **Scraping Ingestion Pipeline**: Runs crawlers (Selenium, Playwright, Firecrawl API, REST) based on parameters in `config.yml`. It computes content hashes for raw listings, checking them against PostgreSQL records to bypass duplicates, saving new raw records as `pending`.
 2. **Task Queue Worker**: For each raw insertion, a job is dispatched to a Redis Queue (RQ) named `ai-processing`. Standalone process workers pull jobs from Redis and start AI extraction.
-3. **AI Structured Processing**: The worker uses `GeminiClientPool` to query Gemini models using system prompts. It returns Pydantic validation outputs mapping details (skills, salary, experience, employment type, last_date_to_apply) and inserts them into `processed_jobs`, resolving expiry date via `config.yml`/`DEFAULT_JOB_EXPIRY_DAYS` fallback.
-4. **REST API Service**: FastAPI app verifying identity tokens statelessly via Auth0 JWKS caching, checking local profiles, and exposing CRUD routes.
-5. **Frontend Client App**: Multi-page client application built on React 19 and TanStack Start, loading routes and prefetching details.
-6. **Design System & UI**: Custom OKLCH design token architecture with warm porcelain light theme, OLED obsidian dark theme, blocking script hydration for flash-free theme reloads, sticky full-height desktop navigation sidebar, and left-to-right directional wave shimmer skeleton loaders.
+3. **AI Structured Processing**: The worker uses `GeminiClientPool` to query Gemini models using system prompts. It returns Pydantic validation outputs mapping details (skills, salary, experience, employment type, last_date_to_apply, **apply_url**) and inserts them into `processed_jobs`, resolving expiry date via `config.yml`/`DEFAULT_JOB_EXPIRY_DAYS` fallback. When no `apply_url` is found in the extraction or the scraper `raw_payload`, the **Contact Finder Agent** (`ai/agents/contact_finder.py`) is triggered automatically.
+4. **Autonomous Contact Finder Agent**: Runs DuckDuckGo HTML searches (zero cost, no API key) to discover HR, Recruiter, Co-Founder, or Founder contacts for a company. Gemini LLM synthesizes contact name, role, and email from search snippets. Async DNS MX validation confirms deliverability. Results are cached in the `company_contacts` table — subsequent jobs from the same company hit the cache, skipping all search and LLM calls.
+5. **REST API Service**: FastAPI app verifying identity tokens statelessly via Auth0 JWKS caching, checking local profiles, and exposing CRUD routes.
+6. **Frontend Client App**: Multi-page client application built on React 19 and TanStack Start, loading routes and prefetching details. The job detail page uses a three-tier CTA: (1) direct apply link if available, (2) `mailto:` outreach button with pre-composed cold email if contact was found, (3) tracked apply button otherwise.
+7. **Design System & UI**: Custom OKLCH design token architecture with warm porcelain light theme, OLED obsidian dark theme, blocking script hydration for flash-free theme reloads, sticky full-height desktop navigation sidebar, and left-to-right directional wave shimmer skeleton loaders.
 
 ---
 
@@ -45,6 +46,9 @@ The application runs a divided architecture:
 - Role-based Access Control (RBAC): database `role` column (`admin` | `user`), YAML-driven `admin_config.admin_emails` in `config.yml` (plus env fallback), `require_admin` FastAPI dependency (HTTP 403 Forbidden for non-admins), protected `/api/admin/*` endpoints, and dynamic frontend protection (sidebar navigation filtering, dashboard pipeline widget guarding, and `/app/admin` route access denial).
 - Personalized Job Feed v2 (Hybrid Recommendation Engine): Two-stage recommendation architecture combining pgvector cosine distance candidate retrieval with deterministic `ScoringEngine` structured reranking. Precomputes 768-dimensional job embeddings via Google Gemini (`models/gemini-embedding-001`) upon `ProcessedJob` ingestion; generates canonical user preference embeddings on profile/resume changes; retrieves top N candidates (pool size = 200) via database-side pgvector `<=>` cosine distance; structured reranking weights (Semantic 40%, Structured 60%); Redis feed cache (`feed:user:{id}` with 1-hour TTL); deterministic cold start fallback for empty profiles; single-batch PostgreSQL query pagination with ranking order preservation.
 - Real Activity & Notification System: PostgreSQL `user_activities` table, `ActivityRepository`, `/api/notifications` routes mounted in FastAPI, event hooks on job save/apply (`/api/v1/events/jobs`), resume upload and AI parsing, profile updates, and dynamic frontend Dashboard widget, Notifications page with filter tabs, and navbar unread sync.
+- **Smart Apply URL Extraction**: Gemini LLM extraction prompt updated to detect and extract direct application URLs (Greenhouse, Lever, Ashby, Workday, Google Forms) from job descriptions. `_extract_apply_url_from_payload` helper reads `apply_url` from scraper `raw_payload` (RemoteOK natively returns it). `ProcessedJobRepository.create()` uses LLM result with payload fallback. `apply_url` column added to `processed_jobs`.
+- **Autonomous Contact Finder Agent** (`ai/agents/contact_finder.py`): Triggered by `ai_worker.py` when no apply URL is present. DuckDuckGo HTML scraping (zero cost) → Gemini LLM synthesis → async DNS MX validation → upsert to `company_contacts` cache. Cache hit avoids all I/O for repeated company lookups. `contact_email`, `contact_name`, `contact_role` columns added to `processed_jobs`. New `company_contacts` table created with Alembic migration `e20c2bd928e7`.
+- **One-Click Outreach Frontend** (`app.jobs.$jobId.tsx`): `ContactOutreach` component renders a `mailto:` button with pre-composed cold-outreach draft, a contact card (name, role, email), and a one-click clipboard copy. AI discovery disclaimer shown. Full three-tier CTA priority: direct link > email outreach > tracked apply button.
 
 ### Remaining
 - Ingestion scheduler system to automate scraper execution.
@@ -63,7 +67,8 @@ The application runs a divided architecture:
 | **Wellfound Provider** | `backend/providers/wellfound_provider.py` | Scrapes Wellfound using Firecrawl Markdown API |
 | **RemoteOK Provider** | `backend/providers/remoteOK_provider.py` | Fetches JSON listings via RemoteOK API |
 | **Gemini Client Pool** | `backend/ai/pools/gemini_pool.py` | Thread-safe connection key cycling |
-| **AI Worker** | `backend/workers/ai_worker.py` | Background processor extracting metadata via LLM |
+| **AI Worker** | `backend/workers/ai_worker.py` | Background processor: LLM extraction → apply_url resolution → Contact Finder Agent → embedding |
+| **Contact Finder Agent** | `backend/ai/agents/contact_finder.py` | DuckDuckGo search → Gemini synthesis → DNS MX validation → company_contacts cache |
 | **Resume Processing** | `backend/routes/resume.py`, `backend/storage/r2.py`, `backend/workers/resume_worker.py` | Private R2 PDF storage, in-memory text extraction, RQ/Gemini parsing, and profile skill synchronization |
 | **User Profile Sync** | `backend/utils/auth.py` | Verifies JWTs, fetches Auth0 details, syncs profile database rows |
 | **Vite App Shell** | `frontend/src/routes/` | Authenticated routes, layouts, and pages rendering |
@@ -94,6 +99,11 @@ The application runs a divided architecture:
 ### 5.5 Theme Persistence & Hydration Invariant
 - Theme initialization must occur synchronously in `<head>` before HTML render to prevent light/dark flash during page reloads.
 - Color variables in `styles.css` must remain strictly structured under `:root` (light mode porcelain canvas) and `.dark` (OLED obsidian canvas) using `oklch`.
+
+### 5.6 Contact Finder Agent Caching Invariant
+- The `company_contacts` table is a shared cache keyed on `company_key` (normalized lowercase, alphanumeric-only company name). The agent MUST check for an existing cached record with a non-null `contact_email` before running any search or LLM calls.
+- Never hard-delete rows from `company_contacts` — instead upsert with updated confidence values. Deleting cached contacts would cause redundant agent re-runs for already-resolved companies.
+- The agent is non-blocking: LLM failure, DNS failure, or empty search results must never raise exceptions to the caller (`ai_worker.py` catches and logs all agent errors gracefully).
 
 ---
 

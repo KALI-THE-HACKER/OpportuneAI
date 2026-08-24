@@ -34,6 +34,10 @@ class JobCardSchema(BaseModel):
     saved: bool = False
     link: str | None = None
     lastDateToApply: str | None = None
+    applyUrl: str | None = None
+    contactEmail: str | None = None
+    contactName: str | None = None
+    contactRole: str | None = None
 
 
 class FeedResponseSchema(BaseModel):

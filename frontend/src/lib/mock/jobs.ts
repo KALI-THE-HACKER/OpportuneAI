@@ -24,7 +24,14 @@ export interface Job {
   aiExplanation?: string;
   experienceLevel: "Entry" | "Mid" | "Senior" | "Lead" | "Principal";
   saved?: boolean;
+  /** Direct application URL if available from the job posting. */
+  applyUrl?: string | null;
+  /** HR / Founder contact discovered by the AI agent (when applyUrl is absent). */
+  contactEmail?: string | null;
+  contactName?: string | null;
+  contactRole?: string | null;
 }
+
 
 const skillsPool = [
   "TypeScript",

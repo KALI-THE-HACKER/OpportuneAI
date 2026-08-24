@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   Bookmark,
@@ -14,7 +14,12 @@ import {
   DollarSign,
   ExternalLink,
   Loader2,
+  Mail,
+  Copy,
+  Check,
+  User,
 } from "lucide-react";
+
 import { jobsApi, recordEvent } from "@/lib/api";
 import { LoadingState, ErrorState, EmptyState } from "@/components/shared/state-views";
 import { MatchBadge } from "@/components/shared/job-card";
@@ -191,34 +196,57 @@ function JobDetailPage() {
               </span>
             </div>
 
-            <button
-              onClick={() => apply.mutate()}
-              disabled={apply.isPending || apply.isSuccess}
-              className="
-                w-full h-10 inline-flex items-center justify-center gap-2
-                rounded-lg bg-brand text-brand-foreground text-sm font-semibold
-                border border-brand/80 hover:opacity-90
-                disabled:opacity-60 disabled:cursor-not-allowed
-                transition-all duration-150 shadow-sm cursor-pointer
-              "
-            >
-              {apply.isPending ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Applying…
-                </>
-              ) : apply.isSuccess ? (
-                <>
-                  <CheckCircle2 className="size-4" />
-                  Application sent
-                </>
-              ) : (
-                <>
-                  <Send className="size-4" />
-                  Apply now
-                </>
-              )}
-            </button>
+            {/* Primary CTA: direct apply link > mailto contact > tracked apply button */}
+            {job.applyUrl ? (
+              <a
+                id="btn-apply-direct"
+                href={job.applyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => apply.mutate()}
+                className="
+                  w-full h-10 inline-flex items-center justify-center gap-2
+                  rounded-lg bg-brand text-brand-foreground text-sm font-semibold
+                  border border-brand/80 hover:opacity-90
+                  transition-all duration-150 shadow-sm cursor-pointer
+                "
+              >
+                <ExternalLink className="size-4" />
+                Apply now
+              </a>
+            ) : job.contactEmail ? (
+              <ContactOutreach job={job} />
+            ) : (
+              <button
+                id="btn-apply-tracked"
+                onClick={() => apply.mutate()}
+                disabled={apply.isPending || apply.isSuccess}
+                className="
+                  w-full h-10 inline-flex items-center justify-center gap-2
+                  rounded-lg bg-brand text-brand-foreground text-sm font-semibold
+                  border border-brand/80 hover:opacity-90
+                  disabled:opacity-60 disabled:cursor-not-allowed
+                  transition-all duration-150 shadow-sm cursor-pointer
+                "
+              >
+                {apply.isPending ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Applying…
+                  </>
+                ) : apply.isSuccess ? (
+                  <>
+                    <CheckCircle2 className="size-4" />
+                    Application sent
+                  </>
+                ) : (
+                  <>
+                    <Send className="size-4" />
+                    Apply now
+                  </>
+                )}
+              </button>
+            )}
 
             <button
               onClick={() => save.mutate()}
@@ -313,5 +341,80 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       </h2>
       {children}
     </section>
+  );
+}
+
+/** Shown when applyUrl is absent but contactEmail was discovered by the AI agent. */
+function ContactOutreach({ job }: { job: import("@/lib/mock/jobs").Job }) {
+  const [copied, setCopied] = useState(false);
+
+  const subject = encodeURIComponent(`Application for ${job.title} at ${job.company}`);
+  const body = encodeURIComponent(
+    `Hi ${job.contactName ?? "there"},\n\n` +
+      `I came across the ${job.title} opening at ${job.company} and I'm excited to apply.\n\n` +
+      `I believe my background aligns well with the role and I'd love the opportunity to connect.\n\n` +
+      `Looking forward to hearing from you.\n\nBest regards`
+  );
+  const mailtoHref = `mailto:${job.contactEmail}?subject=${subject}&body=${body}`;
+
+  function copyEmail() {
+    if (!job.contactEmail) return;
+    void navigator.clipboard.writeText(job.contactEmail).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  return (
+    <div className="space-y-2.5">
+      {/* mailto button */}
+      <a
+        id="btn-contact-email"
+        href={mailtoHref}
+        className="
+          w-full h-10 inline-flex items-center justify-center gap-2
+          rounded-lg bg-brand text-brand-foreground text-sm font-semibold
+          border border-brand/80 hover:opacity-90
+          transition-all duration-150 shadow-sm cursor-pointer
+        "
+      >
+        <Mail className="size-4" />
+        Email {job.contactRole ? job.contactRole : "Recruiter"}
+      </a>
+
+      {/* Contact card */}
+      <div className="p-3 bg-surface border border-border rounded-lg flex items-start gap-2.5">
+        <div className="size-7 shrink-0 grid place-items-center rounded-full bg-accent/10 border border-accent/20 mt-0.5">
+          <User className="size-3.5 text-accent" />
+        </div>
+        <div className="min-w-0 flex-1">
+          {job.contactName && (
+            <p className="text-xs font-semibold text-foreground truncate">{job.contactName}</p>
+          )}
+          {job.contactRole && (
+            <p className="text-[11px] text-muted-foreground truncate">{job.contactRole}</p>
+          )}
+          <div className="flex items-center gap-1.5 mt-1">
+            <p className="text-[11px] text-foreground/70 truncate flex-1">{job.contactEmail}</p>
+            <button
+              id="btn-copy-email"
+              onClick={copyEmail}
+              className="shrink-0 p-0.5 rounded hover:bg-accent/10 transition-colors cursor-pointer"
+              title="Copy email"
+            >
+              {copied ? (
+                <Check className="size-3 text-emerald-500" />
+              ) : (
+                <Copy className="size-3 text-muted-foreground" />
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <p className="text-[10px] text-muted-foreground text-center">
+        Contact discovered by AI · verify before reaching out
+      </p>
+    </div>
   );
 }

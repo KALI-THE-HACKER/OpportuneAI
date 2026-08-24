@@ -269,4 +269,29 @@
 **Status**: ✅ Implemented, migrated, tested
 
 ---
-*Last updated: 2026-08-23*
+
+### 8. Job Apply Link Extraction & Autonomous Contact Finder Agent
+**Backend** (`backend/ai/schemas.py`, `backend/ai/extraction/prompts.py`, `backend/ai/agents/contact_finder.py`, `backend/workers/ai_worker.py`, `backend/database/models/`):
+- **Apply URL extraction**: `JobExtraction` schema and extraction prompt updated to detect direct application links (Greenhouse, Lever, Ashby, Workday, career page URLs, Google Forms) from job descriptions.
+- **Raw payload fallback**: `ai_worker.py` reads `apply_url` from scraped `raw_payload` (e.g. RemoteOK API `apply_url` field) before falling back to the LLM result.
+- **ProcessedJob enrichment**: New nullable columns `apply_url`, `contact_email`, `contact_name`, `contact_role` on `processed_jobs` table.
+- **CompanyContact cache table**: New `company_contacts` table caches discovered contacts per company (by normalized `company_key`). Prevents redundant agent runs for multiple jobs from the same company.
+- **Autonomous Contact Finder Agent** (`ai/agents/contact_finder.py`):
+  - Triggered automatically in `ai_worker.py` when `apply_url` is absent after AI processing.
+  - **Search**: Zero-cost DuckDuckGo HTML scraping via `httpx` (no API key). Runs two targeted queries: LinkedIn people search for HR/Founder/Recruiter at company, and domain email pattern search.
+  - **LLM synthesis**: Gemini LLM analyzes snippets, extracts name, role, email or derives email pattern (`first@domain` / `first.last@domain`).
+  - **DNS validation**: Async `socket.getaddrinfo` check verifies email domain resolves before committing confidence.
+  - **Caching**: Upserts discovered contact into `company_contacts`. Cache hit skips all search/LLM steps.
+- **Migration**: `e20c2bd928e7_add_apply_url_contact_fields_and_company_contacts_table`
+
+**Frontend** (`frontend/src/routes/app.jobs.$jobId.tsx`, `frontend/src/lib/mock/jobs.ts`):
+- `Job` interface extended with `applyUrl`, `contactEmail`, `contactName`, `contactRole`.
+- Job detail page CTA logic:
+  - `applyUrl` present → "Apply now" button opens direct link in new tab + records apply event.
+  - `applyUrl` absent, `contactEmail` present → `ContactOutreach` component: `mailto:` button with pre-composed cold-outreach email, contact card (name, role, email), one-click email copy, AI discovery disclaimer.
+  - Neither → original tracked apply button (fires `POST /api/v1/events/jobs` with `apply` event type).
+
+**Status**: ✅ Implemented, migrated, linted (9/10 tests pass; 1 pre-existing flaky score equality test unrelated to this feature)
+
+---
+*Last updated: 2026-08-25*
