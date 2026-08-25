@@ -1,9 +1,10 @@
-import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { Sparkles, CheckCircle2 } from "lucide-react";
+import { Sparkles, CheckCircle2, ArrowRight } from "lucide-react";
 import { userApi } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/shared/page-header";
 import { LoadingState, ErrorState } from "@/components/shared/state-views";
 import { ResumeInsights } from "@/components/profile/resume-insights";
@@ -15,6 +16,7 @@ import {
   STANDARD_ROLES,
 } from "@/lib/data/profile-options";
 import type { UserProfile } from "@/lib/mock/user";
+import { isProfileIncomplete, isResumeIncomplete } from "@/lib/utils/onboarding";
 
 const profileSearchSchema = z.object({
   onboarding: z.string().optional(),
@@ -30,14 +32,23 @@ function ProfilePage() {
   const qc = useQueryClient();
   const search = useSearch({ from: "/app/profile" });
   const navigate = useNavigate();
+  const { updateUser, refresh } = useAuth();
 
   const q = useQuery({ queryKey: ["user"], queryFn: () => userApi.get() });
   const update = useMutation({
     mutationFn: (patch: Partial<UserProfile>) => userApi.update(patch),
-    onSuccess: () => {
+    onSuccess: (updatedUser) => {
+      if (updatedUser) {
+        updateUser(updatedUser);
+      }
       void qc.invalidateQueries({ queryKey: ["user"] });
+      void refresh();
       if (search.onboarding === "true") {
-        void navigate({ to: "/app/resume", search: { onboarding: "true" } });
+        if (isResumeIncomplete(updatedUser)) {
+          void navigate({ to: "/app/resume", search: { onboarding: "true" } });
+        } else {
+          void navigate({ to: "/app/dashboard" });
+        }
       }
     },
   });
@@ -62,6 +73,8 @@ function ProfilePage() {
   if (q.isLoading || !form) return <LoadingState variant="profile" />;
   if (q.isError) return <ErrorState onRetry={() => q.refetch()} />;
 
+  const isFormComplete = !isProfileIncomplete(form);
+
   return (
     <>
       <PageHeader
@@ -81,6 +94,16 @@ function ProfilePage() {
               filter relevant job matching signals.
             </p>
           </div>
+          {isFormComplete && (
+            <Link
+              to={isResumeIncomplete(form) ? "/app/resume" : "/app/dashboard"}
+              search={isResumeIncomplete(form) ? { onboarding: "true" } : undefined}
+              className="text-xs font-semibold text-foreground hover:text-accent whitespace-nowrap flex items-center gap-1 shrink-0"
+            >
+              {isResumeIncomplete(form) ? "Continue to Resume" : "Go to Dashboard"}
+              <ArrowRight className="size-3" />
+            </Link>
+          )}
         </div>
       )}
 

@@ -19,7 +19,8 @@ interface AuthState {
   signUp: (name: string, email: string, password: string) => Promise<Session>;
   signInWithSocial: (connection: "google-oauth2" | "github" | "linkedin") => Promise<void>;
   signOut: () => Promise<void>;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<UserProfile | null>;
+  updateUser: (profile: UserProfile) => void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -60,6 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function syncAuth0Token() {
       if (isAuth0Authenticated && auth0User) {
+        setProfileLoading(true);
+
         const initialUser: UserProfile = {
           id: auth0User.sub || "auth0-user",
           name: auth0User.name || auth0User.nickname || "Authenticated User",
@@ -77,8 +80,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           minSalary: 0,
           emailVerified: auth0User.email_verified || false,
         };
-        setUser(initialUser);
-        setProfileLoading(false);
 
         try {
           let token: string | null = null;
@@ -106,12 +107,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             };
             persistSession(session);
             setLocalSession(session);
+          } else {
+            setUser(initialUser);
           }
         } catch (error) {
           console.error("Auth0 token sync error:", error);
           persistSession(null);
           setLocalSession(null);
           setApiAuthToken(null);
+          setUser(null);
+        } finally {
+          setProfileLoading(false);
         }
       }
     }
@@ -204,18 +210,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     },
     async refresh() {
-      if (user) {
-        try {
-          const profile = await userApi.get();
-          setUser(profile);
-          if (localSession) {
-            const updated = { ...localSession, user: profile };
-            persistSession(updated);
-            setLocalSession(updated);
-          }
-        } catch (error) {
-          console.error("Failed to refresh user profile:", error);
+      try {
+        const profile = await userApi.get();
+        setUser(profile);
+        if (localSession) {
+          const updated = { ...localSession, user: profile };
+          persistSession(updated);
+          setLocalSession(updated);
         }
+        return profile;
+      } catch (error) {
+        console.error("Failed to refresh user profile:", error);
+        return null;
+      }
+    },
+    updateUser(updatedProfile: UserProfile) {
+      setUser(updatedProfile);
+      if (localSession) {
+        const updated = { ...localSession, user: updatedProfile };
+        persistSession(updated);
+        setLocalSession(updated);
       }
     },
   };

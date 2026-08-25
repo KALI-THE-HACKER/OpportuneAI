@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { resumeApi } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/shared/page-header";
 import { LoadingState, ErrorState, EmptyState } from "@/components/shared/state-views";
 import { timeAgo } from "@/lib/format";
@@ -33,6 +34,7 @@ function ResumePage() {
   const qc = useQueryClient();
   const search = useSearch({ from: "/app/resume" });
   const navigate = useNavigate();
+  const { refresh } = useAuth();
 
   const q = useQuery({
     queryKey: ["resume"],
@@ -52,17 +54,20 @@ function ResumePage() {
     if (prevStatus === "processing" && currentStatus === "processed") {
       toast.success("Resume processing complete! Extracted skills added to your profile.");
       void qc.invalidateQueries({ queryKey: ["user"] });
+      void refresh();
     } else if (prevStatus === "processing" && currentStatus === "failed") {
       toast.error("Resume processing failed. Please check the PDF format and try again.");
     }
     prevStatusRef.current = currentStatus;
-  }, [q.data?.status, qc]);
+  }, [q.data?.status, qc, refresh]);
 
   const upload = useMutation({
     mutationFn: (f: File) => resumeApi.upload(f),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Resume uploaded! AI is extracting skills…");
       void qc.invalidateQueries({ queryKey: ["resume"] });
+      void qc.invalidateQueries({ queryKey: ["user"] });
+      await refresh();
       if (search.onboarding === "true") {
         void navigate({ to: "/app/dashboard" });
       }
@@ -91,9 +96,10 @@ function ResumePage() {
     onSuccess: () => {
       toast.info("Resume removed");
     },
-    onSettled: () => {
+    onSettled: async () => {
       void qc.invalidateQueries({ queryKey: ["resume"] });
       void qc.invalidateQueries({ queryKey: ["user"] });
+      await refresh();
     },
   });
 
@@ -146,9 +152,14 @@ function ResumePage() {
           </div>
           <Link
             to="/app/dashboard"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                sessionStorage.setItem("onboarding_resume_skipped", "true");
+              }
+            }}
             className="text-xs font-semibold text-foreground hover:text-accent whitespace-nowrap flex items-center gap-1 shrink-0"
           >
-            Skip
+            {q.data ? "Continue to Dashboard" : "Skip"}
             <ArrowRight className="size-3" />
           </Link>
         </div>

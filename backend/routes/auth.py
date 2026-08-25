@@ -62,6 +62,9 @@ class UserProfileSchema(BaseModel):
     workModes: list[str] = []
     minSalary: int = 0
     emailVerified: bool = False
+    hasResume: bool = False
+    resumeFileName: str | None = None
+    resumeStatus: str | None = None
 
     @classmethod
     def from_orm_model(cls, user: User) -> "UserProfileSchema":
@@ -81,6 +84,13 @@ class UserProfileSchema(BaseModel):
             workModes=user.work_modes or [],
             minSalary=user.min_salary,
             emailVerified=user.email_verified,
+            hasResume=bool(
+                user.resume_file_name
+                or user.resume_storage_key
+                or (user.resume_status and user.resume_status != "failed")
+            ),
+            resumeFileName=user.resume_file_name,
+            resumeStatus=user.resume_status,
         )
 
 
