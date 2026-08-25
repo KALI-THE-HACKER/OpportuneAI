@@ -47,12 +47,12 @@ The application runs a divided architecture:
 - Personalized Job Feed v2 (Hybrid Recommendation Engine): Two-stage recommendation architecture combining pgvector cosine distance candidate retrieval with deterministic `ScoringEngine` structured reranking. Precomputes 768-dimensional job embeddings via Google Gemini (`models/gemini-embedding-001`) upon `ProcessedJob` ingestion; generates canonical user preference embeddings on profile/resume changes; retrieves top N candidates (pool size = 200) via database-side pgvector `<=>` cosine distance; structured reranking weights (Semantic 40%, Structured 60%); Redis feed cache (`feed:user:{id}` with 1-hour TTL); deterministic cold start fallback for empty profiles; single-batch PostgreSQL query pagination with ranking order preservation.
 - Real Activity & Notification System: PostgreSQL `user_activities` table, `ActivityRepository`, `/api/notifications` routes mounted in FastAPI, event hooks on job save/apply (`/api/v1/events/jobs`), resume upload and AI parsing, profile updates, and dynamic frontend Dashboard widget, Notifications page with filter tabs, and navbar unread sync.
 - **Applied Job State Tracking & Feed Exclusion**: When user applies to a job, `jobId` is added to the user's applied set (in Redis `user:{id}:applied_jobs` and client state). Applied jobs display an emerald `Applied` badge on `JobCard` and an `Applied` CTA (for both external direct apply and tracked applications) on the job detail page instead of `Apply now`. `FeedService` and client feed calls automatically exclude all applied jobs from being suggested in subsequent personalized feeds or recommendation lists.
-
+- **Real Job Applications Tracking & Management**: Complete database-backed application management system. PostgreSQL `job_applications` table (`JobApplication` ORM model, unique constraint on `(user_id, job_id)`), `JobApplicationRepository`, and `/api/applications` REST endpoints (`GET`, `POST`, `PATCH`, `DELETE`). The frontend Applications page (`/app/applied`) provides live status filtering (All, Applied, Interviewing, Offer, Rejected), instant search, inline status updater dropdown, recruiter notes editing, direct job actions, and rich empty states.
 
 ### Remaining
 - Ingestion scheduler system to automate scraper execution.
 - Advanced behavioral learning and ML reranking.
-- Real REST backend integration for admin stats and application management.
+- Real REST backend integration for admin stats.
 
 ---
 

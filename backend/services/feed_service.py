@@ -99,6 +99,20 @@ class FeedService:
                 "Failed to fetch applied jobs from Redis for user %s: %s", user.id, e
             )
 
+        # 2. Check Database Job Applications
+        try:
+            from database.repositories.job_application_repository import (
+                JobApplicationRepository,
+            )
+
+            app_repo = JobApplicationRepository(self.db)
+            db_applied_ids = await app_repo.get_applied_job_ids(user.id)
+            applied_ids.update(db_applied_ids)
+        except Exception as e:
+            logger.warning(
+                "Failed to fetch applied jobs from DB for user %s: %s", user.id, e
+            )
+
         return applied_ids
 
     def invalidate_feed(self, user_id: int) -> None:
@@ -352,6 +366,11 @@ class FeedService:
             )
             cached_job_ids = await self.generate_feed(user)
 
+        # Filter out applied jobs from cached ranking in-memory with zero recomputation
+        applied_ids = await self.get_applied_job_ids(user)
+        if applied_ids and cached_job_ids:
+            cached_job_ids = [jid for jid in cached_job_ids if jid not in applied_ids]
+
         total_count = len(cached_job_ids)
         target_ids = cached_job_ids[offset : offset + limit]
 
@@ -371,12 +390,9 @@ class FeedService:
             jobs_by_id[jid] for jid in target_ids if jid in jobs_by_id
         ]
 
-        applied_ids = await self.get_applied_job_ids(user)
-
         items = [
-            self.format_job_card(job, user=user, is_applied=(job.id in applied_ids))
+            self.format_job_card(job, user=user, is_applied=False)
             for job in ordered_jobs
-            if job.id not in applied_ids
         ]
 
         has_more = (offset + limit) < total_count

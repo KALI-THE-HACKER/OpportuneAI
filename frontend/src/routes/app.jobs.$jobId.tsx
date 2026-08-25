@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -32,9 +32,18 @@ export const Route = createFileRoute("/app/jobs/$jobId")({
 
 function JobDetailPage() {
   const { jobId } = useParams({ from: "/app/jobs/$jobId" });
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const viewedRef = useRef(false);
   const startTimeRef = useRef<number>(Date.now());
+
+  function handleGoBack() {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      window.history.back();
+    } else {
+      navigate({ to: "/app/jobs" });
+    }
+  }
 
   const q = useQuery({
     queryKey: ["job", jobId],
@@ -70,11 +79,27 @@ function JobDetailPage() {
   const apply = useMutation({
     mutationFn: () => jobsApi.apply(jobId, "job_detail"),
     onSuccess: () => {
+      // Optimistically update current job state to applied
+      qc.setQueryData(["job", jobId], (old: typeof q.data) => (old ? { ...old, applied: true } : old));
+
+      // Optimistically filter applied job from cached feed / recommendations in memory
+      qc.setQueriesData({ queryKey: ["feed"] }, (old: any) => {
+        if (!old) return old;
+        if (Array.isArray(old)) {
+          return old.filter((j: any) => j.id !== jobId && j.id !== `job-${jobId}`);
+        }
+        if (old.items && Array.isArray(old.items)) {
+          return {
+            ...old,
+            items: old.items.filter((j: any) => j.id !== jobId && j.id !== `job-${jobId}`),
+            total: Math.max(0, (old.total ?? old.items.length) - 1),
+          };
+        }
+        return old;
+      });
+
+      // Update applications & notifications lists
       qc.invalidateQueries({ queryKey: ["applications"] });
-      qc.invalidateQueries({ queryKey: ["job", jobId] });
-      qc.invalidateQueries({ queryKey: ["jobs"] });
-      qc.invalidateQueries({ queryKey: ["feed"] });
-      qc.invalidateQueries({ queryKey: ["saved"] });
       qc.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
@@ -96,9 +121,13 @@ function JobDetailPage() {
         title="Job not found"
         description="This listing may have been removed."
         action={
-          <Link to="/app/jobs" className="text-foreground underline text-sm">
-            Back to explorer
-          </Link>
+          <button
+            type="button"
+            onClick={handleGoBack}
+            className="text-foreground underline text-sm cursor-pointer"
+          >
+            Go back
+          </button>
         }
       />
     );
@@ -107,13 +136,14 @@ function JobDetailPage() {
 
   return (
     <>
-      <Link
-        to="/app/jobs"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+      <button
+        type="button"
+        onClick={handleGoBack}
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors cursor-pointer"
       >
         <ArrowLeft className="size-4" />
-        Back to explorer
-      </Link>
+        Go back
+      </button>
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-6">
         {/* Main article */}

@@ -107,9 +107,10 @@ async def create_job_event(
                 from services.feed_service import get_redis_client
 
                 redis_client = get_redis_client()
-                redis_client.delete(f"feed:user:{_user.id}")
                 if body.event_type == "apply":
                     redis_client.sadd(f"user:{_user.id}:applied_jobs", str(body.job_id))
+                else:
+                    redis_client.delete(f"feed:user:{_user.id}")
             except Exception:
                 pass
 
@@ -126,6 +127,16 @@ async def create_job_event(
                             body=f"Saved {job.job_title} at {job.company} to your bookmarked jobs.",
                         )
                     elif body.event_type == "apply":
+                        from database.repositories.job_application_repository import (
+                            JobApplicationRepository,
+                        )
+
+                        app_repo = JobApplicationRepository(db)
+                        await app_repo.create_or_update(
+                            user_id=_user.id,
+                            job_id=body.job_id,
+                            status="applied",
+                        )
                         await activity_repo.create_unique_recent(
                             user_id=_user.id,
                             activity_type="application",
