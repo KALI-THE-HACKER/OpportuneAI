@@ -29,6 +29,7 @@ Stores user profiles and match preferences synced from Auth0.
 | `preferred_locations` | `Mapped[list[str]]` | `JSON` | `default=[]` | Target locations |
 | `work_modes` | `Mapped[list[str]]` | `JSON` | `default=[]` | Allowed modes (`remote`, `hybrid`, `onsite`) |
 | `min_salary` | `Mapped[int]` | `INTEGER` | `default=0` | Minimum target salary budget |
+| `willing_to_relocate` | `Mapped[bool]` | `BOOLEAN` | `default=False` | Willing to relocate based on job location |
 | `email_verified` | `Mapped[bool]` | `BOOLEAN` | `default=False` | Verification status from Auth0 |
 | `created_at` | `Mapped[datetime]` | `TIMESTAMP` | `default=utcnow` | Registration time |
 | `updated_at` | `Mapped[datetime]` | `TIMESTAMP` | `default=utcnow`, `onupdate=utcnow` | Last profile update time |

@@ -155,15 +155,36 @@ class ScoringEngine:
         job_location: str,
         work_mode: str,
         user_work_modes: list[str],
+        willing_to_relocate: bool = False,
     ) -> float:
         """Calculate location and remote work compatibility."""
-        user_modes_lower = [m.lower() for m in user_work_modes]
-        if work_mode == "remote" and (
-            "remote" in user_modes_lower or not user_work_modes
-        ):
+        is_job_remote = (work_mode or "").lower() == "remote" or "remote" in (
+            job_location or ""
+        ).lower()
+
+        user_pref_locs_lower = [
+            loc.lower().strip() for loc in preferred_locations if loc
+        ]
+        user_wants_remote = (
+            any("remote" in loc for loc in user_pref_locs_lower)
+            or any(m.lower().strip() == "remote" for m in user_work_modes if m)
+            or (not user_work_modes and not user_pref_locs_lower)
+        )
+
+        # 1. If user's preferred locations include remote and job is remote, treat as location match
+        if is_job_remote and user_wants_remote:
             return LOCATION_WEIGHT
 
-        locs = [loc.lower() for loc in ([user_location] + preferred_locations) if loc]
+        # 2. If willing to relocate is enabled, skip physical location comparison
+        if willing_to_relocate:
+            return LOCATION_WEIGHT
+
+        # 3. Otherwise retain existing location-matching logic
+        locs = [
+            loc.lower()
+            for loc in ([user_location] + preferred_locations)
+            if loc and "remote" not in loc.lower()
+        ]
         if not locs:
             return 0.5 * LOCATION_WEIGHT  # Neutral
 
@@ -266,6 +287,10 @@ class ScoringEngine:
             user_title = user.title or ""
             user_loc = user.location or ""
 
+        user_willing_to_relocate = (
+            bool(getattr(user, "willing_to_relocate", False)) if user else False
+        )
+
         has_preferences = bool(
             user_skills
             or user_roles
@@ -274,6 +299,7 @@ class ScoringEngine:
             or user_years
             or user_title
             or user_loc
+            or user_willing_to_relocate
         )
 
         job_work_mode = infer_work_mode(job.location, job.employment_type)
@@ -296,6 +322,7 @@ class ScoringEngine:
             job_location=job.location,
             work_mode=job_work_mode,
             user_work_modes=user_modes,
+            willing_to_relocate=user_willing_to_relocate,
         )
         work_mode_score = cls.calculate_work_mode_score(
             user_work_modes=user_modes,

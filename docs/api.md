@@ -50,6 +50,7 @@ FastAPI verifies incoming JWTs using public signature keys from Auth0 domains.
       "preferredLocations": ["Bengaluru", "Remote"],
       "workModes": ["hybrid", "remote"],
       "minSalary": 80000,
+      "willingToRelocate": false,
       "emailVerified": true
     },
     "expiresAt": 1785123456000,
@@ -73,7 +74,7 @@ FastAPI verifies incoming JWTs using public signature keys from Auth0 domains.
 ### 2.3 Get Current User Profile
 - **Endpoint**: `GET /api/auth/me`
 - **Authentication Required**: Yes
-- **Response (`UserProfileSchema`)**: Returns user profile metrics matching user preferences.
+- **Response (`UserProfileSchema`)**: Returns user profile metrics matching user preferences (includes `willingToRelocate: boolean`).
 
 ### 2.4 Update Current User Profile
 - **Endpoint**: `PUT /api/users/me`
@@ -91,7 +92,8 @@ FastAPI verifies incoming JWTs using public signature keys from Auth0 domains.
     "preferredRoles": ["Senior Backend Engineer", "Lead Developer"],
     "preferredLocations": ["Delhi", "Remote"],
     "workModes": ["remote"],
-    "minSalary": 120000
+    "minSalary": 120000,
+    "willingToRelocate": true
   }
   ```
 - **Response (`UserProfileSchema`)**: Returns the complete updated user profile.

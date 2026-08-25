@@ -91,8 +91,15 @@ def build_user_preference_embedding_text(user: User) -> str | None:
         infer_experience_level(years_exp) if years_exp > 0 else ""
     )
 
+    willing_to_relocate = bool(getattr(user, "willing_to_relocate", False))
+
     has_preferences = bool(
-        merged_skills or unique_roles or unique_locs or work_modes or years_exp > 0
+        merged_skills
+        or unique_roles
+        or unique_locs
+        or work_modes
+        or years_exp > 0
+        or willing_to_relocate
     )
 
     if not has_preferences:
@@ -105,6 +112,8 @@ def build_user_preference_embedding_text(user: User) -> str | None:
         lines.append(f"Interested roles: {', '.join(unique_roles)}")
     if unique_locs:
         lines.append(f"Preferred locations: {', '.join(unique_locs)}")
+    if willing_to_relocate:
+        lines.append("Willing to relocate: Yes")
     if work_modes:
         lines.append(f"Preferred work modes: {', '.join(work_modes)}")
     if years_exp > 0 or exp_level:

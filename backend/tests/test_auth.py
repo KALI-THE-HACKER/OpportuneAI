@@ -75,6 +75,7 @@ async def test_auth_and_profile_sync(dispose_db_engine):
             preferredLocations=["Remote", "San Francisco, CA"],
             workModes=["remote", "hybrid"],
             minSalary=180000,
+            willingToRelocate=True,
         )
 
         updated_profile = await update_me(data=update_data, user=user, db=db)
@@ -85,12 +86,14 @@ async def test_auth_and_profile_sync(dispose_db_engine):
         assert "Product Management" in updated_profile.skills
         assert "remote" in updated_profile.workModes
         assert updated_profile.minSalary == 180000
+        assert updated_profile.willingToRelocate is True
 
         # Verify update is saved to database
         db_user_after = await repo.get_by_id(user.id)
         assert db_user_after.title == "Senior Product Manager"
         assert db_user_after.years_of_experience == 7
         assert db_user_after.min_salary == 180000
+        assert db_user_after.willing_to_relocate is True
 
         # 5. Test login route function in mock mode
         from routes.auth import LoginInputSchema, RegisterInputSchema, login, register

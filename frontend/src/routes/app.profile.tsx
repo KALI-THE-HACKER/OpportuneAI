@@ -174,6 +174,51 @@ function ProfilePage() {
               />
             </Row>
 
+            <Row label="Relocation preference">
+              <label className="text-sm flex items-center gap-2.5 cursor-pointer select-none pt-0.5 group">
+                <input
+                  type="checkbox"
+                  checked={!!form.willingToRelocate}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      willingToRelocate: e.target.checked,
+                    })
+                  }
+                  className="sr-only"
+                />
+                <div
+                  className={`size-4 rounded flex items-center justify-center border transition-all duration-150 shrink-0 ${
+                    form.willingToRelocate
+                      ? "bg-brand border-brand"
+                      : "bg-background border-input group-hover:border-foreground/40"
+                  }`}
+                >
+                  {form.willingToRelocate && (
+                    <svg
+                      className="size-2.5 text-brand-foreground"
+                      viewBox="0 0 10 10"
+                      fill="none"
+                    >
+                      <path
+                        d="M1.5 5L4 7.5L8.5 2.5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                </div>
+                <span className="text-sm font-medium text-foreground">
+                  Willing to relocate based on job location?
+                </span>
+              </label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                When enabled, feed ranking skips physical location filters, allowing matching jobs from any location.
+              </p>
+            </Row>
+
             <Row label="Minimum expected salary (USD / year)">
               <Input
                 type="number"
@@ -188,22 +233,27 @@ function ProfilePage() {
                 {(["remote", "hybrid", "on-site"] as const).map((m) => (
                   <label
                     key={m}
-                    className="text-sm flex items-center gap-2 cursor-pointer select-none"
+                    className="text-sm flex items-center gap-2 cursor-pointer select-none group"
                   >
-                    <div
-                      className={`size-4 rounded flex items-center justify-center border transition-all duration-150 shrink-0 cursor-pointer ${
-                        form.workModes.includes(m)
-                          ? "bg-brand border-brand"
-                          : "bg-background border-input hover:border-foreground/40"
-                      }`}
-                      onClick={() =>
+                    <input
+                      type="checkbox"
+                      checked={form.workModes.includes(m)}
+                      onChange={(e) =>
                         setForm({
                           ...form,
-                          workModes: form.workModes.includes(m)
-                            ? form.workModes.filter((x) => x !== m)
-                            : [...form.workModes, m],
+                          workModes: e.target.checked
+                            ? [...form.workModes, m]
+                            : form.workModes.filter((x) => x !== m),
                         })
                       }
+                      className="sr-only"
+                    />
+                    <div
+                      className={`size-4 rounded flex items-center justify-center border transition-all duration-150 shrink-0 ${
+                        form.workModes.includes(m)
+                          ? "bg-brand border-brand"
+                          : "bg-background border-input group-hover:border-foreground/40"
+                      }`}
                     >
                       {form.workModes.includes(m) && (
                         <svg
@@ -221,19 +271,6 @@ function ProfilePage() {
                         </svg>
                       )}
                     </div>
-                    <input
-                      type="checkbox"
-                      checked={form.workModes.includes(m)}
-                      onChange={() =>
-                        setForm({
-                          ...form,
-                          workModes: form.workModes.includes(m)
-                            ? form.workModes.filter((x) => x !== m)
-                            : [...form.workModes, m],
-                        })
-                      }
-                      className="sr-only"
-                    />
                     <span className="capitalize">{m}</span>
                   </label>
                 ))}
