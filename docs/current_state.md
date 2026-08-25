@@ -137,13 +137,17 @@
 - Job eligibility and expiry filtering directly using `processed_jobs.last_date_to_apply`.
 - Redis feed cache key `feed:user:{id}` with 1-hour TTL storing ranked job IDs.
 - Single-query batch PostgreSQL job fetching (`WHERE id IN (...)`) preserving Redis rank order in-memory.
-- Automatic feed cache invalidation and preference embedding refresh on profile updates (`PUT /api/users/me`), resume extraction completion, resume deletion, and significant interaction events (`save`, `unsave`, `apply`, `dismiss`, `not_interested`).
-- Endpoints: `GET /api/feed` (cursor-paginated) and `GET /api/jobs/{job_id}` (individual job detail).
+- Automatic feed cache invalidation and preference embedding refresh on profile updates (`PUT /api/users/me`), resume extraction completion, and resume deletion.
+- Applied job exclusion: When a user applies to a job, its ID is stored in the user's applied set (`user:{id}:applied_jobs` in Redis and `job_applications` table). The heavy recommendation feed cache (`feed:user:{id}`) is NOT invalidated upon apply; instead, applied job IDs are filtered in-memory with $O(1)$ lookup on subsequent `GET /api/feed` requests and during full feed regenerations.
+- Endpoints: `GET /api/feed` (cursor-paginated) and `GET /api/jobs/{job_id}` (individual job detail with `applied` status).
 
-**Frontend** (`frontend/src/lib/api/jobs.ts`, `frontend/src/routes/app.dashboard.tsx`, `frontend/src/routes/app.recommendations.tsx`, `frontend/src/routes/app.jobs.index.tsx`, `frontend/src/routes/app.jobs.$jobId.tsx`):
+**Frontend** (`frontend/src/lib/api/jobs.ts`, `frontend/src/components/shared/job-card.tsx`, `frontend/src/routes/app.dashboard.tsx`, `frontend/src/routes/app.recommendations.tsx`, `frontend/src/routes/app.jobs.index.tsx`, `frontend/src/routes/app.jobs.$jobId.tsx`):
 - Real backend API integration via `jobsApi.feed()`, `jobsApi.get()`, `jobsApi.recommendations()`, and `jobsApi.list()`.
+- Optimistic in-memory removal: On applying to a role, the client removes the applied job directly from cached React Query feeds without triggering computationally heavy server refetches or feed regenerations.
+- Applied job state tracking: `JobCard` displays an emerald `Applied` badge with `CheckCircle2` icon. The job detail CTA displays `Applied` (for both direct external links and tracked applications) instead of `Apply now`.
+- Applied jobs are excluded from the personalized feed and recommendations.
 - Coordinated TanStack Query cache keys (`["feed", { limit: 4 }]` for Dashboard, `["feed", { limit: 12 }]` for Recommendations).
-- Interaction tracking wired to `POST /api/v1/events/jobs` with automatic cache invalidation.
+- Interaction tracking wired to `POST /api/v1/events/jobs`.
 
 **Status**: ✅ Complete with unit and integration tests
 
@@ -171,11 +175,39 @@
 
 ---
 
+### 11. Real Job Applications Tracking & Management System
+**Backend** (`backend/database/models/job_application.py`, `backend/database/repositories/job_application_repository.py`, `backend/routes/applications.py`, `backend/routes/events.py`, `backend/services/feed_service.py`):
+- `job_applications` table in PostgreSQL mapped to `JobApplication` ORM model.
+- Enforces unique constraint on `(user_id, job_id)`.
+- `JobApplicationRepository` supporting `create_or_update`, `list_by_user` (eager-loading job and raw_job), `get_by_id`, `update_status_or_notes`, `delete`, and `get_applied_job_ids`.
+- REST endpoints under `/api/applications`:
+  - `GET /api/applications` — List user's applications with optional status filtering (`applied`, `interviewing`, `offer`, `rejected`, `withdrawn`).
+  - `POST /api/applications` — Create/upsert application, update Redis applied set, invalidate feed cache, and log user activity.
+  - `PATCH /api/applications/{id}` — Update status or add recruiter/interview notes.
+  - `DELETE /api/applications/{id}` — Remove/withdraw application from tracking.
+- Automatic integration with `POST /api/v1/events/jobs` on apply event.
+- Migration: `f4de408c0c82_add_job_applications_table`.
+- Unit tests in `backend/tests/test_job_applications.py`.
+
+**Frontend** (`frontend/src/routes/app.applied.tsx`, `frontend/src/lib/api/jobs.ts`):
+- Live `jobsApi.applications()`, `jobsApi.apply()`, `jobsApi.updateApplication()`, and `jobsApi.deleteApplication()` wired to backend endpoints.
+- Applications page (`/app/applied`) features:
+  - Dynamic status tabs (`All`, `Applied`, `Interviewing`, `Offers`, `Rejected`) with live count badges.
+  - Fast search filter across roles, companies, and skills.
+  - Interactive status dropdown with immediate optimistic updates.
+  - Inline recruiter and interview notes editor.
+  - Direct action buttons (job details, outreach mailto, external apply post, remove application).
+  - Rich empty states with "Explore Job Recommendations" CTA.
+
+**Status**: ✅ Complete with tests and production build verification
+
+---
+
 ## In Progress
 
 ### 1. Real API Integration (Frontend → Backend)
-- **Completed**: Auth, profiles, resume, feed, job details, interaction events, notifications and user activity.
-- **Missing**: Replace mock implementations in `admin.ts` and `jobs.ts` applications tracking.
+- **Completed**: Auth, profiles, resume, feed, job details, interaction events, notifications, user activity, and real job applications.
+- **Missing**: Replace mock implementations in `admin.ts`.
 
 ---
 
@@ -184,8 +216,10 @@
 ### Backend
 - [x] `GET /api/feed` - Personalized, cached job feed with cursor pagination
 - [x] `GET /api/jobs/{job_id}` - Single job detail with match scoring
-- [ ] `GET /api/applied` - User applications with status
-- [ ] `POST /api/applied` - Apply to job
+- [x] `GET /api/applications` - User applications with status and job metadata
+- [x] `POST /api/applications` - Apply to job / track application
+- [x] `PATCH /api/applications/{id}` - Update status and notes
+- [x] `DELETE /api/applications/{id}` - Remove/withdraw application
 - [ ] `GET /api/saved` - Saved jobs
 - [ ] `POST /api/saved` - Save/unsave job
 - [x] `POST /api/resume/upload` - In-memory PDF upload and asynchronous parsing

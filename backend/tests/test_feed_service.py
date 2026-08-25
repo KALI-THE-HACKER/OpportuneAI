@@ -1,10 +1,12 @@
 import uuid
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 
 import pytest
 
 from database.models.processed_job import ProcessedJob
 from database.models.raw_job import ProcessingStatus, RawJob
+from database.repositories.processed_job_repository import ProcessedJobRepository
 from database.repositories.user_repository import UserRepository
 from database.session import AsyncSessionLocal
 from services.feed_service import FeedService
@@ -19,6 +21,7 @@ def anyio_backend():
 class MockRedis:
     def __init__(self):
         self.store = {}
+        self.sets = {}
 
     def get(self, key: str):
         return self.store.get(key)
@@ -28,7 +31,28 @@ class MockRedis:
         return True
 
     def delete(self, key: str):
-        return self.store.pop(key, None)
+        self.store.pop(key, None)
+        self.sets.pop(key, None)
+        return True
+
+    def sadd(self, key: str, *members: str):
+        if key not in self.sets:
+            self.sets[key] = set()
+        for m in members:
+            self.sets[key].add(str(m))
+        return len(members)
+
+    def smembers(self, key: str):
+        return set(self.sets.get(key, set()))
+
+    def srem(self, key: str, *members: str):
+        s = self.sets.get(key, set())
+        removed = 0
+        for m in members:
+            if str(m) in s:
+                s.remove(str(m))
+                removed += 1
+        return removed
 
 
 def test_scoring_variable_length_skills():
@@ -209,6 +233,13 @@ async def test_feed_service_personalized_ranking_and_caching(dispose_db_engine):
         expired_ids = [item["id"] for item in expired_check_res["items"]]
         assert str(pj_py.id) not in expired_ids
 
+        # 5. Applied check: Applied jobs must be excluded from feed
+        mock_redis.sadd(f"user:{user.id}:applied_jobs", str(pj_react.id))
+        feed_service.invalidate_feed(user.id)
+        applied_check_res = await feed_service.get_feed(user=user, limit=10)
+        applied_check_ids = [item["id"] for item in applied_check_res["items"]]
+        assert str(pj_react.id) not in applied_check_ids
+
 
 @pytest.mark.anyio
 async def test_feed_service_hybrid_ranking_with_embeddings(dispose_db_engine):
@@ -232,6 +263,8 @@ async def test_feed_service_hybrid_ranking_with_embeddings(dispose_db_engine):
             user,
             skills=["Python", "FastAPI"],
             preferred_roles=["Backend Engineer"],
+            location="Remote",
+            work_modes=["remote"],
             years_of_experience=3,
         )
         user.preference_embedding = user_embedding
@@ -304,7 +337,12 @@ async def test_feed_service_hybrid_ranking_with_embeddings(dispose_db_engine):
         await db.commit()
 
         feed_service = FeedService(db, redis=mock_redis)
-        feed_res = await feed_service.get_feed(user=user, limit=10)
+        with patch.object(
+            ProcessedJobRepository,
+            "get_semantic_candidates",
+            return_value=[(pj1, 0.98), (pj2, 0.0)],
+        ):
+            feed_res = await feed_service.get_feed(user=user, limit=10)
 
         # High similarity job must rank first
         assert len(feed_res["items"]) >= 2
