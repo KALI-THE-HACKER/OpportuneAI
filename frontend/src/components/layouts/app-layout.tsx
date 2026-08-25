@@ -16,7 +16,7 @@ import {
   X,
   ChevronRight,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Logo } from "@/components/shared/logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
@@ -81,6 +81,21 @@ export function AppLayout() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        const target = e.target as HTMLElement | null;
+        if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+          return;
+        }
+        e.preventDefault();
+        void navigate({ to: "/app/jobs" });
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [navigate]);
 
   const notifs = useQuery({
     queryKey: ["notifications"],
@@ -205,11 +220,18 @@ export function AppLayout() {
               <Menu className="size-4" />
             </button>
 
-            {/* Pipeline status — desktop only */}
-            <div className="hidden lg:flex items-center gap-2 text-xs text-muted-foreground font-mono">
-              <span className="size-1.5 rounded-full bg-accent animate-pulse-glow" />
-              PIPELINE ONLINE
-            </div>
+            {/* Quick search trigger — desktop & tablet */}
+            <Link
+              to="/app/jobs"
+              className="hidden sm:flex items-center gap-2.5 px-3 h-8 rounded-lg bg-surface/80 hover:bg-surface border border-border hover:border-foreground/20 text-muted-foreground hover:text-foreground text-xs transition-all duration-150 shadow-card hover:shadow-elevated w-48 md:w-64 lg:w-72 group cursor-pointer"
+              title="Search opportunities (⌘K)"
+            >
+              <Search className="size-3.5 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+              <span className="truncate">Search jobs, skills, roles…</span>
+              <kbd className="ml-auto pointer-events-none hidden md:inline-flex h-4.5 select-none items-center gap-0.5 rounded border border-border bg-card px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                <span className="text-[11px]">⌘</span>K
+              </kbd>
+            </Link>
 
             {/* Right actions */}
             <div className="flex items-center gap-2 ml-auto">
