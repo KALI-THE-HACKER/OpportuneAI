@@ -78,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           preferredLocations: [],
           workModes: [],
           minSalary: 0,
+          willingToRelocate: false,
           emailVerified: auth0User.email_verified || false,
         };
 

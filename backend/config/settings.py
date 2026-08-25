@@ -53,6 +53,12 @@ class Settings(BaseSettings):
     database_url: str
     alembic_database_url: str
 
+    # Database Pool Settings (safe for Supabase session mode pool limit of 15)
+    db_pool_size: int = 5
+    db_max_overflow: int = 2
+    db_pool_timeout: int = 30
+    db_pool_recycle: int = 300
+
     # Redis Settings
     redis_host: str = "localhost"
     redis_port: int = 6379

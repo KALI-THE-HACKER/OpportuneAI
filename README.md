@@ -161,7 +161,7 @@ Candidates from Stage 1 are reranked against explicit user constraints across 5 
 | :--- | :---: | :--- |
 | **Technical Skills** | **35%** | Variable-length normalized intersection between candidate proficiencies and required job skills. |
 | **Target Roles** | **30%** | Substring / token fuzzy matching between preferred roles and job title. |
-| **Location & Work Mode** | **15%** | Preferred cities matching + work style alignment (`remote`, `hybrid`, `onsite`). |
+| **Location & Work Mode** | **15%** | Remote match shortcut, physical city matching, or full match when "Willing to relocate" is enabled. |
 | **Experience & Seniority** | **10%** | Experience level comparison (`entry`, `mid`, `senior`, `lead`) with numeric year tolerances. |
 | **Employment Type** | **10%** | Match on contract/full-time/internship preferences. |
 
@@ -190,6 +190,7 @@ For users without sufficient profile or resume data:
 - **Multi-Source Scraping**: Integrated scrapers for LinkedIn, Naukri, Wellfound (Firecrawl markdown), and RemoteOK.
 - **SHA-256 Job Fingerprinting**: Prevents duplicate listings across multiple crawling runs using `title|company|date_posted|location` hashing.
 - **Gemini Client Pool**: Thread-safe multi-API-key cycling with rate-limit tracking and automatic cooldown flags.
+- **Smart Location & Remote Matching**: Remote job postings automatically match when user prefers remote work without penalizing physical location discrepancies. Users can also toggle "Willing to relocate" to unlock matching jobs worldwide.
 - **Smart Apply Links**: Gemini LLM extracts direct application URLs (Greenhouse, Lever, Ashby, Workday, etc.) from job descriptions. RemoteOK `apply_url` is also read directly from the scraper payload.
 - **Autonomous Contact Finder Agent**: When no apply link is present, an autonomous AI agent searches DuckDuckGo for HR, Recruiter, Co-Founder, or Founder contacts — zero API cost. Gemini synthesizes name, role, and email from search snippets; DNS MX validation confirms deliverability. Results are cached per company in `company_contacts` to avoid redundant searches.
 - **One-Click Outreach**: Frontend renders a pre-composed cold-outreach `mailto:` button with the contact's name, role, and email when no direct apply URL is available. Includes a one-click email copy button.

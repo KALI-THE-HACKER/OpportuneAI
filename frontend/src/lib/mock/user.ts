@@ -13,6 +13,7 @@ export interface UserProfile {
   preferredLocations: string[];
   workModes: ("remote" | "hybrid" | "on-site")[];
   minSalary: number;
+  willingToRelocate?: boolean;
   emailVerified: boolean;
   hasResume?: boolean;
   resumeFileName?: string | null;
@@ -41,6 +42,7 @@ export const MOCK_USER: UserProfile = {
   preferredLocations: ["Remote", "New York, NY", "San Francisco, CA"],
   workModes: ["remote", "hybrid"],
   minSalary: 160000,
+  willingToRelocate: false,
   emailVerified: true,
 };
 

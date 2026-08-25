@@ -19,8 +19,13 @@ if (
     connect_args["statement_cache_size"] = 0
 
 is_testing = "pytest" in sys.modules or os.getenv("TESTING") == "1"
+is_pooler = (
+    "supabase" in settings.database_url
+    or ":6543" in settings.database_url
+    or "pooler" in settings.database_url
+)
 
-if is_testing:
+if is_testing or is_pooler:
     engine = create_async_engine(
         settings.database_url,
         echo=False,
@@ -31,8 +36,10 @@ else:
     engine = create_async_engine(
         settings.database_url,
         echo=False,
-        pool_size=20,
-        max_overflow=10,
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
+        pool_timeout=settings.db_pool_timeout,
+        pool_recycle=settings.db_pool_recycle,
         pool_pre_ping=True,
         connect_args=connect_args,
     )

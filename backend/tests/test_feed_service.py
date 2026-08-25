@@ -98,6 +98,52 @@ def test_scoring_role_matching():
     assert score_unrelated == 0.0
 
 
+def test_scoring_location_matching():
+    # 1. User preferred locations include "remote" & job is remote -> full match without comparing physical locs
+    score_remote = ScoringEngine.calculate_location_score(
+        user_location="London, UK",
+        preferred_locations=["Remote", "Berlin, Germany"],
+        job_location="Remote",
+        work_mode="remote",
+        user_work_modes=["remote", "hybrid"],
+        willing_to_relocate=False,
+    )
+    assert score_remote == 15.0
+
+    # 2. User willing to relocate -> full match regardless of physical location mismatch
+    score_relocate = ScoringEngine.calculate_location_score(
+        user_location="London, UK",
+        preferred_locations=["London, UK"],
+        job_location="Tokyo, Japan",
+        work_mode="on-site",
+        user_work_modes=["on-site"],
+        willing_to_relocate=True,
+    )
+    assert score_relocate == 15.0
+
+    # 3. User not willing to relocate and locations do not match -> low score
+    score_mismatch = ScoringEngine.calculate_location_score(
+        user_location="London, UK",
+        preferred_locations=["London, UK"],
+        job_location="Tokyo, Japan",
+        work_mode="on-site",
+        user_work_modes=["on-site"],
+        willing_to_relocate=False,
+    )
+    assert score_mismatch == 3.0  # 0.2 * 15.0
+
+    # 4. User physical location match -> full match
+    score_physical_match = ScoringEngine.calculate_location_score(
+        user_location="London, UK",
+        preferred_locations=["Berlin, Germany"],
+        job_location="Berlin, Germany",
+        work_mode="hybrid",
+        user_work_modes=["hybrid"],
+        willing_to_relocate=False,
+    )
+    assert score_physical_match == 15.0
+
+
 def test_cold_start_score():
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     job = ProcessedJob(

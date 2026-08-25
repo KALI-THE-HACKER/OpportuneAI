@@ -61,6 +61,7 @@ class UserProfileSchema(BaseModel):
     preferredLocations: list[str] = []
     workModes: list[str] = []
     minSalary: int = 0
+    willingToRelocate: bool = False
     emailVerified: bool = False
     hasResume: bool = False
     resumeFileName: str | None = None
@@ -83,6 +84,7 @@ class UserProfileSchema(BaseModel):
             preferredLocations=user.preferred_locations or [],
             workModes=user.work_modes or [],
             minSalary=user.min_salary,
+            willingToRelocate=bool(getattr(user, "willing_to_relocate", False)),
             emailVerified=user.email_verified,
             hasResume=bool(
                 user.resume_file_name
@@ -106,6 +108,7 @@ class UserProfileUpdateSchema(BaseModel):
     preferredLocations: list[str] | None = None
     workModes: list[str] | None = None
     minSalary: int | None = None
+    willingToRelocate: bool | None = None
 
 
 class LoginInputSchema(BaseModel):
@@ -164,6 +167,8 @@ async def update_me(
         update_data["work_modes"] = data.workModes
     if data.minSalary is not None:
         update_data["min_salary"] = data.minSalary
+    if data.willingToRelocate is not None:
+        update_data["willing_to_relocate"] = data.willingToRelocate
 
     ranking_fields = {
         "title",
@@ -174,6 +179,7 @@ async def update_me(
         "preferred_locations",
         "work_modes",
         "min_salary",
+        "willing_to_relocate",
     }
     has_ranking_change = any(k in ranking_fields for k in update_data.keys())
 

@@ -46,6 +46,9 @@ class User(Base):
         JSON, default=list, server_default="[]"
     )
     min_salary: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    willing_to_relocate: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False
+    )
 
     # Preference Embedding fields for Hybrid Recommendation
     preference_embedding: Mapped[list[float] | None] = mapped_column(
