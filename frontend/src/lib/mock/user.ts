@@ -14,6 +14,9 @@ export interface UserProfile {
   workModes: ("remote" | "hybrid" | "on-site")[];
   minSalary: number;
   emailVerified: boolean;
+  hasResume?: boolean;
+  resumeFileName?: string | null;
+  resumeStatus?: "processed" | "processing" | "failed" | null;
 }
 
 export const MOCK_USER: UserProfile = {
