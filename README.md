@@ -241,6 +241,9 @@ OpportuneAI/
 │   └── Dockerfile               # Multi-stage Node 22-alpine SSR runner
 ├── docker/
 │   └── nginx/                   # Ingress reverse proxy configuration (gzip, routing, security headers)
+├── systemd/                     # Systemd service unit and auto-installer script
+├── scripts/
+│   └── deploy.sh                # Production zero-downtime manual CI/CD deployment script
 ├── ansible/                     # Production server provisioning and stack deployment playbooks
 ├── docker-compose.yml           # Unified orchestration for Nginx, frontend, backend, redis, and workers
 ├── DOCKER.md                    # In-depth container architecture & troubleshooting guide
@@ -304,7 +307,28 @@ See [DOCKER.md](file:///Users/luckyverma/Desktop/Development/OpportuneAI/DOCKER.
 
 ---
 
-### 🛠️ Option B: Automated Ansible Deployment
+### 🚀 Option B: 1-Click Manual CI/CD Deployment Script
+
+If you run on a Self-hosted server/Linux server/VPS, deploy or update with zero downtime via the automated shell pipeline:
+
+```bash
+# Run the deployment pipeline
+./scripts/deploy.sh
+```
+
+**What this script does:**
+1. Stashes uncommitted local changes.
+2. Pulls the latest commits from `main`.
+3. Verifies Docker engine health.
+4. Performs an in-place rolling update: `docker compose up -d --build --remove-orphans`.
+5. Runs database migrations: `docker compose exec -T backend alembic upgrade head`.
+6. Restarts and validates the `opportuneai.service` systemd unit (if installed).
+7. Verifies HTTP health at `http://127.0.0.1/health`.
+8. Logs all timestamped output to `~/deploy-opportuneai.log` (configurable via `$LOG_FILE`).
+
+---
+
+### 🛠️ Option C: Automated Ansible Deployment
 
 Deploy and provision a remote Ubuntu/Debian server automatically:
 
@@ -320,7 +344,7 @@ See [ansible/README.md](file:///Users/luckyverma/Desktop/Development/OpportuneAI
 
 ---
 
-### 💻 Option C: Manual Local Development
+### 💻 Option D: Manual Local Development
 
 #### 1. Prerequisites
 - **Python 3.11+**
