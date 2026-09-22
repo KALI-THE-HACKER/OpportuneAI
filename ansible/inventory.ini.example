@@ -1,0 +1,14 @@
+# ==============================================================================
+# Ansible Production Inventory Example
+# Copy this file to inventory.ini and customize with your production server details.
+# ==============================================================================
+
+[opportuneai_servers]
+# Example VPS / EC2 / Bare-metal host:
+prod-server-01 ansible_host=your-server-ip ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_ed25519
+
+[opportuneai_servers:vars]
+ansible_python_interpreter=/usr/bin/python3
+deploy_dir=/opt/opportuneai
+app_port=80
+run_migrations=true

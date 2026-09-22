@@ -1,0 +1,26 @@
+# ==============================================================================
+# Ansible Deployment Variables
+# ==============================================================================
+
+app_name: opportuneai
+deploy_dir: /opt/opportuneai
+deploy_user: root
+app_port: 80
+
+# Source synchronization:
+# 'local_sync': synchronizes local repository files to target server via rsync
+# 'git_clone': clones from git repository
+deploy_method: local_sync
+git_repo_url: ""
+git_repo_branch: main
+
+# Database & Migration control
+run_migrations: true
+
+# Docker Compose command prefix
+docker_compose_cmd: "docker compose"
+
+# Health check settings
+healthcheck_retries: 20
+healthcheck_delay: 5
+healthcheck_url: "http://127.0.0.1:{{ app_port }}/health"

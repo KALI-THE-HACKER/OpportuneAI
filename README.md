@@ -11,6 +11,8 @@
   <img src="https://img.shields.io/badge/tanstack-start-ff4154?style=flat-square" alt="TanStack Start" />
   <img src="https://img.shields.io/badge/llm-gemini--2.5--flash-8e75ff?style=flat-square&logo=google" alt="Gemini 2.5 Flash" />
   <img src="https://img.shields.io/badge/cache-redis-dc382d?style=flat-square&logo=redis" alt="Redis" />
+  <img src="https://img.shields.io/badge/docker-ready-2496ed?style=flat-square&logo=docker" alt="Docker Ready" />
+  <img src="https://img.shields.io/badge/ansible-automated-ee0000?style=flat-square&logo=ansible" alt="Ansible Automated" />
 </p>
 
 ---
@@ -190,12 +192,15 @@ For users without sufficient profile or resume data:
 - **Multi-Source Scraping**: Integrated scrapers for LinkedIn, Naukri, Wellfound (Firecrawl markdown), and RemoteOK.
 - **SHA-256 Job Fingerprinting**: Prevents duplicate listings across multiple crawling runs using `title|company|date_posted|location` hashing.
 - **Gemini Client Pool**: Thread-safe multi-API-key cycling with rate-limit tracking and automatic cooldown flags.
-- **Smart Location & Remote Matching**: Remote job postings automatically match when user prefers remote work without penalizing physical location discrepancies. Users can also toggle "Willing to relocate" to unlock matching jobs worldwide.
-- **Smart Apply Links**: Gemini LLM extracts direct application URLs (Greenhouse, Lever, Ashby, Workday, etc.) from job descriptions. RemoteOK `apply_url` is also read directly from the scraper payload.
-- **Autonomous Contact Finder Agent**: When no apply link is present, an autonomous AI agent searches DuckDuckGo for HR, Recruiter, Co-Founder, or Founder contacts — zero API cost. Gemini synthesizes name, role, and email from search snippets; DNS MX validation confirms deliverability. Results are cached per company in `company_contacts` to avoid redundant searches.
-- **One-Click Outreach**: Frontend renders a pre-composed cold-outreach `mailto:` button with the contact's name, role, and email when no direct apply URL is available. Includes a one-click email copy button.
+- **Two-Stage Hybrid Scoring Engine**: Combines 768-dim vector embeddings (`gemini-embedding-001`) with deterministic rules (skills, target roles, locations, experience, work modes).
+- **Smart Location & Remote Matching**: Remote jobs instantly match remote preferences; optional "Willing to relocate" flag unlocks global opportunities.
+- **Smart Apply Links**: Gemini LLM extracts direct application URLs (Greenhouse, Lever, Ashby, Workday, etc.) from job descriptions.
+- **Autonomous Contact Finder Agent**: Discovers recruiter, founder, and HR contacts via DuckDuckGo and Gemini synthesis with DNS MX deliverability verification.
+- **One-Click Cold Outreach & AI Pitch Generator**: Pre-composed `mailto:` links with one-click copy, plus an AI cold outreach generator tailored to the job description and user profile.
+- **Real Application Tracking**: Comprehensive application lifecycle management (`/app/applied`) with status tags (Applied, Interviewing, Offer, Rejected) and automatic feed exclusion for applied listings.
+- **Enterprise Admin Control Plane**: Centralized telemetry, live crawler logs (SSE), cancellation controls, secret/API-key encryption, and email alerting (Google Workspace, Zoho, SMTP).
 - **Resume Intelligence**: Private Cloudflare R2 PDF document storage, in-memory text parsing (`pypdf`), and async LLM skill extraction.
-- **Real Activity & Notification Feed**: Centralized `user_activities` ledger tracking job bookmarks, applications, resume processing milestones, and profile updates.
+- **Production Containerization & Automation**: Multi-stage Docker builds, isolated internal Docker network with Nginx ingress (only port 80 exposed), and automated Ansible playbooks for zero-downtime deployment.
 - **Role-Based Access Control (RBAC)**: Fine-grained admin dashboard and metrics gated by JWT claims and email allowlists.
 - **Modern UI / UX**: Built on TanStack Start, React 19, Tailwind CSS v4, custom OKLCH dark/light themes, and skeleton shimmer loaders.
 
@@ -214,16 +219,17 @@ OpportuneAI/
 │   │   └── schemas.py           # Pydantic extraction output schemas (JobExtraction, ContactInfo)
 │   ├── config/                  # Configuration loaders, settings & YAML definitions
 │   ├── database/                # SQLAlchemy models, async session & repositories
-│   │   ├── models/              # User, RawJob, ProcessedJob, CompanyContact, UserActivity, UserJobEvent
+│   │   ├── models/              # User, RawJob, ProcessedJob, CompanyContact, UserActivity, UserJobEvent, JobApplication
 │   │   ├── repositories/        # Database CRUD encapsulation classes
 │   │   └── seed.py              # Realistic sample data seed generator
 │   ├── ingestion/               # Scraping orchestrator & deduplication pipeline
 │   ├── migrations/              # Alembic database migration revisions (incl. pgvector)
 │   ├── providers/               # Platform adapter interfaces (LinkedIn, Naukri, Wellfound, RemoteOK)
-│   ├── routes/                  # FastAPI routers (auth, feed, jobs, events, notifications, resume, admin)
-│   ├── services/                # Feed service, ScoringEngine, UserEmbeddingService & backfill
+│   ├── routes/                  # FastAPI routers (auth, feed, jobs, events, notifications, resume, admin, applications, outreach)
+│   ├── services/                # Feed service, ScoringEngine, UserEmbeddingService, LogStreamService, EmailAlertService
 │   ├── storage/                 # Cloudflare R2 S3-compatible client wrappers
 │   ├── workers/                 # Background RQ worker consumers (ai_worker, resume_worker)
+│   ├── Dockerfile               # Multi-stage Python 3.11 runner with unprivileged user & health check
 │   └── tests/                   # Complete pytest suite (unit, integration, API, embeddings, agents)
 ├── frontend/
 │   ├── src/
@@ -232,6 +238,12 @@ OpportuneAI/
 │   │   ├── lib/                 # Typed API client adapters & formatting utilities
 │   │   ├── routes/              # TanStack Start file-based routing views
 │   │   └── styles.css           # OKLCH design tokens & animations
+│   └── Dockerfile               # Multi-stage Node 22-alpine SSR runner
+├── docker/
+│   └── nginx/                   # Ingress reverse proxy configuration (gzip, routing, security headers)
+├── ansible/                     # Production server provisioning and stack deployment playbooks
+├── docker-compose.yml           # Unified orchestration for Nginx, frontend, backend, redis, and workers
+├── DOCKER.md                    # In-depth container architecture & troubleshooting guide
 ├── docs/                        # Architecture memory and current system states
 ├── DOCUMENTATION.md             # In-depth technical architecture details
 ├── CLAUDE.md                    # Developer guidelines and commands
@@ -256,20 +268,70 @@ OpportuneAI/
 - **Styling**: Tailwind CSS v4, Lucide Icons, OKLCH Color Tokens
 - **Auth**: Auth0 React SPA SDK with PKCE & JWKS token verification
 
+### DevOps & Infrastructure
+- **Containerization**: Docker, Docker Compose (multi-stage builds, non-root users)
+- **Reverse Proxy**: Nginx (gzip compression, single host port exposure, internal network isolation)
+- **Provisioning**: Ansible (automated system setup, Docker installation, systemd daemonization, and migrations)
+
 ---
 
 ## 🚀 Getting Started
 
-### 1. Prerequisites
+### 🐳 Option A: Production Docker Deployment (Recommended)
+
+Run the complete multi-service stack with a single command:
+
+1. **Configure environment variables**:
+   ```bash
+   cp .env.docker.example .env
+   cp backend/.env.example backend/.env
+   # Edit backend/.env with your Supabase DATABASE_URL, GEMINI_API_KEYS, etc.
+   ```
+
+2. **Launch with Docker Compose**:
+   ```bash
+   docker compose up -d --build
+   ```
+
+3. **Run database migrations inside the container**:
+   ```bash
+   docker compose exec backend alembic upgrade head
+   ```
+
+The application is now accessible via Nginx at `http://localhost` (or your configured `PORT`). Only Nginx is exposed to the host; the backend, Redis, and workers communicate over an isolated internal network.
+
+See [DOCKER.md](file:///Users/luckyverma/Desktop/Development/OpportuneAI/DOCKER.md) for full architecture and operational commands.
+
+---
+
+### 🛠️ Option B: Automated Ansible Deployment
+
+Deploy and provision a remote Ubuntu/Debian server automatically:
+
+```bash
+# 1. Configure target server in inventory
+cp ansible/inventory.ini.example ansible/inventory.ini
+
+# 2. Run the deployment playbook
+ansible-playbook -i ansible/inventory.ini ansible/playbook.yml
+```
+
+See [ansible/README.md](file:///Users/luckyverma/Desktop/Development/OpportuneAI/ansible/README.md) for full parameters and systemd unit management.
+
+---
+
+### 💻 Option C: Manual Local Development
+
+#### 1. Prerequisites
 - **Python 3.11+**
-- **Node.js 20+** & **npm**
+- **Node.js 22+** & **npm**
 - **PostgreSQL 15+** with **pgvector**
 - **Redis 7+**
 - **Google Chrome** (for undetected-chromedriver crawler)
 
 ---
 
-### 2. Backend Setup
+#### 2. Backend Setup
 
 1. **Navigate to the backend directory and create a virtual environment**:
    ```bash
@@ -320,7 +382,7 @@ OpportuneAI/
 
 ---
 
-### 3. Frontend Setup
+#### 3. Frontend Setup
 
 1. **Navigate to the frontend directory**:
    ```bash
