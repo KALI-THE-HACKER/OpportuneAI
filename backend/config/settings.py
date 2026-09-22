@@ -103,6 +103,19 @@ class Settings(BaseSettings):
     r2_endpoint_url: str | None = None
 
     feed_cache_ttl: int = 3600
+    encryption_master_key: str | None = None
+
+    # SMTP & Alert Email Provider Settings (Google / Zoho / Custom)
+    smtp_provider: str = "google"
+    smtp_enabled: bool = False
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = ""
+    smtp_from_name: str = "OpportuneAI Alerts"
+    smtp_use_tls: bool = True
+    smtp_use_ssl: bool = False
 
     model_config = SettingsConfigDict(
         env_file=".env",

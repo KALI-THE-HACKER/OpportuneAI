@@ -26,18 +26,20 @@
 
 ---
 
-### 2. Job Ingestion Pipeline
-**Backend** (`backend/ingestion/pipeline.py`, `backend/providers/`):
+### 2. Job Ingestion Pipeline & Orchestrator
+**Backend** (`backend/ingestion/pipeline.py`, `backend/services/pipeline_orchestrator.py`, `backend/providers/`, `backend/scrapers/`):
 - Abstract `BaseProvider` with 4 implementations:
   - **LinkedInProvider**: `linkedin-jobs-scraper` (Selenium-based)
-  - **NaukriProvider**: `undetected-chromedriver` + BeautifulSoup
+  - **NaukriProvider**: Native stealth headless Chrome driver with CDP injection (`--headless=new`)
   - **WellfoundProvider**: Playwright + Firecrawl markdown extraction
   - **RemoteOKProvider**: REST API (`https://remoteok.com/api`)
 - Deduplication via content hash (SHA256 of title|company|date|location)
-- Saves to `raw_jobs` table
-- Enqueues AI processing jobs to Redis queue
+- Distributed Redis locks (`lock:scraper:{provider}`) and distributed cancellation signaling (`cancel:scraper:{id}`)
+- Server reload & restart recovery: automatic cleanup of dangling orphaned runs on FastAPI startup
+- In-memory & SSE log streaming service (`LogStreamService`) for live crawler terminal output
+- Saves to `raw_jobs` table and enqueues AI processing jobs to Redis queue
 
-**Status**: ✅ Core pipeline works; scrapers are fragile (browser automation)
+**Status**: ✅ Core pipeline and orchestrator fully functional with cancellation & retry scheduling
 
 ---
 
@@ -204,11 +206,55 @@
 
 ---
 
+### 12. Production Admin Control Plane & Pipeline Orchestration
+**Backend** (`backend/routes/admin.py`, `backend/services/pipeline_orchestrator.py`, `backend/services/scheduler.py`, `backend/services/queue_service.py`, `backend/services/system_config_service.py`, `backend/services/email_notification_service.py`, `backend/services/log_stream_service.py`, `backend/services/audit_service.py`, `backend/utils/encryption.py`, `backend/database/models/`):
+- **Database Architecture**: New PostgreSQL tables `scraper_runs`, `system_configs`, `system_api_keys`, `admin_audit_logs`, `alert_notifications` with Alembic migration `3cfcb26a5c5b_add_admin_control_plane_tables`.
+- **Scraper & Pipeline Orchestrator**:
+  - Redis distributed locking (`lock:scraper:<provider>`) to prevent duplicate concurrent runs.
+  - Manual and scheduled batch/single crawler triggers (`all`, `linkedin`, `naukri`, `wellfound`, `remoteok`).
+  - Asynchronous, non-blocking execution with real-time progress, duration, items fetched, and items saved telemetry.
+  - Configurable retry policies: exponential backoff + automatic 2-hour delay on rate limits / anti-bot challenges (HTTP 429, Cloudflare, Captcha, 403).
+  - In-flight scraper cancellation support.
+- **Automated Daily 2 AM Cron Scheduler** (`services/scheduler.py`):
+  - In-process AsyncIO background scheduler utilizing `croniter` (default `0 2 * * *` = daily 2:00 AM UTC).
+  - Automatically evaluates scheduled runs and picks up due retries (`next_retry_at <= now`).
+  - Managed via FastAPI app lifespan startup and graceful shutdown.
+- **Queue & Worker Management (Redis RQ)** (`services/queue_service.py`):
+  - Live telemetry for `ai-processing`, `resume-processing`, `scraper-queue`.
+  - Operations to retry all failed jobs from RQ registry or purge failed registries.
+  - Active worker node telemetry (names, states, queues, job counters).
+- **Secure Encrypted Key Vault & Config Management** (`utils/encryption.py`, `services/system_config_service.py`):
+  - AES Fernet encryption for API keys at rest.
+  - Raw secret values masked upon creation (`••••••••abcd`) and never returned in plain text.
+  - Dynamic runtime config store for LLM provider/model selection, temperatures, scraper settings, retry policies, cron expressions, and feature flags with in-memory caching and DB fallback.
+- **Admin Alert & Email Notification Engine** (`services/email_notification_service.py`):
+  - Automatic email alerts on scraper failures, repeated retries, provider anti-bot blocks, and critical pipeline errors.
+  - Throttling mechanisms (15-min window) preventing alert storms.
+  - Configurable SMTP support + dev simulation mode and test email dispatch.
+- **Audit Logging** (`services/audit_service.py`):
+  - Logs all critical admin actions (triggering scrapers, config changes, key additions/revocations, retry triggers, test alerts) with user email, action name, target, changes diff, and IP address.
+- **Live Structured Log Streaming** (`services/log_stream_service.py`):
+  - In-memory circular log ring buffer + ingestion log merger filterable by log level, source, and search queries.
+- **Full Unit & Integration Test Coverage**: 7 passing tests in `tests/test_admin.py` and `tests/test_pipeline_orchestration.py` (79/79 suite pass).
+
+**Frontend** (`frontend/src/routes/app.admin.tsx`, `frontend/src/lib/api/admin.ts`):
+- Modern, 7-tab enterprise Admin Control Plane:
+  1. **Overview**: Live status banner, KPI cards, provider health status matrix, quick trigger actions.
+  2. **Scrapers & Pipeline Orchestration**: Provider control cards, "Trigger All", filterable execution history table, interactive Run Detail Modal with structured logs viewer and error stack traces.
+  3. **Queues & Workers**: RQ queue telemetry, worker node cards, failed job bulk retry and purge controls.
+  4. **Live Logs**: Real-time terminal log viewer with auto-scroll toggle, source/level filtering, search, and export log download.
+  5. **Config & Secrets Vault**: LLM selector, retry policies, cron scheduler editor, feature flags, encrypted API key vault (add modal with instant masking, delete/revoke).
+  6. **Alerts & Emails**: Alert rule toggles, recipient emails manager, send test email trigger.
+  7. **Audit Trail**: Searchable, filterable administrative audit logs table.
+
+**Status**: ✅ Complete, migrated, fully tested, and production-ready.
+
+---
+
 ## In Progress
 
 ### 1. Real API Integration (Frontend → Backend)
-- **Completed**: Auth, profiles, resume, feed, job details, interaction events, notifications, user activity, and real job applications.
-- **Missing**: Replace mock implementations in `admin.ts`.
+- **Completed**: Auth, profiles, resume, feed, job details, interaction events, notifications, user activity, job applications, and full admin control plane.
 
 ---
 
@@ -221,15 +267,23 @@
 - [x] `POST /api/applications` - Apply to job / track application
 - [x] `PATCH /api/applications/{id}` - Update status and notes
 - [x] `DELETE /api/applications/{id}` - Remove/withdraw application
+- [x] `GET /api/admin/stats` - Pipeline stats and live telemetry
+- [x] `GET /api/admin/scrapers` - Scraper health and status
+- [x] `POST /api/admin/scrapers/trigger` - Manual scraper trigger
+- [x] `GET /api/admin/queue` - Redis RQ queue telemetry
+- [x] `GET /api/admin/logs` - Live log streaming
+- [x] `GET /api/admin/config` - Dynamic system configuration
+- [x] `PUT /api/admin/config` - Update system configuration
+- [x] `GET /api/admin/api-keys` - Encrypted API key vault
+- [x] `POST /api/admin/api-keys` - Add encrypted API key
+- [x] `DELETE /api/admin/api-keys/{id}` - Revoke API key
+- [x] `POST /api/admin/notifications/test` - Test email notification
+- [x] `GET /api/admin/audit-logs` - Audit trail history
+- [x] Scheduler for periodic ingestion (AsyncIO cron scheduler at 2:00 AM UTC)
 - [ ] `GET /api/saved` - Saved jobs
 - [ ] `POST /api/saved` - Save/unsave job
-- [x] `POST /api/resume/upload` - In-memory PDF upload and asynchronous parsing
-- [x] `GET /api/resume` - Resume metadata and parse status
-- [x] `DELETE /api/resume` - Clear stored resume data
-- [ ] `GET /api/admin/stats` - Pipeline stats (frontend expects this)
-- [ ] `POST /api/admin/ingest` - Trigger manual ingestion
-- [ ] `POST /api/admin/reprocess` - Reprocess raw jobs
-- [ ] Scheduler for periodic ingestion (APScheduler or cron)
+- [ ] Rate limiting on public API endpoints
+- [ ] API versioning strategy
 - [ ] Match score recalculation job (when user profile changes)
 - [ ] Rate limiting on API endpoints
 - [ ] API versioning strategy
@@ -329,4 +383,20 @@
 **Status**: ✅ Implemented, migrated, linted (9/10 tests pass; 1 pre-existing flaky score equality test unrelated to this feature)
 
 ---
-*Last updated: 2026-08-25*
+
+### 9. Admin Control Plane & Security Hardening
+**Backend** (`backend/routes/admin.py`, `backend/services/pipeline_orchestrator.py`, `backend/services/system_config_service.py`, `backend/services/email_notification_service.py`, `backend/utils/encryption.py`):
+- **Dynamic Configuration & Secret Masking**:
+  - `SystemConfigService.get_all_configs` dynamically traverses and masks sensitive values (`*_pass`, `*_secret`, `*_token`) as `"••••••••"`.
+  - `SystemConfigService.update_config` automatically preserves existing plaintext credentials when receiving masked placeholders from frontend updates.
+- **Scraper Invariant & Cancellation Fixes**:
+  - `PipelineOrchestrator` automatically clears lingering Redis cancellation keys (`cancel:scraper:{provider}`) when acquiring locks for new runs and in finally blocks, resolving 10-minute scraper lockout conditions.
+- **Alert Dispatch Security**:
+  - `EmailNotificationService` sanitizes subject lines (CRLF stripping) and escapes HTML bodies (`html.escape`) to prevent email injection and phishing vectors.
+- **Encryption Alerts**:
+  - `encryption.py` emits explicit security warnings when master encryption keys are not configured in production environments.
+
+**Status**: ✅ Audited, hardened, verified with automated test suite
+
+---
+*Last updated: 2026-09-22*

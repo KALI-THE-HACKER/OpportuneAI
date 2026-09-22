@@ -1,9 +1,4 @@
-"""
-Wellfound scraper — uses Firecrawl markdown extraction only for lower
-credit usage and parses job listings directly from markdown.
-
-Requires FIRECRAWL_API_KEY in the environment (or .env file).
-"""
+"""Wellfound scraper — uses Firecrawl markdown extraction for low credit usage."""
 
 import os
 import re
@@ -12,6 +7,10 @@ from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
 from firecrawl import V1FirecrawlApp
 
+from utils.logging_config import get_feature_logger, log_dev, log_dev_error
+
+logger = get_feature_logger("ingestion")
+
 BASE_URL = "https://wellfound.com"
 
 
@@ -19,63 +18,108 @@ def scrape_wellfound_jobs(
     job_title: str = "Software Engineer Intern",
     location: Optional[str] = "India",
 ) -> List[Dict[str, Any]]:
-    """
-    Scrape Wellfound jobs and return normalized data.
-
-    Returns:
-    [
-        {
-            "title": "...",
-            "company": "...",
-            "location": "...",
-            "link": "...",
-            "date": "...",
-            "salary": "...",
-            "equity": "...",
-            "experience": "...",
-            "employment_type": "...",
-            "remote": "...",
-            "description": "...",
-        }
-    ]
-    """
-
+    """Scrape Wellfound jobs and return normalized data."""
     load_dotenv()
 
     api_key = os.getenv("FIRECRAWL_API_KEY", "").strip()
     if not api_key:
-        raise ValueError("FIRECRAWL_API_KEY not found")
+        err_msg = "FIRECRAWL_API_KEY not found in environment or .env"
+        logger.error(f"[Wellfound] [ERROR:AUTH_OR_CONFIG] {err_msg}")
+        log_dev_error(
+            "WELLFOUND_MISSING_API_KEY",
+            err_msg,
+            context={"job_title": job_title, "location": location},
+            logger_name="ingestion",
+        )
+        raise ValueError("FIRECRAWL_API_KEY not found in environment or .env")
 
     url = _build_search_url(job_title, location)
-
-    app = V1FirecrawlApp(api_key=api_key)
-
-    result = app.scrape_url(
-        url,
-        formats=["markdown"],
-        timeout=30000,
+    logger.info(
+        f"[Wellfound] [START] Initiating Firecrawl scrape for role='{job_title}', location='{location}' → URL: {url}"
+    )
+    log_dev(
+        "WELLFOUND_FIRECRAWL_START",
+        {"job_title": job_title, "location": location, "url": url},
+        logger_name="ingestion",
     )
 
-    markdown = getattr(result, "markdown", "") or ""
-    with open("wellfound.md", "w", encoding="utf-8") as f:
-        f.write(markdown)
+    try:
+        app = V1FirecrawlApp(api_key=api_key)
+        result = app.scrape_url(
+            url,
+            formats=["markdown"],
+            timeout=30000,
+        )
+    except Exception as e:
+        err_str = str(e)
+        if "429" in err_str or "rate limit" in err_str.lower():
+            logger.error(
+                f"[Wellfound] [ERROR:RATE_LIMIT_429] Firecrawl API rate limit exceeded: {e}"
+            )
+            log_dev_error(
+                "WELLFOUND_FIRECRAWL_429",
+                e,
+                context={"url": url},
+                logger_name="ingestion",
+            )
+        elif "401" in err_str or "auth" in err_str.lower() or "key" in err_str.lower():
+            logger.error(
+                f"[Wellfound] [ERROR:AUTH_OR_CONFIG] Invalid or expired Firecrawl API key: {e}"
+            )
+            log_dev_error(
+                "WELLFOUND_FIRECRAWL_AUTH_ERROR",
+                e,
+                context={"url": url},
+                logger_name="ingestion",
+            )
+        elif "timeout" in err_str.lower():
+            logger.error(
+                f"[Wellfound] [ERROR:TIMEOUT] Firecrawl scrape timed out after 30s for {url}: {e}"
+            )
+            log_dev_error(
+                "WELLFOUND_FIRECRAWL_TIMEOUT",
+                e,
+                context={"url": url, "timeout": 30000},
+                logger_name="ingestion",
+            )
+        else:
+            logger.error(
+                f"[Wellfound] [ERROR:FIRECRAWL] Firecrawl request failed for {url}: {e}",
+                exc_info=True,
+            )
+            log_dev_error(
+                "WELLFOUND_FIRECRAWL_ERROR",
+                e,
+                context={"url": url},
+                logger_name="ingestion",
+            )
+        raise
 
-    return _parse_jobs_from_markdown(markdown, location)
+    markdown = getattr(result, "markdown", "") or ""
+    logger.info(
+        f"[Wellfound] [FIRECRAWL_SUCCESS] Received {len(markdown)} bytes of markdown from Firecrawl"
+    )
+
+    jobs = _parse_jobs_from_markdown(markdown, location)
+    logger.info(
+        f"[Wellfound] [SUCCESS] Successfully parsed {len(jobs)} jobs from Wellfound markdown"
+    )
+    log_dev(
+        "WELLFOUND_SCRAPER_COMPLETE",
+        {
+            "markdown_length": len(markdown),
+            "jobs_parsed_count": len(jobs),
+            "sample_job": jobs[0] if jobs else None,
+        },
+        logger_name="ingestion",
+    )
+    return jobs
 
 
 def _build_search_url(
     role: str,
     location: Optional[str] = None,
 ) -> str:
-    """
-    Examples:
-        software engineer + bangalore
-        -> https://wellfound.com/role/l/software-engineer/bangalore
-
-        software engineer
-        -> https://wellfound.com/role/r/software-engineer
-    """
-
     role_slug = role.strip().lower().replace(" ", "-")
 
     if location:
@@ -89,18 +133,7 @@ def _parse_jobs_from_markdown(
     markdown: str,
     search_location: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """
-    Parse Firecrawl markdown output.
-
-    Wellfound markdown typically looks like:
-
-        [Stripe](https://wellfound.com/company/stripe)
-        [Software Engineer](https://wellfound.com/jobs/123456)
-
-    We track the latest company link and attach it to
-    subsequent job links.
-    """
-
+    """Parse Firecrawl markdown output."""
     jobs: List[Dict[str, Any]] = []
 
     current_company = "Unknown"
@@ -182,13 +215,3 @@ def _parse_jobs_from_markdown(
                 current_employment_type = None
 
     return jobs
-
-
-if __name__ == "__main__":
-    jobs = scrape_wellfound_jobs(
-        job_title="Software Engineer Intern",
-        location="India",
-    )
-
-    for job in jobs:
-        print(job)

@@ -248,7 +248,7 @@ async def login(data: LoginInputSchema, db: AsyncSession = Depends(get_db)):
     }
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(trust_env=False) as client:
             resp = await client.post(url, json=payload)
             if resp.status_code != 200:
                 detail = "Authentication failed"
@@ -321,7 +321,7 @@ async def register(data: RegisterInputSchema, db: AsyncSession = Depends(get_db)
     }
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(trust_env=False) as client:
             resp = await client.post(signup_url, json=signup_payload)
             if resp.status_code != 200:
                 detail = "Registration failed"
@@ -396,7 +396,7 @@ async def resend_verification(
                 "client_secret": settings.auth0_client_secret,
                 "audience": f"https://{settings.auth0_domain}/api/v2/",
             }
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(trust_env=False) as client:
                 token_resp = await client.post(token_url, json=token_payload)
                 if token_resp.status_code == 200:
                     mgmt_token = token_resp.json().get("access_token")

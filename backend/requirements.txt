@@ -6,6 +6,8 @@ pydantic-settings
 linkedin-jobs-scraper
 firecrawl-py
 beautifulsoup4
+undetected-chromedriver
+setuptools
 sqlalchemy
 asyncpg
 alembic

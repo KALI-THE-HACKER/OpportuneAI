@@ -49,11 +49,19 @@ The application runs a divided architecture:
 - **Applied Job State Tracking & Feed Exclusion**: When user applies to a job, `jobId` is added to the user's applied set (in Redis `user:{id}:applied_jobs` and client state). Applied jobs display an emerald `Applied` badge on `JobCard` and an `Applied` CTA (for both external direct apply and tracked applications) on the job detail page instead of `Apply now`. `FeedService` and client feed calls automatically exclude all applied jobs from being suggested in subsequent personalized feeds or recommendation lists.
 - **Real Job Applications Tracking & Management**: Complete database-backed application management system. PostgreSQL `job_applications` table (`JobApplication` ORM model, unique constraint on `(user_id, job_id)`), `JobApplicationRepository`, and `/api/applications` REST endpoints (`GET`, `POST`, `PATCH`, `DELETE`). The frontend Applications page (`/app/applied`) provides live status filtering (All, Applied, Interviewing, Offer, Rejected), instant search, inline status updater dropdown, recruiter notes editing, direct job actions, and rich empty states.
 - **Feed Location Matching & Willingness to Relocate**: `ScoringEngine.calculate_location_score` updated: (1) if user's preferred locations/modes include `remote` and a job is `remote`, it is treated as an instant location match (`LOCATION_WEIGHT`) without comparing physical locations; (2) `willing_to_relocate` boolean preference added to `User` model, `UserProfileSchema`, `canonical.py` preference embeddings, and frontend Profile page. When enabled, feed ranking skips physical location filters, allowing matching jobs worldwide.
+- **Enterprise Admin Control Plane & Dashboard**: Comprehensive full-stack admin infrastructure:
+  - **Overview & Telemetry**: Platform metrics, health gauges, job funnel conversions, pipeline throughput, error distribution charts.
+  - **Pipeline & Scraper Orchestrator**: Provider lifecycle management (LinkedIn, Naukri, Wellfound, RemoteOK), distributed Redis locks (`lock:scraper:{provider}`), cancellation signaling, manual triggers, auto-retries with exponential and 2-hour anti-bot backoff, live SSE log streaming (`LogStreamService`), and automated startup orphan run cleanup.
+  - **Job Pipeline Inspector**: Paginated browser for raw, processed, and enriched jobs with JSON payload inspectors, manual AI re-enrichment triggers, and delete actions.
+  - **System Config & Secrets Manager**: Centralized dynamic settings (`SystemConfig`, `SystemApiKey`) supporting runtime overrides, Fernet encryption for API keys, optimistic debounced UI updates with instant state persistence.
+  - **Task Queue & Worker Fleet**: Real-time Redis RQ monitoring for `ai-processing` and `resume-processing` queues (active jobs, failure registries, worker status, retry/purge actions).
+  - **Alerts & Notification Dispatch Engine**: Email alerts via Google Workspace and Zoho Mail (or custom SMTP) using dual SSL (port 465) / STARTTLS (port 587) protocol adapters, username normalization, and audit logging into `alert_notifications`.
+  - **Audit Logging**: Comprehensive admin action tracking (`admin_audit_logs`) recording IP, user agent, action targets, and diffs.
+- **Headless Naukri Ingestion**: Modern stealth headless Chrome driver with CDP webdriver evasion, avoiding native macOS ARM64 binary code-signing and architecture crashes.
+- **Resilient AI Extraction Engine**: Two-tier fallback mechanism in `OpenRouterLLM` and `GeminiLLM` handling reasoning models that output JSON in text rather than tool calls, with defensive validation in `JobExtractor`.
 
 ### Remaining
-- Ingestion scheduler system to automate scraper execution.
 - Advanced behavioral learning and ML reranking.
-- Real REST backend integration for admin stats.
 
 ---
 

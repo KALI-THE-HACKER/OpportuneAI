@@ -2,6 +2,7 @@ import { apiCall, type Paginated } from "./client";
 import {
   type Job,
   type ApplicationRecord,
+  type ApplicationStatus,
   MOCK_APPLICATIONS,
   APPLIED_JOB_IDS,
   SAVED_JOB_IDS,

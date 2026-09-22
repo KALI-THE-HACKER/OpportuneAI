@@ -31,6 +31,8 @@ export interface Job {
   contactEmail?: string | null;
   contactName?: string | null;
   contactRole?: string | null;
+  /** Application deadline / last date to apply if specified */
+  lastDateToApply?: string | null;
 }
 
 

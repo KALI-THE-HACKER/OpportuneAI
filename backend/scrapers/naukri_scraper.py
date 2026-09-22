@@ -1,13 +1,5 @@
-"""Naukri scraper — uses ``undetected-chromedriver`` to open your real Chrome
-browser, render the JS-heavy Naukri page, and extract job cards.
+"""Naukri scraper — uses undetected-chromedriver to render JS and extract job cards."""
 
-``undetected-chromedriver`` patches your system Chrome to remove automation
-flags, making it virtually undetectable by Akamai / CloudFlare.
-
-A ``--naukri-html`` fallback is kept for offline / debugging use.
-"""
-
-import logging
 import os
 import re
 import time
@@ -15,24 +7,17 @@ from typing import Optional
 
 from bs4 import BeautifulSoup, Tag
 
-logger = logging.getLogger(__name__)
+from utils.logging_config import get_feature_logger, log_dev, log_dev_error
+
+logger = get_feature_logger("ingestion")
 
 BASE_URL = "https://www.naukri.com"
 MAX_PAGES = 2
 DELAY_BETWEEN_PAGES = 2  # seconds
 
 
-# ------------------------------------------------------------------
-# URL helpers
-# ------------------------------------------------------------------
-
-
 def _build_search_url(role: str, location: Optional[str] = None, page: int = 1) -> str:
-    """Build Naukri search URL.
-    Examples:
-        ("product manager", "bangalore") → naukri.com/product-manager-jobs-in-bangalore
-        ("python developer", None)        → naukri.com/python-developer-jobs
-    """
+    """Build Naukri search URL."""
     slug = role.strip().lower().replace(" ", "-")
     url = f"{BASE_URL}/{slug}-jobs"
     if location:
@@ -43,14 +28,8 @@ def _build_search_url(role: str, location: Optional[str] = None, page: int = 1) 
     return url
 
 
-# ------------------------------------------------------------------
-# HTML parsing (works on rendered DOM — Playwright or saved file)
-# ------------------------------------------------------------------
-
-
 def _extract_job_from_card(card: Tag) -> dict | None:
     """Pull title, company, location, link, date, salary, experience from a single card."""
-    # --- title & link ---
     title_el = (
         card.select_one("a[class*='title']")
         or card.select_one("a.title")
@@ -61,7 +40,6 @@ def _extract_job_from_card(card: Tag) -> dict | None:
     title_text = title_el.get_text(strip=True)
     link = title_el.get("href", "")
 
-    # --- company ---
     comp_el = (
         card.find(class_=re.compile(r"comp"))
         or card.select_one("a[class*='companyName']")
@@ -69,7 +47,6 @@ def _extract_job_from_card(card: Tag) -> dict | None:
     )
     company = comp_el.get_text(strip=True) if comp_el else "N/A"
 
-    # --- location ---
     loc_el = (
         card.find(class_=re.compile(r"loc"))
         or card.find(class_=re.compile(r"location"))
@@ -77,15 +54,12 @@ def _extract_job_from_card(card: Tag) -> dict | None:
     )
     location = loc_el.get_text(" ", strip=True) if loc_el else "N/A"
 
-    # --- date posted ---
     date_el = card.find(class_=re.compile(r"date|post.day|footer"))
     date_posted = date_el.get_text(strip=True) if date_el else None
 
-    # --- salary ---
     salary_el = card.find(class_=re.compile(r"salary"))
     salary = salary_el.get_text(strip=True) if salary_el else None
 
-    # --- experience ---
     exp_el = card.find(class_=re.compile(r"exp"))
     experience = exp_el.get_text(strip=True) if exp_el else None
 
@@ -125,7 +99,9 @@ def _parse_jobs_from_html(html: str) -> list[dict]:
             "div.cust-job-tuple, div[class*='jobTuple']"
         )
 
-    logger.info("Found %d potential job card(s) in HTML.", len(cards))
+    logger.info(
+        f"[Naukri] [PARSER] Found {len(cards)} potential job card elements in HTML"
+    )
 
     for card in cards:
         try:
@@ -133,73 +109,82 @@ def _parse_jobs_from_html(html: str) -> list[dict]:
             if job:
                 jobs.append(job)
         except Exception as exc:  # noqa: BLE001
-            logger.debug("Failed to parse a Naukri card: %s", exc)
+            logger.debug(f"[Naukri] Failed to parse card: {exc}")
+
     return jobs
 
 
-# ------------------------------------------------------------------
-# JSON parsing (intercepted jobapi response)
-# ------------------------------------------------------------------
+def _init_browser_driver(headless: bool = True):
+    """
+    Initialize a headless Chrome browser driver with stealth anti-detection flags.
 
-
-def _parse_jobs_from_api(data: dict) -> list[dict]:
-    """Parse the JSON payload returned by Naukri's internal jobapi."""
-    jobs: list[dict] = []
-    for item in data.get("jobDetails", []):
-        try:
-            title = item.get("title", "").strip()
-            if not title:
-                continue
-
-            company = item.get("companyName", "N/A")
-
-            placeholders = item.get("placeholders", [])
-            location = "N/A"
-            for ph in placeholders:
-                if ph.get("type") == "location":
-                    location = ph.get("label", "N/A")
-                    break
-
-            jd_url = item.get("jdURL", "")
-            url = jd_url if jd_url.startswith("http") else f"{BASE_URL}{jd_url}"
-
-            date_posted = item.get("footerPlaceholderLabel") or item.get("createdDate")
-
-            jobs.append(
-                {
-                    "title": title,
-                    "company": company,
-                    "location": location,
-                    "link": url,
-                    "date_posted": date_posted,
-                    "salary": item.get("salaryDetail") or item.get("salary"),
-                    "experience": item.get("experienceText") or item.get("experience"),
-                    "description": item.get("jobDescription") or "",
-                }
-            )
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("Failed to parse Naukri API item: %s", exc)
-    return jobs
-
-
-# ------------------------------------------------------------------
-# Live mode — undetected-chromedriver (uses your real Chrome)
-# ------------------------------------------------------------------
-
-
-def _scrape_live(role: str, location: Optional[str], headless: bool) -> list[dict]:
-    """Open Naukri in real Chrome via undetected-chromedriver."""
+    Prefers Selenium Chrome with modern headless flags and CDP script injection,
+    with an automatic fallback to undetected-chromedriver if needed.
+    """
     try:
-        import undetected_chromedriver as uc
-        from selenium.webdriver.common.by import By
-        from selenium.webdriver.support import expected_conditions as EC
-        from selenium.webdriver.support.ui import WebDriverWait
-    except ImportError:
-        logger.error(
-            "undetected-chromedriver is required for Naukri scraping. "
-            "Install with: pip install undetected-chromedriver"
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+
+        options = Options()
+        if headless:
+            options.add_argument("--headless=new")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--window-size=1440,900")
+        options.add_argument(
+            "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
         )
-        return []
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option("useAutomationExtension", False)
+
+        driver = webdriver.Chrome(options=options)
+        driver.execute_cdp_cmd(
+            "Page.addScriptToEvaluateOnNewDocument",
+            {
+                "source": """
+                    Object.defineProperty(navigator, 'webdriver', {
+                        get: () => undefined
+                    });
+                """
+            },
+        )
+        return driver
+    except Exception as e:
+        logger.warning(
+            f"[Naukri] Standard Selenium launch encountered '{e}', attempting undetected-chromedriver fallback..."
+        )
+        try:
+            import undetected_chromedriver as uc
+
+            uc_options = uc.ChromeOptions()
+            uc_options.add_argument("--no-sandbox")
+            uc_options.add_argument("--window-size=1440,900")
+            if headless:
+                uc_options.add_argument("--headless=new")
+            return uc.Chrome(options=uc_options, headless=headless)
+        except Exception as uc_err:
+            logger.error(f"[Naukri] All browser drivers failed: {uc_err}")
+            raise
+
+
+def _is_cancelled(provider: str = "naukri") -> bool:
+    try:
+        from workers.connection import redis_connection
+
+        return bool(redis_connection.get(f"cancel:scraper:{provider.lower()}"))
+    except Exception:
+        return False
+
+
+def _scrape_live(
+    role: str, location: Optional[str] = None, headless: bool = True
+) -> list[dict]:
+    """Open Naukri in headless Chrome via stealth browser driver."""
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.support.ui import WebDriverWait
 
     # Fix SSL cert issue on macOS
     try:
@@ -210,25 +195,53 @@ def _scrape_live(role: str, location: Optional[str], headless: bool) -> list[dic
         pass
 
     all_jobs: list[dict] = []
-    options = uc.ChromeOptions()
-    options.add_argument("--no-sandbox")
-    options.add_argument("--window-size=1440,900")
-
     driver = None
     try:
-        driver = uc.Chrome(options=options, headless=headless)
+        logger.info(
+            f"[Naukri] [BROWSER] Launching Chrome browser (headless={headless})..."
+        )
+        log_dev(
+            "NAUKRI_BROWSER_LAUNCH",
+            {"role": role, "location": location, "headless": headless},
+            logger_name="ingestion",
+        )
+        driver = _init_browser_driver(headless=headless)
 
         for pg in range(1, MAX_PAGES + 1):
+            if _is_cancelled("naukri"):
+                logger.info(
+                    "[Naukri] [CANCELLED] Scraper cancellation signal received. Halting crawl."
+                )
+                break
+
             url = _build_search_url(role, location, pg)
-            logger.info("Naukri page %d → %s", pg, url)
+            logger.info(f"[Naukri] [FETCHING] Page {pg}/{MAX_PAGES} → {url}")
 
             driver.get(url)
 
+            if _is_cancelled("naukri"):
+                logger.info(
+                    "[Naukri] [CANCELLED] Scraper cancellation signal received. Halting crawl."
+                )
+                break
+
             # Check for access denied
-            if "Access Denied" in driver.page_source[:500]:
-                logger.warning(
-                    "Naukri returned Access Denied. "
-                    "Try running with headless=False or use --naukri-html."
+            page_snippet = driver.page_source[:800]
+            if any(
+                t in page_snippet
+                for t in ["Access Denied", "Cloudflare", "Security Challenge"]
+            ):
+                err_msg = f"Access Denied / Cloudflare block encountered on {url}"
+                logger.error(f"[Naukri] [ERROR:ANTI_BOT_BLOCKED] {err_msg}")
+                log_dev_error(
+                    "NAUKRI_ANTI_BOT_BLOCKED",
+                    err_msg,
+                    context={
+                        "page": pg,
+                        "url": url,
+                        "html_snippet": page_snippet[:300],
+                    },
+                    logger_name="ingestion",
                 )
                 break
 
@@ -237,72 +250,84 @@ def _scrape_live(role: str, location: Optional[str], headless: bool) -> list[dic
                 WebDriverWait(driver, 15).until(
                     EC.presence_of_element_located((By.ID, "listContainer"))
                 )
-                # Extra time for all job cards to load
                 time.sleep(3)
-            except Exception:
-                logger.info("Job container did not appear on page %d.", pg)
+            except Exception as e:
+                logger.warning(
+                    f"[Naukri] [TIMEOUT] Job container '#listContainer' did not appear on page {pg} within 15s: {e}"
+                )
+                log_dev(
+                    "NAUKRI_CONTAINER_WAIT_TIMEOUT",
+                    {"page": pg, "url": url, "warning": str(e)},
+                    logger_name="ingestion",
+                )
 
             rendered_html = driver.page_source
             page_jobs = _parse_jobs_from_html(rendered_html)
-            logger.info("Parsed %d job(s) from page %d.", len(page_jobs), pg)
+            logger.info(
+                f"[Naukri] [PARSED] Page {pg}: Successfully parsed {len(page_jobs)} jobs"
+            )
             all_jobs.extend(page_jobs)
 
             if not page_jobs:
-                logger.info("No jobs on page %d — stopping pagination.", pg)
+                logger.info(
+                    f"[Naukri] No jobs found on page {pg}, terminating pagination."
+                )
                 break
 
             if pg < MAX_PAGES:
                 time.sleep(DELAY_BETWEEN_PAGES)
 
     except Exception as exc:
-        logger.error("undetected-chromedriver error: %s", exc)
+        logger.error(
+            f"[Naukri] [ERROR:BROWSER_CRASH] undetected-chromedriver execution error: {exc}",
+            exc_info=True,
+        )
+        log_dev_error(
+            "NAUKRI_EXECUTION_ERROR",
+            exc,
+            context={"role": role, "location": location},
+            logger_name="ingestion",
+        )
+        raise
     finally:
         if driver:
-            driver.quit()
+            try:
+                driver.quit()
+            except Exception:
+                pass
 
+    logger.info(
+        f"[Naukri] [SUCCESS] Scraped total of {len(all_jobs)} jobs from Naukri across {MAX_PAGES} pages."
+    )
+    log_dev(
+        "NAUKRI_SCRAPER_COMPLETE",
+        {
+            "total_jobs_scraped": len(all_jobs),
+            "sample_job": all_jobs[0] if all_jobs else None,
+        },
+        logger_name="ingestion",
+    )
     return all_jobs
-
-
-# ------------------------------------------------------------------
-# Offline fallback — parse a saved HTML file
-# ------------------------------------------------------------------
 
 
 def _scrape_from_file(path: str) -> list[dict]:
     """Parse a locally-saved Naukri HTML file."""
     if not path or not os.path.isfile(path):
-        logger.error("HTML file not found: %s", path)
+        logger.error(f"[Naukri] [ERROR:FILE_NOT_FOUND] HTML file not found: {path}")
         return []
 
-    logger.info("Parsing saved Naukri HTML: %s", path)
+    logger.info(f"[Naukri] Parsing saved HTML file: {path}")
     with open(path, encoding="utf-8", errors="replace") as fh:
         return _parse_jobs_from_html(fh.read())
-
-
-# ------------------------------------------------------------------
-# Public API
-# ------------------------------------------------------------------
 
 
 def scrape_naukri_jobs(
     job_title: str,
     location: Optional[str] = None,
     html_file: str | None = None,
-    headless: bool = False,
+    headless: bool = True,
 ) -> list[dict]:
-    """Scrape Naukri jobs as normalized dicts."""
+    """Scrape Naukri jobs as normalized dicts in headless browser mode."""
     if html_file:
         return _scrape_from_file(html_file)
     return _scrape_live(job_title, location, headless)
-
-
-# ------------------------------------------------------------------
-# Script entrypoint
-# ------------------------------------------------------------------
-
-if __name__ == "__main__":
-    jobs = scrape_naukri_jobs(
-        job_title="Software Engineer",
-        location="Bangalore",
-    )
-    print(f"Found {len(jobs)} jobs")

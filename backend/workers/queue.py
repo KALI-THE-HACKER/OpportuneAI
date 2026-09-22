@@ -1,7 +1,11 @@
+# fmt: off
 import os
 
+# fmt: on
 from redis import Redis
 from rq import Queue
+
+import workers.fork_safety  # noqa: F401  — must be first; see module docstring
 
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))

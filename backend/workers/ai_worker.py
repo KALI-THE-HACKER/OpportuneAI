@@ -1,7 +1,14 @@
+# fmt: off
+# MUST be the very first import. Monkeypatches _scproxy, pre-warms ObjC proxy
+# classes, and pre-imports heavy C-extensions in the parent so forked RQ
+# children never trigger ObjC class-init -> SIGABRT (OBJC namespace code 1).
+# fmt: on
 import asyncio
 import logging
+import uuid
 from typing import Any
 
+import workers.fork_safety  # noqa: F401
 from ai.agents.contact_finder import ContactFinderAgent
 from ai.extraction.extractor import InsufficientJobDataError, JobExtractor
 from ai.providers.factory import get_llm
@@ -25,6 +32,24 @@ def _extract_apply_url_from_payload(raw_payload: dict | None) -> str | None:
 
 async def _process_raw_job(raw_job_id: Any) -> None:
     """Asynchronous implementation of the AI processing pipeline for a raw job."""
+    if isinstance(raw_job_id, uuid.UUID):
+        logger.error(
+            "Invalid raw_job_id %r (UUID not supported, expected int32); skipping job",
+            raw_job_id,
+        )
+        return
+
+    try:
+        raw_job_id = int(raw_job_id)
+        if raw_job_id < 1 or raw_job_id > 2_147_483_647:
+            raise ValueError(f"ID {raw_job_id} out of int32 range")
+    except (ValueError, TypeError):
+        logger.error(
+            "Invalid raw_job_id %r (expected 32-bit positive int); skipping job",
+            raw_job_id,
+        )
+        return
+
     logger.info("Starting AI processing for raw job %s", raw_job_id)
 
     async with AsyncSessionLocal() as db:
