@@ -105,12 +105,32 @@ docker compose down
 
 ---
 
+## Systemd Service Management (Auto-Start on Boot)
+
+To automatically launch and supervise the entire Docker Compose stack on Linux boot:
+
+```bash
+# 1. Install and enable the systemd unit (automatically sets your current working directory)
+sudo ./systemd/install.sh
+
+# 2. Control the stack using systemctl
+sudo systemctl start opportuneai
+sudo systemctl status opportuneai
+sudo systemctl restart opportuneai
+sudo systemctl stop opportuneai
+
+# 3. View systemd logs
+journalctl -u opportuneai -f
+```
+
+---
+
 ## Service Catalog
 
 | Service | Image / Base | Internal Port | Description |
 | :--- | :--- | :--- | :--- |
 | **`nginx`** | `nginx:1.27-alpine` | `80` (mapped to host) | Reverse proxy, static asset compression, security headers. |
-| **`frontend`** | `node:20-alpine` (multi-stage) | `3000` | TanStack Start / React 19 SSR runtime. |
+| **`frontend`** | `node:22-alpine` (multi-stage) | `3000` | TanStack Start / React 19 SSR runtime. |
 | **`backend`** | `python:3.11-slim` (multi-stage) | `8000` | FastAPI application serving `/api/*` and `/health`. |
 | **`rq-worker-ai`** | `python:3.11-slim` (backend image) | None | Consumes `ai-processing` Redis queue for Gemini extraction. |
 | **`rq-worker-resume`** | `python:3.11-slim` (backend image) | None | Consumes `resume-processing` Redis queue for PDF parsing. |
