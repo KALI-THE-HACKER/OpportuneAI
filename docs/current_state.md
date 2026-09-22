@@ -50,6 +50,8 @@
   - **GeminiProvider**: Google Gemini API with connection pooling (`gemini_pool.py`)
   - **OpenRouterProvider**: OpenAI-compatible fallback
 - Job extraction: skills, salary, experience, employment_type, description
+- Robust extraction sanitization: normalizes employment types, extracts clean salary without equity pollution, and converts sparse metadata or raw JSON dumps into human-readable job descriptions
+- Scraper parsing normalization: Wellfound markdown parsing accumulates job card fields, isolates title links from employment types, and splits multi-value salary/equity lines
 - Match scoring against user profiles (skills, roles, locations, experience, salary)
 - Saves structured data to `processed_jobs` table
 

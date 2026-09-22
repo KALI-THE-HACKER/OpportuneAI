@@ -64,12 +64,14 @@ class OpenRouterLLM(BaseLLM):
 
         response: T | None = None
         try:
-            structured_llm = self.client.with_structured_output(
-                output_schema, include_raw=True
-            )
-            result_dict = await structured_llm.ainvoke(messages)
-            response = result_dict.get("parsed")
-            raw_msg = result_dict.get("raw")
+            structured_llm = self.client.with_structured_output(output_schema)
+            result = await structured_llm.ainvoke(messages)
+            if isinstance(result, dict):
+                response = result.get("parsed")
+                raw_msg = result.get("raw")
+            else:
+                response = result
+                raw_msg = None
 
             # Fallback 1: check if raw content from tool call message contains JSON
             if response is None and raw_msg:
