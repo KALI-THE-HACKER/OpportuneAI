@@ -1,10 +1,13 @@
 import json
+import logging
 
 from ai.extraction.prompts import JOB_EXTRACTION_PROMPT
 from ai.providers.base import BaseLLM
 from ai.schemas import JobExtraction
 from database.models.raw_job import RawJob
 from utils.logging_config import log_dev
+
+logger = logging.getLogger("worker")
 
 
 class InsufficientJobDataError(Exception):
@@ -17,48 +20,62 @@ class InsufficientJobDataError(Exception):
 
 def _build_job_text(raw_job: RawJob) -> str:
     """
-    Build the text to send to the LLM.
+    Build comprehensive structured text to send to the LLM for extraction.
 
-    Always sends the full payload so the model has maximum context.
-    Falls back gracefully when raw_payload is None or not a dict.
+    Combines both top-level RawJob metadata (title, company, location, date, link, source)
+    and all attributes from raw_payload (description, tags, salary, experience, etc.).
     """
-    payload = raw_job.raw_payload
+    header_lines = [
+        f"Job Title: {raw_job.title or 'N/A'}",
+        f"Company Name: {raw_job.company or 'N/A'}",
+        f"Location: {raw_job.location or 'Remote / Unspecified'}",
+        f"Source: {raw_job.source or 'N/A'}",
+        f"Date Posted: {raw_job.date_posted or 'N/A'}",
+        f"Original Link: {raw_job.link or 'N/A'}",
+    ]
 
-    if payload is None:
-        # No payload at all — give the LLM whatever top-level metadata exists
-        return (
-            f"Title: {raw_job.title or 'N/A'}\n"
-            f"Company: {raw_job.company or 'N/A'}\n"
-            f"Location: {raw_job.location or 'N/A'}\n"
-            f"Date Posted: {raw_job.date_posted or 'N/A'}\n"
-            f"Source: {raw_job.source}\n"
-            "(No additional payload data available)"
-        )
+    payload = raw_job.raw_payload
+    description = ""
 
     if isinstance(payload, dict):
-        description = payload.get("description") or ""
-        if description:
-            # Prefer structured context: metadata header + full description
-            header_parts = []
-            for key in (
-                "title",
-                "company",
-                "location",
-                "salary",
-                "experience",
-                "employment_type",
-                "tags",
-            ):
-                value = payload.get(key)
-                if value:
-                    header_parts.append(f"{key.capitalize()}: {value}")
-            header = "\n".join(header_parts)
-            return f"{header}\n\nDescription:\n{description}".strip()
-        # No description key — dump the whole dict as JSON for maximum context
-        return json.dumps(payload, ensure_ascii=False, indent=2)
+        for key in (
+            "salary",
+            "salary_min",
+            "salary_max",
+            "experience",
+            "employment_type",
+            "remote",
+            "equity",
+            "tags",
+            "apply_url",
+        ):
+            val = payload.get(key)
+            if val:
+                if isinstance(val, list):
+                    val = ", ".join(str(x) for x in val)
+                header_lines.append(f"{key.replace('_', ' ').title()}: {val}")
 
-    # Payload is a plain string or some other type
-    return str(payload)
+        description = payload.get("description") or ""
+        if not description:
+            # Fallback to other string fields if description is empty
+            extra_items = {
+                k: v
+                for k, v in payload.items()
+                if k not in ("title", "company", "location", "link") and v
+            }
+            if extra_items:
+                description = json.dumps(extra_items, ensure_ascii=False, indent=2)
+    elif payload:
+        description = str(payload)
+
+    if not description or len(description.strip()) < 10:
+        description = (
+            f"Opportunity for {raw_job.title} at {raw_job.company}. "
+            f"Location: {raw_job.location or 'Remote'}. Source: {raw_job.source}."
+        )
+
+    header = "\n".join(header_lines)
+    return f"{header}\n\nJob Description & Details:\n{description}".strip()
 
 
 class JobExtractor:
@@ -89,10 +106,28 @@ class JobExtractor:
 
         messages = JOB_EXTRACTION_PROMPT.format_messages(job_description=job_text)
 
-        result: JobExtraction = await self.llm.invoke(
+        result: JobExtraction | None = await self.llm.invoke(
             messages=messages,
             output_schema=JobExtraction,
         )
+
+        if result is None:
+            if raw_job.title and raw_job.company:
+                logger.warning(
+                    "LLM returned null extraction for raw job %s; synthesizing basic extraction from raw job data.",
+                    raw_job.id,
+                )
+                result = JobExtraction(
+                    job_title=raw_job.title,
+                    company=raw_job.company,
+                    location=raw_job.location or "",
+                    job_description=job_text,
+                    data_sufficient=True,
+                )
+            else:
+                raise InsufficientJobDataError(
+                    "LLM returned null extraction response and raw job lacks title/company."
+                )
 
         log_dev(
             "JOB AI EXTRACTION RESPONSE",

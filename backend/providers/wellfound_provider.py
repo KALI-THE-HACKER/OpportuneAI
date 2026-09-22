@@ -6,39 +6,40 @@ from providers.base import BaseProvider
 from providers.models.raw_jobs_data import RawJobData
 from scrapers.wellfound_scraper import scrape_wellfound_jobs
 from utils.hashing import compute_content_hash
+from utils.logging_config import get_feature_logger
 from utils.wellfound_utils import extract_wellfound_job_id
+
+logger = get_feature_logger("ingestion")
 
 
 async def scrape_jobs():
-    """
-    This is a wrapper function that reads configuration from config.yml and calls the actual Wellfound scraper with the appropriate parameters.
-    """
+    """Wrapper function that reads configuration and invokes Wellfound scraper."""
     CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "config.yml"
 
-    with open(CONFIG_PATH, "r") as file:
-        config = yaml.safe_load(file)
-
-    scraper_config = config.get("scraper_config", {})
+    role = "Software Engineer Intern"
+    location = "India"
+    if CONFIG_PATH.exists():
+        try:
+            with open(CONFIG_PATH, "r") as file:
+                config = yaml.safe_load(file) or {}
+                scraper_config = config.get("scraper_config", {})
+                role = scraper_config.get("job_title", role)
+                locs = scraper_config.get("locations", [location])
+                location = locs[0] if locs else location
+        except Exception as e:
+            logger.warning(
+                f"[Wellfound] Failed to read config.yml ({e}), using defaults"
+            )
 
     return scrape_wellfound_jobs(
-        job_title=scraper_config.get(
-            "job_title",
-            "Software Engineer Intern",
-        ),
-        location=scraper_config.get(
-            "locations",
-            ["India"],
-        )[0],
+        job_title=role,
+        location=location,
     )
 
 
 class WellfoundProvider(BaseProvider):
-    """
-    WellfoundProvider is responsible for fetching job listings from Wellfound, normalizing the data, and returning it in a structured format.
-    It uses the scrape_jobs function to get raw job data and then processes it into RawJobData objects.
-    """
-
     async def fetch_jobs(self) -> list[RawJobData]:
+        logger.info("[Wellfound] Starting job fetch via WellfoundProvider...")
         jobs = await scrape_jobs()
 
         raw_jobs: list[RawJobData] = []
@@ -70,4 +71,7 @@ class WellfoundProvider(BaseProvider):
                 )
             )
 
+        logger.info(
+            f"[Wellfound] [SUCCESS] WellfoundProvider normalized {len(raw_jobs)} job postings"
+        )
         return raw_jobs

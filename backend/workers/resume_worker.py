@@ -13,8 +13,16 @@ The worker uses a dedicated ``resume-processing`` RQ queue so it doesn't
 compete with the heavier AI job-extraction pipeline on ``ai-processing``.
 """
 
+# fmt: off
+# MUST be the very first import. Monkeypatches _scproxy, pre-warms ObjC proxy
+# classes, and pre-imports heavy C-extensions in the parent so forked RQ
+# children never trigger ObjC class-init -> SIGABRT (OBJC namespace code 1).
+# fmt: on
 import asyncio
+import uuid
+from typing import Any
 
+import workers.fork_safety  # noqa: F401
 from ai.extraction.resume_extractor import ResumeExtractor
 from ai.providers.factory import get_llm
 from database.repositories.activity_repository import ActivityRepository
@@ -26,8 +34,26 @@ configure_logging()
 logger = get_feature_logger("worker")
 
 
-async def _process_resume(user_id: int) -> None:
+async def _process_resume(user_id: Any) -> None:
     """Async implementation of resume AI parsing pipeline."""
+    if isinstance(user_id, uuid.UUID):
+        logger.error(
+            "Invalid user_id %r (UUID not supported, expected int32); skipping resume",
+            user_id,
+        )
+        return
+
+    try:
+        user_id = int(user_id)
+        if user_id < 1 or user_id > 2_147_483_647:
+            raise ValueError(f"ID {user_id} out of int32 range")
+    except (ValueError, TypeError):
+        logger.error(
+            "Invalid user_id %r (expected 32-bit positive int); skipping resume processing",
+            user_id,
+        )
+        return
+
     logger.info("Starting resume processing for user %s", user_id)
 
     async with AsyncSessionLocal() as db:

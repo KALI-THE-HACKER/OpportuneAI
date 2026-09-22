@@ -27,7 +27,7 @@ async def get_jwks() -> dict:
 
     url = f"https://{settings.auth0_domain}/.well-known/jwks.json"
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(trust_env=False) as client:
             resp = await client.get(url)
             if resp.status_code == 200:
                 _jwks_cache = resp.json()
@@ -48,8 +48,11 @@ async def verify_auth0_token(token: str) -> dict:
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    # 1. Dev/Mock support (useful for unit tests and local testing when Auth0 is not configured)
-    if token.startswith("mock-") or not settings.auth0_domain:
+    # 1. Dev/Mock support (only active when Auth0 is not configured or in mock client mode)
+    is_mock_mode = (
+        settings.auth0_client_id == "mock_client_id"
+    ) or not settings.auth0_domain
+    if is_mock_mode and (token.startswith("mock-") or not settings.auth0_domain):
         # Form: mock-auth0|sub-value;email@example.com;Name;avatar_url
         parts = token.split("-", 1)[1].split(";")
         sub = parts[0] if len(parts) > 0 else "mock-user-1"
@@ -144,7 +147,7 @@ async def get_current_user(
     ):
         try:
             url = f"https://{settings.auth0_domain}/userinfo"
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(trust_env=False) as client:
                 userinfo_resp = await client.get(
                     url, headers={"Authorization": f"Bearer {token}"}
                 )

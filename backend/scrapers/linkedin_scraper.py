@@ -1,4 +1,3 @@
-import logging
 from typing import Any, Dict, List
 
 from linkedin_jobs_scraper import LinkedinScraper
@@ -13,7 +12,9 @@ from linkedin_jobs_scraper.filters import (
 )
 from linkedin_jobs_scraper.query import Query, QueryFilters, QueryOptions
 
-logger = logging.getLogger(__name__)
+from utils.logging_config import get_feature_logger, log_dev, log_dev_error
+
+logger = get_feature_logger("ingestion")
 
 
 def scrape_linkedin_jobs(
@@ -24,19 +25,7 @@ def scrape_linkedin_jobs(
     limit: int = 20,
     headless: bool = True,
 ) -> Dict[str, Any]:
-    """
-    Scrape LinkedIn job listings and return the data.
-
-    Args:
-        job_title: The job title to search for
-        locations: List of locations (e.g., ['India'])
-        job_type: List of job types (e.g., [TypeFilters.INTERNSHIP])
-        experience_level: List of experience levels
-        limit: Maximum number of jobs to scrape
-
-    Returns:
-        Dictionary containing scraped jobs data and errors
-    """
+    """Scrape LinkedIn job listings and return the data."""
     if locations is None:
         locations = ["India"]
     if job_type is None:
@@ -46,6 +35,20 @@ def scrape_linkedin_jobs(
 
     jobs_data = []
     errors = []
+
+    logger.info(
+        f"[LinkedIn] [START] Initializing scraper for role='{job_title}', locations={locations}, limit={limit}, headless={headless}"
+    )
+    log_dev(
+        "LINKEDIN_SCRAPER_INIT",
+        {
+            "job_title": job_title,
+            "locations": locations,
+            "limit": limit,
+            "headless": headless,
+        },
+        logger_name="ingestion",
+    )
 
     def on_data(data: EventData):
         """Callback when job data is scraped"""
@@ -58,25 +61,81 @@ def scrape_linkedin_jobs(
             "description": data.description,
         }
         jobs_data.append(job_info)
-        logger.info(f"✓ Scraped: {data.title} at {data.company}")
+        logger.info(
+            f"[LinkedIn] [SCRAPED #{len(jobs_data)}] '{data.title}' at '{data.company}' ({data.location})"
+        )
 
     def on_error(error):
         """Callback when an error occurs"""
-        logger.error(f"✗ Error: {error}")
-        errors.append(str(error))
+        err_str = str(error)
+        is_blocked = any(
+            t in err_str.lower()
+            for t in [
+                "auth",
+                "login",
+                "captcha",
+                "security check",
+                "429",
+                "403",
+                "checkpoint",
+            ]
+        )
+        if is_blocked:
+            logger.error(
+                f"[LinkedIn] [ERROR:ANTI_BOT_BLOCKED] LinkedIn anti-bot/login wall detected: {err_str}"
+            )
+            log_dev_error(
+                "LINKEDIN_ANTI_BOT_BLOCKED",
+                err_str,
+                context={"job_title": job_title, "locations": locations},
+                logger_name="ingestion",
+            )
+        else:
+            logger.error(f"[LinkedIn] [ERROR:SCRAPER] Scraper event error: {err_str}")
+            log_dev_error(
+                "LINKEDIN_SCRAPER_EVENT_ERROR",
+                err_str,
+                context={"scraped_so_far": len(jobs_data)},
+                logger_name="ingestion",
+            )
+        errors.append(err_str)
 
     def on_end():
         """Callback when scraping is complete"""
-        logger.info(f"✓ Scraping complete. Found {len(jobs_data)} jobs")
+        logger.info(
+            f"[LinkedIn] [FINISH] Scraping completed. Successfully collected {len(jobs_data)} jobs (encountered {len(errors)} error events)"
+        )
+        log_dev(
+            "LINKEDIN_SCRAPER_END",
+            {
+                "jobs_collected": len(jobs_data),
+                "errors_count": len(errors),
+                "sample_job": jobs_data[0] if jobs_data else None,
+            },
+            logger_name="ingestion",
+        )
 
     # Initialize scraper
-    scraper = LinkedinScraper(
-        chrome_executable_path=None,
-        chrome_binary_location=None,
-        headless=headless,
-        max_workers=1,
-        slow_mo=2,
-    )
+    try:
+        scraper = LinkedinScraper(
+            chrome_executable_path=None,
+            chrome_binary_location=None,
+            headless=headless,
+            max_workers=1,
+            slow_mo=2,
+        )
+    except Exception as e:
+        logger.error(
+            f"[LinkedIn] [ERROR:BROWSER_DRIVER] Failed to initialize LinkedIn Chromium browser: {e}",
+            exc_info=True,
+        )
+        log_dev_error(
+            "LINKEDIN_BROWSER_INIT_FAILED",
+            e,
+            context={"headless": headless},
+            logger_name="ingestion",
+        )
+        raise
 
     # Register event handlers
     scraper.on(Events.DATA, on_data)
@@ -111,22 +170,19 @@ def scrape_linkedin_jobs(
     )
 
     # Run scraper
-    scraper.run([query])
+    try:
+        scraper.run([query])
+    except Exception as e:
+        logger.error(
+            f"[LinkedIn] [ERROR:EXECUTION] LinkedIn scraper run failed: {e}",
+            exc_info=True,
+        )
+        log_dev_error(
+            "LINKEDIN_RUN_EXECUTION_FAILED",
+            e,
+            context={"job_title": job_title, "locations": locations},
+            logger_name="ingestion",
+        )
+        raise
 
-    # Return results
     return {"jobs": jobs_data, "total_jobs": len(jobs_data), "errors": errors}
-
-
-if __name__ == "__main__":
-    # Configure logging to output progress to terminal when run directly
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
-    )
-
-    # Example usage when run directly
-    result = scrape_linkedin_jobs(
-        job_title="Software Engineer Intern", locations=["India"], limit=20
-    )
-    print("\n" + "=" * 50)
-    print(f"Found {result['total_jobs']} jobs")
-    print("=" * 50)

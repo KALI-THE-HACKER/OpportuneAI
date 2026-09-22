@@ -47,7 +47,7 @@ async def _ddg_search(query: str, max_snippets: int = 8) -> list[str]:
     """Run a DuckDuckGo HTML search and return plain-text result snippets."""
     try:
         async with httpx.AsyncClient(
-            timeout=12, follow_redirects=True, headers=_HEADERS
+            timeout=12, follow_redirects=True, headers=_HEADERS, trust_env=False
         ) as client:
             resp = await client.post(_DDG_URL, data={"q": query, "kl": "us-en"})
             resp.raise_for_status()

@@ -17,6 +17,7 @@ even if they somehow know that user's internal database ID.
 """
 
 import asyncio
+import re
 from functools import cached_property
 from uuid import uuid4
 
@@ -174,7 +175,12 @@ class ResumeStorage:
             raise R2StorageError("Storage key is required")
         self._validate_settings()
         self.verify_owner(storage_key, user_id)
-        safe_name = file_name.replace('"', "")  # strip any embedded quotes
+        # Strictly sanitize filename: remove CRLF, quotes, path traversal, allow only safe characters
+        safe_name = (
+            re.sub(r"[^a-zA-Z0-9_.-]", "_", file_name).strip("._") or "resume.pdf"
+        )
+        if not safe_name.lower().endswith(".pdf"):
+            safe_name += ".pdf"
         try:
             url = await asyncio.to_thread(
                 self._client.generate_presigned_url,

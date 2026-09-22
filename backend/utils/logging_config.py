@@ -1,7 +1,8 @@
-"""Feature-specific application logging with verbose development mode AI tracing."""
+"""Feature-specific application logging with verbose development mode AI & scraper tracing."""
 
 import json
 import logging
+import traceback
 from logging.handlers import RotatingFileHandler
 from typing import Any
 
@@ -70,6 +71,32 @@ def log_dev(label: str, payload: Any, logger_name: str = "ai") -> None:
 
     msg = f"\n{header}\n{formatted_payload}\n{footer}"
     logger.info(msg)
+
+
+def log_dev_error(
+    label: str,
+    error: Exception | str,
+    context: dict[str, Any] | None = None,
+    logger_name: str = "ingestion",
+) -> None:
+    """Log structured development error breakdown when ENV == 'development' or DEBUG is True.
+
+    Outputs error type, message, request context, and formatted traceback in prominent [DEV_LOGS] blocks.
+    """
+    if settings.env != "development" and not settings.debug:
+        return
+
+    payload: dict[str, Any] = {
+        "error_type": type(error).__name__ if isinstance(error, Exception) else "Error",
+        "error_message": str(error),
+        "context": context or {},
+    }
+    if isinstance(error, Exception):
+        tb = traceback.format_exc()
+        if tb and tb.strip() != "NoneType: None":
+            payload["traceback"] = tb
+
+    log_dev(f"ERROR: {label}", payload, logger_name=logger_name)
 
 
 def configure_logging() -> None:

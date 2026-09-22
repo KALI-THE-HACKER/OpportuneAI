@@ -1,5 +1,3 @@
-from uuid import uuid4
-
 from rq.job import Job
 
 from workers.ai_worker import process_raw_job
@@ -11,7 +9,7 @@ def test_enqueue_job_to_redis() -> None:
 
     job = ai_processing_queue.enqueue(
         process_raw_job,
-        uuid4(),
+        999999999,
     )
 
     assert isinstance(job, Job)

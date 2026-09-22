@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 
 import yaml
@@ -9,15 +8,13 @@ from providers.models.raw_jobs_data import RawJobData
 from scrapers.linkedin_scraper import scrape_linkedin_jobs
 from utils.hashing import compute_content_hash
 from utils.linkedin_utils import extract_external_id, format_job_url
+from utils.logging_config import get_feature_logger
 
-logger = logging.getLogger(__name__)
+logger = get_feature_logger("ingestion")
 
 
 def _convert_filter_strings(filter_list: list[str], filter_class) -> list:
-    """
-    Convert string representations of filters to actual filter enum values.
-    Supports TypeFilters and ExperienceLevelFilters.
-    """
+    """Convert string representations of filters to actual filter enum values."""
     if not filter_list:
         return []
 
@@ -27,58 +24,61 @@ def _convert_filter_strings(filter_list: list[str], filter_class) -> list:
             converted.append(getattr(filter_class, filter_str))
         else:
             logger.warning(
-                f"Warning: Filter '{filter_str}' not recognized in {filter_class.__name__}"
+                f"[LinkedIn] Filter '{filter_str}' not recognized in {filter_class.__name__}"
             )
 
     return converted
 
 
 async def scrape_jobs():
-    """
-    This is a wrapper function that reads configuration from config.yml and calls the actual LinkedIn scraper with the appropriate parameters.
-    """
-
-    # Get path to config.yml
+    """Wrapper function reading configuration and invoking LinkedIn scraper."""
     CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "config.yml"
 
-    # Load YAML configuration
-    with open(CONFIG_PATH, "r") as file:
-        config = yaml.safe_load(file)
+    scraper_config = {}
+    if CONFIG_PATH.exists():
+        try:
+            with open(CONFIG_PATH, "r") as file:
+                config = yaml.safe_load(file) or {}
+                scraper_config = config.get("scraper_config", {})
+        except Exception as e:
+            logger.warning(
+                f"[LinkedIn] Failed to read config.yml ({e}), using defaults"
+            )
 
-    # Extract LinkedIn scraper config
-    scraper_config = config.get("scraper_config", {})
-
-    # Convert filter strings to enums
     job_type = _convert_filter_strings(scraper_config.get("job_type", []), TypeFilters)
     experience_level = _convert_filter_strings(
         scraper_config.get("experience_level", []), ExperienceLevelFilters
     )
 
-    # Call scrape_linkedin_jobs with config values
+    job_title = scraper_config.get("job_title", "Software Engineer Intern")
+    locations = scraper_config.get("locations", ["India"])
+    limit = scraper_config.get("limit", 20)
+
     scraped_data = scrape_linkedin_jobs(
-        job_title=scraper_config.get("job_title", "Software Engineer Intern"),
-        locations=scraper_config.get("locations", ["India"]),
+        job_title=job_title,
+        locations=locations,
         job_type=job_type if job_type else None,
         experience_level=experience_level if experience_level else None,
-        limit=scraper_config.get("limit", 20),
+        limit=limit,
     )
 
     return scraped_data
 
 
 class LinkedInProvider(BaseProvider):
-    """
-    LinkedInProvider is responsible for fetching job listings from LinkedIn, normalizing the data, and returning it in a structured format.
-    It uses the scrape_jobs function to get raw job data and then processes it into RawJobData objects.
-    """
-
     async def fetch_jobs(self) -> list[RawJobData]:
+        logger.info("[LinkedIn] Starting job fetch via LinkedInProvider...")
         raw_jobs_data = await scrape_jobs()
 
-        # Extract jobs from the returned dictionary
         jobs = raw_jobs_data.get("jobs", [])
+        errors = raw_jobs_data.get("errors", [])
 
-        return [
+        if errors:
+            logger.warning(
+                f"[LinkedIn] Completed with {len(errors)} error events reported during crawl."
+            )
+
+        raw_jobs = [
             RawJobData(
                 source="linkedin",
                 external_id=extract_external_id(job.get("link", "")),
@@ -97,3 +97,8 @@ class LinkedInProvider(BaseProvider):
             )
             for job in jobs
         ]
+
+        logger.info(
+            f"[LinkedIn] [SUCCESS] LinkedInProvider successfully normalized {len(raw_jobs)} job postings"
+        )
+        return raw_jobs

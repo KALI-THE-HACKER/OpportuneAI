@@ -7,6 +7,9 @@ from providers.base import BaseProvider
 from providers.models.raw_jobs_data import RawJobData
 from scrapers.naukri_scraper import scrape_naukri_jobs
 from utils.hashing import compute_content_hash
+from utils.logging_config import get_feature_logger
+
+logger = get_feature_logger("ingestion")
 
 
 def extract_naukri_job_id(url: str) -> str:
@@ -21,31 +24,39 @@ class NaukriProvider(BaseProvider):
     async def fetch_jobs(self) -> list[RawJobData]:
         config_path = Path(__file__).resolve().parent.parent / "config" / "config.yml"
 
-        with open(config_path, "r") as f:
-            config = yaml.safe_load(f)
+        role = "Software Engineer"
+        locations = []
+        if config_path.exists():
+            try:
+                with open(config_path, "r") as f:
+                    config = yaml.safe_load(f) or {}
+                scraper_config = config.get("scraper_config", {})
+                role = scraper_config.get("job_title", "Software Engineer")
+                locations = scraper_config.get("locations", [])
+            except Exception as e:
+                logger.warning(
+                    f"[Naukri] Failed to read config.yml ({e}), using default role '{role}'"
+                )
 
-        scraper_config = config.get("scraper_config", {})
-
-        role = scraper_config.get(
-            "job_title",
-            "Software Engineer",
+        logger.info(
+            f"[Naukri] [START] Starting NaukriProvider for role='{role}', locations={locations}"
         )
-
-        locations = scraper_config.get("locations", [])
-
         jobs: list[dict] = []
 
         if locations:
             for location in locations:
+                logger.info(f"[Naukri] Scraping Naukri for location='{location}'...")
                 jobs.extend(
                     scrape_naukri_jobs(
                         job_title=role,
                         location=location,
+                        headless=True,
                     )
                 )
         else:
             jobs = scrape_naukri_jobs(
                 job_title=role,
+                headless=True,
             )
 
         raw_jobs: list[RawJobData] = []
@@ -84,4 +95,7 @@ class NaukriProvider(BaseProvider):
             seen_ids.add(raw_job.external_id)
             unique_jobs.append(raw_job)
 
+        logger.info(
+            f"[Naukri] [SUCCESS] NaukriProvider normalized {len(unique_jobs)} unique jobs (filtered {len(raw_jobs) - len(unique_jobs)} internal duplicates)"
+        )
         return unique_jobs
