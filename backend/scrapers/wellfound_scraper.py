@@ -129,89 +129,175 @@ def _build_search_url(
     return f"{BASE_URL}/role/r/{role_slug}"
 
 
+def _normalize_employment_type(text: Optional[str]) -> Optional[str]:
+    """Extract clean employment type from text without links or titles."""
+    if not text:
+        return None
+    cleaned = re.sub(r"\[([^\]]+)\]\([^\)]+\)", "", text).strip()
+    cleaned_lower = cleaned.lower()
+    if "full-time" in cleaned_lower or "full time" in cleaned_lower:
+        return "Full-time"
+    if "part-time" in cleaned_lower or "part time" in cleaned_lower:
+        return "Part-time"
+    if "contract" in cleaned_lower:
+        return "Contract"
+    if "intern" in cleaned_lower:
+        return "Internship"
+    return None
+
+
+def _parse_salary_equity(line: str) -> tuple[Optional[str], Optional[str]]:
+    """Parse salary and equity from a line like '₹20L – ₹30L • No equity' or '$140k - $180k'."""
+    salary: Optional[str] = None
+    equity: Optional[str] = None
+
+    has_salary = bool(
+        re.search(
+            r"[₹$€£]|(?:\b\d+[kK]\b)|(?:\b(?:INR|USD|EUR|GBP)\b)",
+            line,
+            re.IGNORECASE,
+        )
+    )
+    has_equity = "equity" in line.lower()
+
+    if not has_salary and not has_equity:
+        return None, None
+
+    if "•" in line or "|" in line:
+        sep = "•" if "•" in line else "|"
+        parts = [p.strip() for p in line.split(sep)]
+        for part in parts:
+            if "equity" in part.lower():
+                equity = part
+            elif re.search(
+                r"[₹$€£]|(?:\b\d+[kK]\b)|(?:\b(?:INR|USD|EUR|GBP)\b)",
+                part,
+                re.IGNORECASE,
+            ):
+                salary = part
+    elif has_equity and not has_salary:
+        equity = line.strip()
+    elif has_salary and not has_equity:
+        salary = line.strip()
+    elif has_salary and has_equity:
+        eq_match = re.search(
+            r"(\S+\s+equity|no\s+equity|\d+%\s*[-–]\s*\d+%\s*equity)",
+            line,
+            re.IGNORECASE,
+        )
+        if eq_match:
+            equity = eq_match.group(0).strip()
+            salary = line.replace(eq_match.group(0), "").strip().strip("•|- ")
+        else:
+            salary = line.strip()
+
+    return salary, equity
+
+
 def _parse_jobs_from_markdown(
     markdown: str,
     search_location: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Parse Firecrawl markdown output."""
+    """Parse Firecrawl markdown output into structured job dictionaries."""
     jobs: List[Dict[str, Any]] = []
 
     current_company = "Unknown"
-    current_date = None
-    current_salary = None
-    current_equity = None
-    current_experience = None
-    current_remote = None
-    current_employment_type = None
+    current_job: Optional[Dict[str, Any]] = None
 
     link_pattern = re.compile(
         r"\[([^\]]+)\]\((https?://[^\)]*wellfound\.com/[^\)]*)\)",
         re.IGNORECASE,
     )
 
+    def _flush_current_job():
+        nonlocal current_job
+        if current_job:
+            if not current_job.get("location") or current_job["location"] == "N/A":
+                current_job["location"] = search_location or "Remote"
+            jobs.append(current_job)
+            current_job = None
+
     for line in markdown.splitlines():
+        line_clean = line.strip().strip("*").strip("-").strip()
+        if not line_clean:
+            continue
+
         matches = link_pattern.findall(line)
 
-        date_match = re.search(
-            r"(\d+\s+(?:day|days|week|weeks|month|months|year|years)\s+ago)",
-            line,
-            re.IGNORECASE,
-        )
-        if date_match:
-            current_date = date_match.group(1)
-
-        salary_match = re.search(r"₹[^\n]+", line)
-        if salary_match:
-            current_salary = salary_match.group(0).strip()
-
-        if "equity" in line.lower():
-            current_equity = line.strip()
-
-        if "remote" in line.lower():
-            current_remote = line.strip()
-
-        exp_match = re.search(
-            r"\d+\s*years?\s*of\s*exp|\d+years?\s*of\s*exp", line, re.IGNORECASE
-        )
-        if exp_match:
-            current_experience = exp_match.group(0)
-
-        if any(
-            keyword in line.lower()
-            for keyword in ["full-time", "part-time", "contract", "internship"]
-        ):
-            current_employment_type = line.strip()
+        is_company = False
+        is_job = False
+        job_info = None
 
         for text, href in matches:
             text = text.strip().strip("*")
-
             if "/role/" in href:
                 continue
 
             if "/company/" in href:
+                _flush_current_job()
                 current_company = text
-                continue
+                is_company = True
+                break
 
             if "/jobs/" in href:
-                jobs.append(
-                    {
-                        "title": text,
-                        "company": current_company,
-                        "location": current_remote or search_location or "N/A",
-                        "link": href,
-                        "date": current_date,
-                        "salary": current_salary,
-                        "equity": current_equity,
-                        "experience": current_experience,
-                        "employment_type": current_employment_type,
-                        "remote": current_remote,
-                        "description": "",
-                    }
-                )
-                current_salary = None
-                current_equity = None
-                current_experience = None
-                current_remote = None
-                current_employment_type = None
+                is_job = True
+                job_info = (text, href)
+                break
 
+        if is_company:
+            continue
+
+        if is_job and job_info:
+            _flush_current_job()
+            job_title, job_url = job_info
+            emp_type = _normalize_employment_type(line)
+            current_job = {
+                "title": job_title,
+                "company": current_company,
+                "location": "N/A",
+                "link": job_url,
+                "date": None,
+                "salary": None,
+                "equity": None,
+                "experience": None,
+                "employment_type": emp_type,
+                "remote": None,
+                "description": "",
+            }
+            continue
+
+        if current_job:
+            date_match = re.search(
+                r"(\d+\s+(?:day|days|week|weeks|month|months|year|years)\s+ago)",
+                line_clean,
+                re.IGNORECASE,
+            )
+            if date_match and not current_job.get("date"):
+                current_job["date"] = date_match.group(1)
+
+            exp_match = re.search(
+                r"\d+\s*years?\s*of\s*exp|\d+years?\s*of\s*exp",
+                line_clean,
+                re.IGNORECASE,
+            )
+            if exp_match and not current_job.get("experience"):
+                current_job["experience"] = exp_match.group(0)
+
+            emp_type = _normalize_employment_type(line_clean)
+            if emp_type and not current_job.get("employment_type"):
+                current_job["employment_type"] = emp_type
+
+            if any(
+                kw in line_clean.lower() for kw in ("remote", "onsite", "hybrid")
+            ) and not current_job.get("remote"):
+                current_job["remote"] = line_clean
+                current_job["location"] = line_clean
+
+            salary, equity = _parse_salary_equity(line_clean)
+            if salary and not current_job.get("salary"):
+                current_job["salary"] = salary
+            if equity and not current_job.get("equity"):
+                current_job["equity"] = equity
+
+    _flush_current_job()
     return jobs

@@ -278,6 +278,43 @@ def test_wellfound_markdown_parser():
     assert jobs[0]["title"] == "Frontend Engineer"
     assert jobs[0]["company"] == "Linear"
     assert jobs[0]["link"] == "https://wellfound.com/jobs/987654"
+    assert jobs[0]["salary"] == "$140k - $180k"
+    assert jobs[0]["employment_type"] == "Full-time"
+
+
+def test_wellfound_markdown_parser_with_inlined_metadata():
+    """Test Wellfound markdown parsing when employment type is on title line and salary includes equity."""
+    sample_md = """
+    # Wellfound Jobs
+    [Vercel](https://wellfound.com/company/vercel)
+    * [Site Reliability Engineer (SRE)](https://wellfound.com/jobs/4126035-site-reliability-engineer-sre) Full-time
+    * ₹20L – ₹30L • No equity
+    * 3years of exp
+    * Onsite or remote • San Francisco+5
+
+    * [Forward Deployment Engineer](https://wellfound.com/jobs/4632620-forward-deployment-engineer) Contract
+    * $150k - $200k • 0.1% equity
+    * 5years of exp
+    """
+    jobs = _parse_jobs_from_markdown(sample_md, search_location="Remote")
+    assert len(jobs) == 2
+
+    # Job 1
+    assert jobs[0]["title"] == "Site Reliability Engineer (SRE)"
+    assert jobs[0]["company"] == "Vercel"
+    assert jobs[0]["employment_type"] == "Full-time"
+    assert jobs[0]["salary"] == "₹20L – ₹30L"
+    assert jobs[0]["equity"] == "No equity"
+    assert jobs[0]["experience"] == "3years of exp"
+    assert jobs[0]["location"] == "Onsite or remote • San Francisco+5"
+
+    # Job 2
+    assert jobs[1]["title"] == "Forward Deployment Engineer"
+    assert jobs[1]["company"] == "Vercel"
+    assert jobs[1]["employment_type"] == "Contract"
+    assert jobs[1]["salary"] == "$150k - $200k"
+    assert jobs[1]["equity"] == "0.1% equity"
+    assert jobs[1]["experience"] == "5years of exp"
 
 
 def test_extract_wellfound_job_id():
