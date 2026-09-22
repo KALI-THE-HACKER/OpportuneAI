@@ -1,0 +1,32 @@
+[Unit]
+Description=OpportuneAI Application Stack (Docker Compose)
+Documentation=https://github.com/KALI-THE-HACKER/OpportuneAI
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+# Adjust this path if your application is deployed to a different directory
+WorkingDirectory=/opt/opportuneai
+
+# Ensure old dangling containers are cleaned up before starting
+ExecStartPre=-/usr/bin/docker compose down --remove-orphans
+
+# Compose Up: Start all containers (Nginx, Frontend, Backend, Redis, RQ Workers)
+ExecStart=/usr/bin/docker compose up -d --remove-orphans
+
+# Compose Down: Gracefully shut down all containers on system shutdown / service stop
+ExecStop=/usr/bin/docker compose down
+
+# Reload containers
+ExecReload=/usr/bin/docker compose restart
+
+# Sane timeouts for image pulling and graceful worker shutdown
+TimeoutStartSec=0
+TimeoutStopSec=60
+
+[Install]
+WantedBy=multi-user.target
