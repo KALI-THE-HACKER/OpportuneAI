@@ -82,7 +82,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { name: "theme-color", content: "#fbfbfb" },
+      { name: "theme-color", content: "#0A0A0F" },
+      { name: "color-scheme", content: "dark light" },
       { title: "OpportuneAI — Your AI career copilot" },
       {
         name: "description",
@@ -90,6 +91,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "OpportuneAI is an AI-powered job discovery and application copilot. Personalized matches, skill-gap insights, and a clean workflow for serious job seekers.",
       },
       { name: "author", content: "OpportuneAI" },
+      { name: "application-name", content: "OpportuneAI" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "OpportuneAI" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "format-detection", content: "telephone=no" },
       { property: "og:title", content: "OpportuneAI — Your AI career copilot" },
       {
         property: "og:description",
@@ -120,14 +127,27 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       {
         rel: "icon",
-        type: "image/png",
-        href: "https://cdn.luckylinux.dev/opportuneai-assets/OpportuneAI-logo.png",
+        type: "image/x-icon",
+        href: "/favicon.ico",
       },
-      { rel: "manifest", href: "/manifest.webmanifest" },
+      {
+        rel: "icon",
+        type: "image/png",
+        sizes: "32x32",
+        href: "/icons/favicon-32x32.png",
+      },
+      {
+        rel: "icon",
+        type: "image/png",
+        sizes: "16x16",
+        href: "/icons/favicon-16x16.png",
+      },
       {
         rel: "apple-touch-icon",
-        href: "https://cdn.luckylinux.dev/opportuneai-assets/OpportuneAI-logo.png",
+        sizes: "180x180",
+        href: "/icons/apple-touch-icon.png",
       },
+      { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),
   shellComponent: RootShell,
@@ -142,7 +162,7 @@ function RootShell({ children }: { children: ReactNode }) {
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("opportune.theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark");}else{document.documentElement.classList.remove("dark");}}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem("opportune.theme");var isDark=t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(isDark){document.documentElement.classList.add("dark");}else{document.documentElement.classList.remove("dark");}var tc=isDark?"#0A0A0F":"#FBFAF8";var m=document.querySelector('meta[name="theme-color"]');if(m){m.setAttribute("content",tc);}}catch(e){}})();`,
           }}
         />
         <HeadContent />

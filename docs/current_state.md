@@ -300,8 +300,9 @@
 - [x] Standardized skills and profile combobox autocomplete search
 - [x] Flash-free theme hydration script
 - [x] Full-height sticky sidebar with independent scrolling
+- [x] Progressive Web App (PWA) for Android and iOS (WebManifest, maskable icons, standalone Service Worker with offline caching, mobile bottom tab navigation, safe-area insets, dynamic theme-color syncing, and native/guided install prompts)
 - [ ] Real-time notifications (WebSocket/SSE)
-- [ ] PWA offline support (service worker registered but not configured)
+- [x] PWA offline support with cache fallback and connectivity banner
 - [ ] E2E tests (Playwright/Cypress)
 - [ ] Unit tests (Vitest + React Testing Library)
 
@@ -411,4 +412,29 @@
 **Status**: ✅ Complete, validated via `docker compose config` and unit tests
 
 ---
-*Last updated: 2026-09-22*
+
+### 13. Progressive Web App (PWA) for Android and iOS
+**Frontend** (`frontend/public/manifest.webmanifest`, `frontend/public/sw.js`, `frontend/public/icons/`, `frontend/src/routes/__root.tsx`, `frontend/src/hooks/use-theme.tsx`, `frontend/src/hooks/use-pwa-install.ts`, `frontend/src/components/pwa/`, `frontend/src/components/layouts/mobile-bottom-nav.tsx`, `frontend/src/styles.css`):
+- **Full Icon Suite**: High-resolution icons generated from official logo: `icon-192.png`, `icon-512.png`, Android adaptive maskable icons `icon-maskable-192.png` and `icon-maskable-512.png` (with 20% safe zone padding on OLED obsidian background), Apple Touch Icon `apple-touch-icon.png` (180x180), and multi-size favicons.
+- **Web App Manifest**: Complete `manifest.webmanifest` with `id`, `start_url`, `display: "standalone"`, `orientation: "portrait-primary"`, standard and maskable icon declarations, theme/background colors, and quick shortcuts (Dashboard, Jobs, AI Matches, Saved).
+- **iOS & Android Shell Integration**: Added `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style: black-translucent`, `apple-mobile-web-app-title`, `mobile-web-app-capable`, `format-detection: telephone=no`. Dynamic `<meta name="theme-color">` switching on theme changes matching dark mode (`#0A0A0F`) and light mode (`#FBFAF8`).
+- **Safe-Area Inset Handling**: Added CSS safe area utilities (`--sat`, `--sab`, `pt-safe`, `pb-safe`) ensuring sticky headers clear the iPhone Dynamic Island / notch and mobile navigation bars clear the iOS home indicator.
+- **Mobile Bottom Tab Navigation**: Responsive bottom navigation bar (`MobileBottomNav`) for screens `< lg` with 5 primary destinations (Home, Jobs, Matches, Applied, Menu), active pills, and smooth drawer trigger.
+- **Standalone Service Worker & Offline Fallback**: Production-grade Service Worker in `public/sw.js` with Stale-While-Revalidate caching for static assets, Network-First caching for HTML navigations, offline fallback page, and connectivity status indicator (`OfflineIndicator`).
+- **Install Promotion & iOS Guidance**: Custom install hook (`usePwaInstall`) supporting one-click native installation on Android/Chrome (`beforeinstallprompt`) and an interactive step-by-step visual guidance sheet on iOS Safari (`Share` → `Add to Home Screen` → `Add`).
+
+### 14. Mobile Responsiveness & Job Explorer Filter Drawer
+**Frontend** (`frontend/src/routes/app.jobs.index.tsx`, `frontend/src/routes/app.applied.tsx`):
+- **Job Explorer Responsive Filter Drawer**:
+  - Re-architected Job Explorer (`/app/jobs/`): replaced the intrusive stacked 15-item filter sidebar on mobile screens (`< lg`) with a slide-over `Sheet` drawer.
+  - Desktop sidebar remains fixed on the left grid at `220px` (`hidden lg:block`).
+  - Search area on mobile features an inline `Filters` trigger button showing active filter count badge (`SlidersHorizontal`) alongside the sort dropdown.
+  - Active filter chips: when filters are selected, a touch-friendly horizontal chip row displays active filters with 1-tap dismissal (`×`) and a "Clear all" action.
+  - Drawer includes a sticky header, scrollable filter body, "Reset all" action, and dynamic "Show N jobs" CTA.
+- **Applications Tracking Mobile Responsiveness**:
+  - Converted `/app/applied` table view (previously overflowing 630px+ horizontally) into native responsive card layouts (`md:hidden`) with full touch controls: status selector, inline notes editing, and job actions. Preserved desktop table on `md:block`.
+
+**Status**: ✅ Complete, verified via Prettier, ESLint, and production build
+
+---
+*Last updated: 2026-09-23*

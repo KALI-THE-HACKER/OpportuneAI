@@ -1,16 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Bell,
-  Check,
-  CheckCheck,
-  Send,
-  Bookmark,
-  Sparkles,
-  Zap,
-  Info,
-} from "lucide-react";
+import { Bell, Check, CheckCheck, Send, Bookmark, Sparkles, Zap, Info } from "lucide-react";
 import { notificationsApi } from "@/lib/api";
 import { PageHeader } from "@/components/shared/page-header";
 import { LoadingState, ErrorState, EmptyState } from "@/components/shared/state-views";
@@ -155,18 +146,14 @@ function NotificationsPage() {
                       >
                         {n.title}
                       </span>
-                      {!n.read && (
-                        <span className="size-2 rounded-full bg-accent shrink-0" />
-                      )}
+                      {!n.read && <span className="size-2 rounded-full bg-accent shrink-0" />}
                     </div>
                     <span className="text-[11px] text-muted-foreground shrink-0 font-mono">
                       {timeAgo(n.createdAt)}
                     </span>
                   </div>
                   {n.body && (
-                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                      {n.body}
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{n.body}</p>
                   )}
                 </div>
                 {!n.read && (

@@ -18,6 +18,7 @@ import {
   AlertCircle,
   Loader2,
   Sparkles,
+  MapPin,
 } from "lucide-react";
 
 import { jobsApi } from "@/lib/api";
@@ -202,7 +203,7 @@ function AppliedPage() {
           {/* Filter Bar: Tabs + Search */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-border">
             {/* Status Tabs */}
-            <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
               {TABS.map((tab) => {
                 const count = tabCounts[tab.id] ?? 0;
                 const isActive = activeTab === tab.id;
@@ -211,7 +212,7 @@ function AppliedPage() {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={`
-                      h-8 px-3 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap transition-all duration-150 cursor-pointer
+                      shrink-0 h-8 px-3 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap transition-all duration-150 cursor-pointer
                       ${
                         isActive
                           ? "bg-foreground text-background font-semibold shadow-xs"
@@ -260,7 +261,7 @@ function AppliedPage() {
 
           {/* Applications Content */}
           {filteredApplications.length === 0 ? (
-            <div className="p-12 text-center bg-card border border-border rounded-xl shadow-card space-y-3">
+            <div className="p-8 sm:p-12 text-center bg-card border border-border rounded-xl shadow-card space-y-3">
               <div className="size-10 rounded-xl bg-surface border border-border grid place-items-center text-muted-foreground mx-auto">
                 <AlertCircle className="size-5 opacity-60" />
               </div>
@@ -283,229 +284,429 @@ function AppliedPage() {
               )}
             </div>
           ) : (
-            <div className="bg-card border border-border rounded-xl overflow-hidden shadow-card">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-surface/70 border-b border-border text-muted-foreground">
-                    <tr>
-                      <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest">
-                        Role & Company
-                      </th>
-                      <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest hidden md:table-cell">
-                        Location / Salary
-                      </th>
-                      <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest">
-                        Applied
-                      </th>
-                      <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest">
-                        Status
-                      </th>
-                      <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest hidden lg:table-cell">
-                        Notes
-                      </th>
-                      <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest text-right">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {filteredApplications.map((a) => {
-                      const status = STATUS_CONFIG[a.status] ?? STATUS_CONFIG["applied"];
-                      const isEditingNote = editingNoteAppId === a.id;
+            <>
+              {/* Mobile Cards View (< md screens) */}
+              <div className="md:hidden space-y-3">
+                {filteredApplications.map((a) => {
+                  const status = STATUS_CONFIG[a.status] ?? STATUS_CONFIG["applied"];
+                  const isEditingNote = editingNoteAppId === a.id;
 
-                      return (
-                        <tr
-                          key={a.id}
-                          className="hover:bg-surface/40 transition-colors duration-100 group"
-                        >
-                          {/* Role & Company */}
-                          <td className="px-5 py-4 min-w-[220px]">
-                            <div className="flex items-start gap-3">
-                              <div className="size-9 shrink-0 rounded-lg bg-surface border border-border grid place-items-center font-mono text-xs font-bold text-muted-foreground shadow-xs">
-                                {a.job.company ? a.job.company.slice(0, 2).toUpperCase() : "CO"}
+                  return (
+                    <div
+                      key={a.id}
+                      className="bg-card border border-border rounded-xl p-4 shadow-card space-y-3"
+                    >
+                      {/* Top Header: Company Avatar + Role & Match + Status Dropdown */}
+                      <div className="flex items-start justify-between gap-2.5">
+                        <div className="flex items-start gap-3 min-w-0">
+                          <div className="size-9 shrink-0 rounded-lg bg-surface border border-border grid place-items-center font-mono text-xs font-bold text-muted-foreground shadow-xs">
+                            {a.job.company ? a.job.company.slice(0, 2).toUpperCase() : "CO"}
+                          </div>
+                          <div className="min-w-0">
+                            <Link
+                              to="/app/jobs/$jobId"
+                              params={{ jobId: a.jobId }}
+                              className="font-semibold text-foreground hover:text-accent transition-colors block text-sm line-clamp-1"
+                            >
+                              {a.job.title}
+                            </Link>
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                              <span className="text-xs text-muted-foreground truncate">
+                                {a.job.company}
+                              </span>
+                              {a.job.matchScore > 0 && (
+                                <div className="scale-85 origin-left">
+                                  <MatchBadge score={a.job.matchScore} />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Status Selector Dropdown */}
+                        <div className="relative shrink-0">
+                          <select
+                            value={a.status}
+                            onChange={(e) =>
+                              updateMutation.mutate({
+                                id: a.id,
+                                status: e.target.value as ApplicationStatus,
+                              })
+                            }
+                            disabled={updateMutation.isPending}
+                            className={`
+                              appearance-none pl-5.5 pr-5.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border cursor-pointer
+                              focus:outline-hidden focus:ring-1 focus:ring-accent transition-all
+                              ${status.badgeClass}
+                            `}
+                          >
+                            <option value="applied">Applied</option>
+                            <option value="interviewing">Interviewing</option>
+                            <option value="offer">Offer</option>
+                            <option value="rejected">Rejected</option>
+                            <option value="withdrawn">Withdrawn</option>
+                          </select>
+                          <span
+                            className={`absolute left-2 top-1/2 -translate-y-1/2 size-2 rounded-full pointer-events-none ${status.dotClass}`}
+                          />
+                          <ChevronDown className="size-3 absolute right-1.5 top-1/2 -translate-y-1/2 opacity-60 pointer-events-none" />
+                        </div>
+                      </div>
+
+                      {/* Metadata Chips: Location, Salary, Applied Time */}
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap pt-1 border-t border-border/50">
+                        <span className="inline-flex items-center gap-1 bg-surface px-2 py-0.5 rounded-md border border-border/60 text-[11px]">
+                          <MapPin className="size-3 text-muted-foreground shrink-0" />
+                          <span className="truncate max-w-[120px]">
+                            {a.job.location || "Remote"}
+                          </span>
+                          {a.job.workMode && <span className="opacity-70">· {a.job.workMode}</span>}
+                        </span>
+
+                        {(a.job.salaryMin || a.job.salaryMax) && (
+                          <span className="bg-surface px-2 py-0.5 rounded-md border border-border/60 text-[11px] font-mono text-muted-foreground">
+                            {formatSalary(a.job.salaryMin, a.job.salaryMax)}
+                          </span>
+                        )}
+
+                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground ml-auto">
+                          <Clock className="size-3 opacity-60" />
+                          <span>{timeAgo(a.appliedAt)}</span>
+                        </span>
+                      </div>
+
+                      {/* Notes Box */}
+                      <div className="bg-surface/50 border border-border/60 rounded-lg p-2.5 text-xs">
+                        {isEditingNote ? (
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="text"
+                              value={noteContent}
+                              onChange={(e) => setNoteContent(e.target.value)}
+                              placeholder="Recruiter notes, interview details..."
+                              className="w-full h-7 px-2 text-xs bg-card border border-border rounded text-foreground focus:outline-hidden focus:border-accent"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleSaveNotes(a.id);
+                                if (e.key === "Escape") setEditingNoteAppId(null);
+                              }}
+                            />
+                            <button
+                              onClick={() => handleSaveNotes(a.id)}
+                              disabled={updateMutation.isPending}
+                              className="h-7 px-2 bg-brand text-brand-foreground rounded text-[10px] font-semibold hover:opacity-90 shrink-0 cursor-pointer"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingNoteAppId(null)}
+                              className="h-7 px-1.5 text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
+                            >
+                              <X className="size-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div
+                            onClick={() => openNoteEditor(a.id, a.notes)}
+                            className="flex items-center justify-between gap-2 cursor-pointer"
+                            title="Click to edit notes"
+                          >
+                            <span className="truncate text-muted-foreground">
+                              {a.notes ? (
+                                <span className="text-foreground">{a.notes}</span>
+                              ) : (
+                                <span className="italic text-[11px] text-muted-foreground/70">
+                                  + Add recruiter or interview notes
+                                </span>
+                              )}
+                            </span>
+                            <FileEdit className="size-3 text-muted-foreground shrink-0 opacity-70" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Card Action Footer */}
+                      <div className="flex items-center justify-between pt-1 gap-2">
+                        <div className="flex items-center gap-1.5">
+                          {a.job.applyUrl && (
+                            <a
+                              href={a.job.applyUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="h-7 px-2.5 rounded-lg border border-border bg-surface hover:bg-card text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1.5 text-xs font-medium cursor-pointer"
+                              title="Open external post"
+                            >
+                              <ExternalLink className="size-3" />
+                              <span>Listing</span>
+                            </a>
+                          )}
+
+                          {a.job.contactEmail && (
+                            <a
+                              href={`mailto:${a.job.contactEmail}`}
+                              className="h-7 px-2.5 rounded-lg border border-border bg-surface hover:bg-card text-muted-foreground hover:text-accent transition-colors inline-flex items-center gap-1.5 text-xs font-medium cursor-pointer"
+                              title={`Email ${a.job.contactName || "Recruiter"}`}
+                            >
+                              <Mail className="size-3 text-accent" />
+                              <span>Email</span>
+                            </a>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1.5 ml-auto">
+                          <Link
+                            to="/app/jobs/$jobId"
+                            params={{ jobId: a.jobId }}
+                            className="h-7 px-3 inline-flex items-center gap-1 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors shadow-xs"
+                          >
+                            <span>View Job</span>
+                            <span>→</span>
+                          </Link>
+
+                          <button
+                            onClick={() => {
+                              if (confirm("Remove this application from tracking?")) {
+                                deleteMutation.mutate(a.id);
+                              }
+                            }}
+                            disabled={deleteMutation.isPending}
+                            className="size-7 grid place-items-center rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                            title="Remove application"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Table View (>= md screens) */}
+              <div className="hidden md:block bg-card border border-border rounded-xl overflow-hidden shadow-card">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-surface/70 border-b border-border text-muted-foreground">
+                      <tr>
+                        <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest">
+                          Role & Company
+                        </th>
+                        <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest hidden md:table-cell">
+                          Location / Salary
+                        </th>
+                        <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest">
+                          Applied
+                        </th>
+                        <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest">
+                          Status
+                        </th>
+                        <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest hidden lg:table-cell">
+                          Notes
+                        </th>
+                        <th className="px-5 py-3.5 font-semibold text-[11px] uppercase tracking-widest text-right">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {filteredApplications.map((a) => {
+                        const status = STATUS_CONFIG[a.status] ?? STATUS_CONFIG["applied"];
+                        const isEditingNote = editingNoteAppId === a.id;
+
+                        return (
+                          <tr
+                            key={a.id}
+                            className="hover:bg-surface/40 transition-colors duration-100 group"
+                          >
+                            {/* Role & Company */}
+                            <td className="px-5 py-4 min-w-[220px]">
+                              <div className="flex items-start gap-3">
+                                <div className="size-9 shrink-0 rounded-lg bg-surface border border-border grid place-items-center font-mono text-xs font-bold text-muted-foreground shadow-xs">
+                                  {a.job.company ? a.job.company.slice(0, 2).toUpperCase() : "CO"}
+                                </div>
+                                <div className="min-w-0">
+                                  <Link
+                                    to="/app/jobs/$jobId"
+                                    params={{ jobId: a.jobId }}
+                                    className="font-semibold text-foreground hover:text-accent transition-colors block truncate"
+                                  >
+                                    {a.job.title}
+                                  </Link>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-xs text-muted-foreground truncate">
+                                      {a.job.company}
+                                    </span>
+                                    {a.job.matchScore > 0 && (
+                                      <div className="scale-85 origin-left">
+                                        <MatchBadge score={a.job.matchScore} />
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                              <div className="min-w-0">
+                            </td>
+
+                            {/* Location & Salary */}
+                            <td className="px-5 py-4 text-xs text-muted-foreground hidden md:table-cell min-w-[160px]">
+                              <div className="space-y-0.5">
+                                <div className="text-foreground/90 font-medium">
+                                  {a.job.location || "Remote"} · {a.job.workMode || "Full-time"}
+                                </div>
+                                <div className="text-[11px] text-muted-foreground font-mono">
+                                  {formatSalary(a.job.salaryMin, a.job.salaryMax)}
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Applied Time */}
+                            <td className="px-5 py-4 text-xs text-muted-foreground whitespace-nowrap min-w-[120px]">
+                              <div className="flex items-center gap-1.5">
+                                <Clock className="size-3.5 opacity-60" />
+                                <span>{timeAgo(a.appliedAt)}</span>
+                              </div>
+                            </td>
+
+                            {/* Status Selector Dropdown */}
+                            <td className="px-5 py-4 min-w-[150px]">
+                              <div className="relative inline-block">
+                                <select
+                                  value={a.status}
+                                  onChange={(e) =>
+                                    updateMutation.mutate({
+                                      id: a.id,
+                                      status: e.target.value as ApplicationStatus,
+                                    })
+                                  }
+                                  disabled={updateMutation.isPending}
+                                  className={`
+                                    appearance-none pl-6 pr-6 py-1 text-[11px] font-bold uppercase tracking-wider rounded-full border cursor-pointer
+                                    focus:outline-hidden focus:ring-1 focus:ring-accent transition-all
+                                    ${status.badgeClass}
+                                  `}
+                                >
+                                  <option value="applied">Applied</option>
+                                  <option value="interviewing">Interviewing</option>
+                                  <option value="offer">Offer</option>
+                                  <option value="rejected">Rejected</option>
+                                  <option value="withdrawn">Withdrawn</option>
+                                </select>
+                                <span
+                                  className={`absolute left-2.5 top-1/2 -translate-y-1/2 size-2 rounded-full pointer-events-none ${status.dotClass}`}
+                                />
+                                <ChevronDown className="size-3 absolute right-2 top-1/2 -translate-y-1/2 opacity-60 pointer-events-none" />
+                              </div>
+                            </td>
+
+                            {/* Notes */}
+                            <td className="px-5 py-4 text-xs text-muted-foreground hidden lg:table-cell max-w-[240px]">
+                              {isEditingNote ? (
+                                <div className="flex items-center gap-1.5">
+                                  <input
+                                    type="text"
+                                    value={noteContent}
+                                    onChange={(e) => setNoteContent(e.target.value)}
+                                    placeholder="Recruiter, round notes..."
+                                    className="w-full h-7 px-2 text-xs bg-surface border border-border rounded text-foreground focus:outline-hidden focus:border-accent"
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") handleSaveNotes(a.id);
+                                      if (e.key === "Escape") setEditingNoteAppId(null);
+                                    }}
+                                  />
+                                  <button
+                                    onClick={() => handleSaveNotes(a.id)}
+                                    disabled={updateMutation.isPending}
+                                    className="h-7 px-2 bg-brand text-brand-foreground rounded text-[10px] font-semibold hover:opacity-90 shrink-0 cursor-pointer"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingNoteAppId(null)}
+                                    className="h-7 px-1.5 text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
+                                  >
+                                    <X className="size-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div
+                                  onClick={() => openNoteEditor(a.id, a.notes)}
+                                  className="group/note flex items-center justify-between gap-1.5 p-1 -m-1 rounded hover:bg-surface cursor-pointer"
+                                  title="Click to edit notes"
+                                >
+                                  <span className="truncate">
+                                    {a.notes ? (
+                                      <span className="text-foreground/90">{a.notes}</span>
+                                    ) : (
+                                      <span className="text-muted-foreground/60 italic">
+                                        + Add notes
+                                      </span>
+                                    )}
+                                  </span>
+                                  <FileEdit className="size-3 text-muted-foreground opacity-0 group-hover/note:opacity-100 shrink-0 transition-opacity" />
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Actions */}
+                            <td className="px-5 py-4 text-right whitespace-nowrap min-w-[140px]">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {/* Direct apply link if available */}
+                                {a.job.applyUrl && (
+                                  <a
+                                    href={a.job.applyUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-1.5 rounded-lg border border-border bg-surface hover:bg-card text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                    title="Open external job post"
+                                  >
+                                    <ExternalLink className="size-3.5" />
+                                  </a>
+                                )}
+
+                                {/* Outreach email if contact exists */}
+                                {a.job.contactEmail && (
+                                  <a
+                                    href={`mailto:${a.job.contactEmail}`}
+                                    className="p-1.5 rounded-lg border border-border bg-surface hover:bg-card text-muted-foreground hover:text-accent transition-colors cursor-pointer"
+                                    title={`Email ${a.job.contactName || "Recruiter"}`}
+                                  >
+                                    <Mail className="size-3.5" />
+                                  </a>
+                                )}
+
+                                {/* View Details */}
                                 <Link
                                   to="/app/jobs/$jobId"
                                   params={{ jobId: a.jobId }}
-                                  className="font-semibold text-foreground hover:text-accent transition-colors block truncate"
+                                  className="h-7 px-2.5 inline-flex items-center gap-1 rounded-lg border border-border bg-surface hover:bg-card text-xs font-semibold text-foreground hover:text-accent transition-colors"
                                 >
-                                  {a.job.title}
+                                  <span>Details</span>
+                                  <span className="text-xs">→</span>
                                 </Link>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <span className="text-xs text-muted-foreground truncate">
-                                    {a.job.company}
-                                  </span>
-                                  {a.job.matchScore > 0 && (
-                                    <div className="scale-85 origin-left">
-                                      <MatchBadge score={a.job.matchScore} />
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
 
-                          {/* Location & Salary */}
-                          <td className="px-5 py-4 text-xs text-muted-foreground hidden md:table-cell min-w-[160px]">
-                            <div className="space-y-0.5">
-                              <div className="text-foreground/90 font-medium">
-                                {a.job.location || "Remote"} · {a.job.workMode || "Full-time"}
-                              </div>
-                              <div className="text-[11px] text-muted-foreground font-mono">
-                                {formatSalary(a.job.salaryMin, a.job.salaryMax)}
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Applied Time */}
-                          <td className="px-5 py-4 text-xs text-muted-foreground whitespace-nowrap min-w-[120px]">
-                            <div className="flex items-center gap-1.5">
-                              <Clock className="size-3.5 opacity-60" />
-                              <span>{timeAgo(a.appliedAt)}</span>
-                            </div>
-                          </td>
-
-                          {/* Status Selector Dropdown */}
-                          <td className="px-5 py-4 min-w-[150px]">
-                            <div className="relative inline-block">
-                              <select
-                                value={a.status}
-                                onChange={(e) =>
-                                  updateMutation.mutate({
-                                    id: a.id,
-                                    status: e.target.value as ApplicationStatus,
-                                  })
-                                }
-                                disabled={updateMutation.isPending}
-                                className={`
-                                  appearance-none pl-6 pr-6 py-1 text-[11px] font-bold uppercase tracking-wider rounded-full border cursor-pointer
-                                  focus:outline-hidden focus:ring-1 focus:ring-accent transition-all
-                                  ${status.badgeClass}
-                                `}
-                              >
-                                <option value="applied">Applied</option>
-                                <option value="interviewing">Interviewing</option>
-                                <option value="offer">Offer</option>
-                                <option value="rejected">Rejected</option>
-                                <option value="withdrawn">Withdrawn</option>
-                              </select>
-                              <span
-                                className={`absolute left-2.5 top-1/2 -translate-y-1/2 size-2 rounded-full pointer-events-none ${status.dotClass}`}
-                              />
-                              <ChevronDown className="size-3 absolute right-2 top-1/2 -translate-y-1/2 opacity-60 pointer-events-none" />
-                            </div>
-                          </td>
-
-                          {/* Notes */}
-                          <td className="px-5 py-4 text-xs text-muted-foreground hidden lg:table-cell max-w-[240px]">
-                            {isEditingNote ? (
-                              <div className="flex items-center gap-1.5">
-                                <input
-                                  type="text"
-                                  value={noteContent}
-                                  onChange={(e) => setNoteContent(e.target.value)}
-                                  placeholder="Recruiter, round notes..."
-                                  className="w-full h-7 px-2 text-xs bg-surface border border-border rounded text-foreground focus:outline-hidden focus:border-accent"
-                                  autoFocus
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") handleSaveNotes(a.id);
-                                    if (e.key === "Escape") setEditingNoteAppId(null);
+                                {/* Delete / Remove */}
+                                <button
+                                  onClick={() => {
+                                    if (confirm("Remove this application from tracking?")) {
+                                      deleteMutation.mutate(a.id);
+                                    }
                                   }}
-                                />
-                                <button
-                                  onClick={() => handleSaveNotes(a.id)}
-                                  disabled={updateMutation.isPending}
-                                  className="h-7 px-2 bg-brand text-brand-foreground rounded text-[10px] font-semibold hover:opacity-90 shrink-0 cursor-pointer"
+                                  disabled={deleteMutation.isPending}
+                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                                  title="Remove application"
                                 >
-                                  Save
-                                </button>
-                                <button
-                                  onClick={() => setEditingNoteAppId(null)}
-                                  className="h-7 px-1.5 text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
-                                >
-                                  <X className="size-3.5" />
+                                  <Trash2 className="size-3.5" />
                                 </button>
                               </div>
-                            ) : (
-                              <div
-                                onClick={() => openNoteEditor(a.id, a.notes)}
-                                className="group/note flex items-center justify-between gap-1.5 p-1 -m-1 rounded hover:bg-surface cursor-pointer"
-                                title="Click to edit notes"
-                              >
-                                <span className="truncate">
-                                  {a.notes ? (
-                                    <span className="text-foreground/90">{a.notes}</span>
-                                  ) : (
-                                    <span className="text-muted-foreground/60 italic">
-                                      + Add notes
-                                    </span>
-                                  )}
-                                </span>
-                                <FileEdit className="size-3 text-muted-foreground opacity-0 group-hover/note:opacity-100 shrink-0 transition-opacity" />
-                              </div>
-                            )}
-                          </td>
-
-                          {/* Actions */}
-                          <td className="px-5 py-4 text-right whitespace-nowrap min-w-[140px]">
-                            <div className="flex items-center justify-end gap-1.5">
-                              {/* Direct apply link if available */}
-                              {a.job.applyUrl && (
-                                <a
-                                  href={a.job.applyUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="p-1.5 rounded-lg border border-border bg-surface hover:bg-card text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                                  title="Open external job post"
-                                >
-                                  <ExternalLink className="size-3.5" />
-                                </a>
-                              )}
-
-                              {/* Outreach email if contact exists */}
-                              {a.job.contactEmail && (
-                                <a
-                                  href={`mailto:${a.job.contactEmail}`}
-                                  className="p-1.5 rounded-lg border border-border bg-surface hover:bg-card text-muted-foreground hover:text-accent transition-colors cursor-pointer"
-                                  title={`Email ${a.job.contactName || "Recruiter"}`}
-                                >
-                                  <Mail className="size-3.5" />
-                                </a>
-                              )}
-
-                              {/* View Details */}
-                              <Link
-                                to="/app/jobs/$jobId"
-                                params={{ jobId: a.jobId }}
-                                className="h-7 px-2.5 inline-flex items-center gap-1 rounded-lg border border-border bg-surface hover:bg-card text-xs font-semibold text-foreground hover:text-accent transition-colors"
-                              >
-                                <span>Details</span>
-                                <span className="text-xs">→</span>
-                              </Link>
-
-                              {/* Delete / Remove */}
-                              <button
-                                onClick={() => {
-                                  if (confirm("Remove this application from tracking?")) {
-                                    deleteMutation.mutate(a.id);
-                                  }
-                                }}
-                                disabled={deleteMutation.isPending}
-                                className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                                title="Remove application"
-                              >
-                                <Trash2 className="size-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            </>
           )}
         </div>
       )}

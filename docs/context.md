@@ -58,6 +58,7 @@ The application runs a divided architecture:
   - **Alerts & Notification Dispatch Engine**: Email alerts via Google Workspace and Zoho Mail (or custom SMTP) using dual SSL (port 465) / STARTTLS (port 587) protocol adapters, username normalization, and audit logging into `alert_notifications`.
   - **Audit Logging**: Comprehensive admin action tracking (`admin_audit_logs`) recording IP, user agent, action targets, and diffs.
 - **Production Containerization & Automation**: Multi-stage Docker build pipeline for FastAPI (`backend/Dockerfile`, Python 3.11-slim, unprivileged user, health check, headless chromium) and TanStack Start SSR (`frontend/Dockerfile`, Node 22-alpine, Nitro standalone server). Orchestrated via `docker-compose.yml` with Nginx ingress reverse proxy exposing only port 80 (keeping backend, frontend, redis, and RQ workers on an internal private bridge network `opportune_net`). Zero secrets baked into image layers. Production Ansible playbook (`ansible/playbook.yml`, `inventory.ini.example`, `vars.yml.example`, `ansible.cfg`) automating Docker CE / Compose installation, code sync, secure `.env` permissions, systemd service management (`opportuneai.service`), and automatic database migration execution (`alembic upgrade head`).
+- **Progressive Web App (PWA) for Android and iOS**: Complete mobile-native app experience featuring standard and Android adaptive maskable icons (`icon-192.png`, `icon-512.png`, `icon-maskable-*.png`, `apple-touch-icon.png`), full Web App Manifest (`manifest.webmanifest`) with shortcuts and standalone configuration, iOS Safari meta tags and Dynamic Island / notch safe area inset handling, frosted-glass Mobile Bottom Tab Navigation (`MobileBottomNav`), standalone Service Worker in `public/sw.js` with offline fallback page, dynamic theme-color synchronization for Android status bar and iOS top bar, and multi-platform install management (`usePwaInstall`, `PwaInstallPrompt` with native Android prompt and iOS Safari "Add to Home Screen" visual guide sheet).
 
 ### Remaining
 - Advanced behavioral learning and ML reranking.
@@ -111,6 +112,9 @@ The application runs a divided architecture:
 - The `company_contacts` table is a shared cache keyed on `company_key` (normalized lowercase, alphanumeric-only company name). The agent MUST check for an existing cached record with a non-null `contact_email` before running any search or LLM calls.
 - Never hard-delete rows from `company_contacts` — instead upsert with updated confidence values. Deleting cached contacts would cause redundant agent re-runs for already-resolved companies.
 - The agent is non-blocking: LLM failure, DNS failure, or empty search results must never raise exceptions to the caller (`ai_worker.py` catches and logs all agent errors gracefully).
+
+### 5.7 Mobile Layout & Responsive Filters Invariant
+- Job listing and explorer views must keep filters non-intrusive on screens smaller than `lg`. Avoid stacking filter sidebars above the search input or feed. Use slide-over `Sheet` drawers triggered by an inline filter button with active count badge, coupled with dismissible filter chips for instantaneous 1-tap removals.
 
 ---
 

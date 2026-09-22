@@ -57,4 +57,3 @@ function AuthGate() {
     return <Navigate to="/auth/sign-in" search={{ redirect: pathname }} replace />;
   return <AppLayout />;
 }
-

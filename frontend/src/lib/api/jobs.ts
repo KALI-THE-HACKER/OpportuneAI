@@ -136,13 +136,11 @@ export const jobsApi = {
     const start = (page - 1) * pageSize;
 
     return {
-      items: filtered
-        .slice(start, start + pageSize)
-        .map((j) => ({
-          ...j,
-          saved: savedSet.has(j.id),
-          applied: appliedSet.has(j.id) || Boolean(j.applied),
-        })),
+      items: filtered.slice(start, start + pageSize).map((j) => ({
+        ...j,
+        saved: savedSet.has(j.id),
+        applied: appliedSet.has(j.id) || Boolean(j.applied),
+      })),
       total: filtered.length,
       page,
       pageSize,
@@ -271,7 +269,6 @@ export const jobsApi = {
     });
   },
 
-
   async generateOutreach(
     jobId: string,
     contactName?: string | null,
@@ -287,4 +284,3 @@ export const jobsApi = {
     });
   },
 };
-

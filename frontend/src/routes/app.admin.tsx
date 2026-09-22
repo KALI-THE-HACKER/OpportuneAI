@@ -56,20 +56,12 @@ import {
   Info,
 } from "lucide-react";
 
-
 export const Route = createFileRoute("/app/admin")({
   head: () => ({ meta: [{ title: "Admin Control Plane · OpportuneAI" }] }),
   component: AdminControlPlane,
 });
 
-type TabType =
-  | "overview"
-  | "scrapers"
-  | "queue"
-  | "logs"
-  | "config"
-  | "notifications"
-  | "audit";
+type TabType = "overview" | "scrapers" | "queue" | "logs" | "config" | "notifications" | "audit";
 
 function AdminControlPlane() {
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -256,7 +248,8 @@ function OverviewTab({ onNavigate }: { onNavigate: (tab: TabType) => void }) {
               <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
             </div>
             <div className="text-xs text-muted-foreground mt-0.5">
-              Scheduled Daily Scrapers run at 02:00 UTC · Ingestion rate nominal · Redis queues healthy
+              Scheduled Daily Scrapers run at 02:00 UTC · Ingestion rate nominal · Redis queues
+              healthy
             </div>
           </div>
         </div>
@@ -374,7 +367,9 @@ function OverviewTab({ onNavigate }: { onNavigate: (tab: TabType) => void }) {
               <div className="space-y-1.5 text-xs text-muted-foreground">
                 <div className="flex justify-between">
                   <span>Indexed:</span>
-                  <span className="font-semibold text-foreground">{p.total_jobs_indexed.toLocaleString()}</span>
+                  <span className="font-semibold text-foreground">
+                    {p.total_jobs_indexed.toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Success Rate:</span>
@@ -383,7 +378,12 @@ function OverviewTab({ onNavigate }: { onNavigate: (tab: TabType) => void }) {
                 <div className="flex justify-between">
                   <span>Last Run:</span>
                   <span className="font-semibold text-foreground">
-                    {p.last_run_at ? new Date(p.last_run_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Never"}
+                    {p.last_run_at
+                      ? new Date(p.last_run_at).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "Never"}
                   </span>
                 </div>
               </div>
@@ -461,7 +461,8 @@ function ScrapersTab() {
         <div>
           <h3 className="text-sm font-bold text-foreground">Scraper Orchestrator</h3>
           <p className="text-xs text-muted-foreground">
-            Trigger individual or batch crawls, observe real-time execution states, 2h anti-bot retry policies, and execution logs.
+            Trigger individual or batch crawls, observe real-time execution states, 2h anti-bot
+            retry policies, and execution logs.
           </p>
         </div>
 
@@ -479,7 +480,10 @@ function ScrapersTab() {
       {/* Provider Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {scrapers.map((p) => (
-          <div key={p.provider} className="bg-card border border-border rounded-xl p-4 shadow-card flex flex-col justify-between space-y-4">
+          <div
+            key={p.provider}
+            className="bg-card border border-border rounded-xl p-4 shadow-card flex flex-col justify-between space-y-4"
+          >
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="font-bold text-foreground text-base">{p.name}</span>
@@ -489,7 +493,9 @@ function ScrapersTab() {
               <div className="space-y-2 text-xs text-muted-foreground">
                 <div className="flex justify-between">
                   <span>Indexed Jobs:</span>
-                  <span className="font-semibold text-foreground">{p.total_jobs_indexed.toLocaleString()}</span>
+                  <span className="font-semibold text-foreground">
+                    {p.total_jobs_indexed.toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Success Rate:</span>
@@ -497,7 +503,9 @@ function ScrapersTab() {
                 </div>
                 <div className="flex justify-between">
                   <span>Avg Duration:</span>
-                  <span className="font-semibold text-foreground">{(p.avg_duration_ms / 1000).toFixed(1)}s</span>
+                  <span className="font-semibold text-foreground">
+                    {(p.avg_duration_ms / 1000).toFixed(1)}s
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Scheduled Daily:</span>
@@ -506,7 +514,12 @@ function ScrapersTab() {
                 {p.next_retry_at && (
                   <div className="flex justify-between text-amber-500 font-medium">
                     <span>Retry Due:</span>
-                    <span>{new Date(p.next_retry_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                    <span>
+                      {new Date(p.next_retry_at).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
                   </div>
                 )}
                 {p.last_error && (
@@ -696,20 +709,28 @@ function RunDetailModal({ runId, onClose }: { runId: number; onClose: () => void
 
         <div className="p-4 overflow-y-auto space-y-4 flex-1">
           {q.isLoading ? (
-            <div className="p-8 text-center text-sm text-muted-foreground">Loading run details...</div>
+            <div className="p-8 text-center text-sm text-muted-foreground">
+              Loading run details...
+            </div>
           ) : !detail ? (
-            <div className="p-8 text-center text-sm text-destructive">Failed to load run details.</div>
+            <div className="p-8 text-center text-sm text-destructive">
+              Failed to load run details.
+            </div>
           ) : (
             <>
               {/* Metrics grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                 <div className="p-3 bg-surface rounded-lg border border-border">
                   <div className="text-muted-foreground">Items Fetched</div>
-                  <div className="text-base font-bold text-foreground mt-0.5">{detail.items_fetched}</div>
+                  <div className="text-base font-bold text-foreground mt-0.5">
+                    {detail.items_fetched}
+                  </div>
                 </div>
                 <div className="p-3 bg-surface rounded-lg border border-border">
                   <div className="text-muted-foreground">Items Saved</div>
-                  <div className="text-base font-bold text-foreground mt-0.5">{detail.items_saved}</div>
+                  <div className="text-base font-bold text-foreground mt-0.5">
+                    {detail.items_saved}
+                  </div>
                 </div>
                 <div className="p-3 bg-surface rounded-lg border border-border">
                   <div className="text-muted-foreground">Duration</div>
@@ -731,10 +752,14 @@ function RunDetailModal({ runId, onClose }: { runId: number; onClose: () => void
                     <AlertTriangle className="size-4" />
                     Error Encountered
                   </div>
-                  <div className="text-destructive font-mono whitespace-pre-wrap">{detail.error_message}</div>
+                  <div className="text-destructive font-mono whitespace-pre-wrap">
+                    {detail.error_message}
+                  </div>
                   {detail.stack_trace && (
                     <details className="mt-2 text-[11px] text-muted-foreground">
-                      <summary className="cursor-pointer hover:underline font-semibold">View Stack Trace</summary>
+                      <summary className="cursor-pointer hover:underline font-semibold">
+                        View Stack Trace
+                      </summary>
                       <pre className="p-2 bg-background/50 rounded font-mono mt-1 overflow-x-auto text-foreground">
                         {detail.stack_trace}
                       </pre>
@@ -754,14 +779,16 @@ function RunDetailModal({ runId, onClose }: { runId: number; onClose: () => void
                   ) : (
                     detail.logs.map((l, i) => (
                       <div key={i} className="flex items-start gap-2">
-                        <span className="text-zinc-500 select-none">{l.timestamp.slice(11, 19)}</span>
+                        <span className="text-zinc-500 select-none">
+                          {l.timestamp.slice(11, 19)}
+                        </span>
                         <span
                           className={`font-bold px-1 rounded text-[10px] ${
                             l.level === "ERROR" || l.level === "CRITICAL"
                               ? "bg-red-500/20 text-red-400"
                               : l.level === "WARN"
-                              ? "bg-yellow-500/20 text-yellow-400"
-                              : "bg-emerald-500/20 text-emerald-400"
+                                ? "bg-yellow-500/20 text-yellow-400"
+                                : "bg-emerald-500/20 text-emerald-400"
                           }`}
                         >
                           {l.level}
@@ -849,7 +876,10 @@ function QueueTab() {
       {/* Queues list */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {data?.queues.map((q) => (
-          <div key={q.name} className="p-5 bg-card border border-border rounded-xl shadow-card space-y-3">
+          <div
+            key={q.name}
+            className="p-5 bg-card border border-border rounded-xl shadow-card space-y-3"
+          >
             <div className="flex items-center justify-between">
               <span className="font-bold text-foreground text-sm flex items-center gap-2">
                 <Layers className="size-4 text-brand" />
@@ -889,7 +919,9 @@ function QueueTab() {
         <div className="px-5 py-4 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Cpu className="size-4 text-brand" />
-            <h3 className="text-sm font-bold text-foreground">Active Worker Nodes ({data?.workers.length || 0})</h3>
+            <h3 className="text-sm font-bold text-foreground">
+              Active Worker Nodes ({data?.workers.length || 0})
+            </h3>
           </div>
           <span className="text-xs text-muted-foreground font-mono">Refreshes every 5s</span>
         </div>
@@ -907,7 +939,7 @@ function QueueTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {(!data?.workers || data.workers.length === 0) ? (
+              {!data?.workers || data.workers.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="p-6 text-center text-muted-foreground">
                     No active RQ worker instances detected on Redis connection.
@@ -923,11 +955,15 @@ function QueueTab() {
                       </span>
                     </td>
                     <td className="p-3 font-mono text-muted-foreground">{w.queues.join(", ")}</td>
-                    <td className="p-3 font-mono text-xs text-muted-foreground">{w.current_job_id || "None (idle)"}</td>
+                    <td className="p-3 font-mono text-xs text-muted-foreground">
+                      {w.current_job_id || "None (idle)"}
+                    </td>
                     <td className="p-3 tabular-nums font-semibold text-emerald-600 dark:text-emerald-400">
                       {w.successful_job_count}
                     </td>
-                    <td className="p-3 tabular-nums font-semibold text-destructive">{w.failed_job_count}</td>
+                    <td className="p-3 tabular-nums font-semibold text-destructive">
+                      {w.failed_job_count}
+                    </td>
                   </tr>
                 ))
               )}
@@ -958,7 +994,9 @@ function LogsTab() {
   const logs = qLogs.data || [];
 
   const handleDownload = () => {
-    const text = logs.map((l) => `${l.timestamp} [${l.level}] ${l.logger}: ${l.message}`).join("\n");
+    const text = logs
+      .map((l) => `${l.timestamp} [${l.level}] ${l.logger}: ${l.message}`)
+      .join("\n");
     const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -1040,10 +1078,15 @@ function LogsTab() {
       {/* Terminal Display */}
       <div className="bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-xl p-4 font-mono text-xs h-[500px] overflow-y-auto space-y-1.5 shadow-2xl">
         {logs.length === 0 ? (
-          <div className="text-zinc-500 italic py-12 text-center">No logs matching active filters.</div>
+          <div className="text-zinc-500 italic py-12 text-center">
+            No logs matching active filters.
+          </div>
         ) : (
           logs.map((l, i) => (
-            <div key={i} className="flex items-start gap-2.5 leading-relaxed hover:bg-zinc-900/60 p-0.5 rounded">
+            <div
+              key={i}
+              className="flex items-start gap-2.5 leading-relaxed hover:bg-zinc-900/60 p-0.5 rounded"
+            >
               <span className="text-zinc-500 shrink-0 select-none">
                 {l.timestamp.slice(11, 23)}
               </span>
@@ -1052,8 +1095,8 @@ function LogsTab() {
                   l.level === "ERROR" || l.level === "CRITICAL"
                     ? "bg-red-500/20 text-red-400 border border-red-500/30"
                     : l.level === "WARN"
-                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                    : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                      ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                      : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                 }`}
               >
                 {l.level}
@@ -1175,7 +1218,7 @@ function ConfigTab() {
         debounceTimers.current[key] = setTimeout(doSave, 500);
       }
     },
-    [updateConfigMutation]
+    [updateConfigMutation],
   );
 
   // Flush pending save immediately on blur so leaving the field saves without delay
@@ -1190,7 +1233,7 @@ function ConfigTab() {
         }
       }
     },
-    [updateConfigMutation]
+    [updateConfigMutation],
   );
 
   const handleFieldChange = (key: string, field: string, value: any, immediate = false) => {
@@ -1253,13 +1296,19 @@ function ConfigTab() {
 
             <div>
               <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                {activeConfigs.llm_config.value?.provider === "openrouter" ? "OpenRouter Model" : "Gemini Model"}
+                {activeConfigs.llm_config.value?.provider === "openrouter"
+                  ? "OpenRouter Model"
+                  : "Gemini Model"}
               </label>
               {activeConfigs.llm_config.value?.provider === "openrouter" ? (
                 <input
                   type="text"
-                  value={activeConfigs.llm_config.value?.openrouter_model ?? "openai/gpt-oss-120b:free"}
-                  onChange={(e) => handleFieldChange("llm_config", "openrouter_model", e.target.value, false)}
+                  value={
+                    activeConfigs.llm_config.value?.openrouter_model ?? "openai/gpt-oss-120b:free"
+                  }
+                  onChange={(e) =>
+                    handleFieldChange("llm_config", "openrouter_model", e.target.value, false)
+                  }
                   onBlur={() => flushSave("llm_config")}
                   placeholder="e.g. openai/gpt-4o-mini"
                   className="w-full text-xs bg-surface border border-border rounded-lg px-3 py-2 text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-brand"
@@ -1287,7 +1336,9 @@ function ConfigTab() {
                 max="1.0"
                 step="0.1"
                 value={activeConfigs.llm_config.value?.temperature ?? 0.0}
-                onChange={(e) => handleFieldChange("llm_config", "temperature", parseFloat(e.target.value), false)}
+                onChange={(e) =>
+                  handleFieldChange("llm_config", "temperature", parseFloat(e.target.value), false)
+                }
                 onBlur={() => flushSave("llm_config")}
                 className="w-full accent-brand mt-2"
               />
@@ -1300,7 +1351,9 @@ function ConfigTab() {
       <div className="bg-card border border-border rounded-xl p-5 shadow-card space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b border-border">
           <RotateCcw className="size-4 text-brand" />
-          <h3 className="text-sm font-bold text-foreground">Scraper Retry Policies & Anti-Bot Strategy</h3>
+          <h3 className="text-sm font-bold text-foreground">
+            Scraper Retry Policies & Anti-Bot Strategy
+          </h3>
         </div>
 
         {activeConfigs.retry_policy && (
@@ -1314,7 +1367,14 @@ function ConfigTab() {
                 min="1"
                 max="10"
                 value={activeConfigs.retry_policy.value?.max_retries ?? 3}
-                onChange={(e) => handleFieldChange("retry_policy", "max_retries", parseInt(e.target.value) || 1, false)}
+                onChange={(e) =>
+                  handleFieldChange(
+                    "retry_policy",
+                    "max_retries",
+                    parseInt(e.target.value) || 1,
+                    false,
+                  )
+                }
                 onBlur={() => flushSave("retry_policy")}
                 className="w-full text-xs bg-surface border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-brand font-medium"
               />
@@ -1329,7 +1389,14 @@ function ConfigTab() {
                 min="10"
                 max="600"
                 value={activeConfigs.retry_policy.value?.base_backoff_seconds ?? 60}
-                onChange={(e) => handleFieldChange("retry_policy", "base_backoff_seconds", parseInt(e.target.value) || 10, false)}
+                onChange={(e) =>
+                  handleFieldChange(
+                    "retry_policy",
+                    "base_backoff_seconds",
+                    parseInt(e.target.value) || 10,
+                    false,
+                  )
+                }
                 onBlur={() => flushSave("retry_policy")}
                 className="w-full text-xs bg-surface border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-brand font-medium"
               />
@@ -1340,7 +1407,14 @@ function ConfigTab() {
                 <input
                   type="checkbox"
                   checked={activeConfigs.retry_policy.value?.retry_after_2h_on_blocked ?? true}
-                  onChange={(e) => handleFieldChange("retry_policy", "retry_after_2h_on_blocked", e.target.checked, true)}
+                  onChange={(e) =>
+                    handleFieldChange(
+                      "retry_policy",
+                      "retry_after_2h_on_blocked",
+                      e.target.checked,
+                      true,
+                    )
+                  }
                   className="rounded text-brand accent-brand size-4"
                 />
                 <span className="text-xs font-semibold text-foreground">
@@ -1368,7 +1442,9 @@ function ConfigTab() {
               <input
                 type="text"
                 value={activeConfigs.scheduler_config.value?.cron_expression ?? "0 2 * * *"}
-                onChange={(e) => handleFieldChange("scheduler_config", "cron_expression", e.target.value, false)}
+                onChange={(e) =>
+                  handleFieldChange("scheduler_config", "cron_expression", e.target.value, false)
+                }
                 onBlur={() => flushSave("scheduler_config")}
                 className="w-full text-xs bg-surface border border-border rounded-lg px-3 py-2 text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-brand"
               />
@@ -1379,7 +1455,9 @@ function ConfigTab() {
                 <input
                   type="checkbox"
                   checked={activeConfigs.scheduler_config.value?.enabled ?? true}
-                  onChange={(e) => handleFieldChange("scheduler_config", "enabled", e.target.checked, true)}
+                  onChange={(e) =>
+                    handleFieldChange("scheduler_config", "enabled", e.target.checked, true)
+                  }
                   className="rounded text-brand accent-brand size-4"
                 />
                 <span className="text-xs font-semibold text-foreground">
@@ -1390,7 +1468,6 @@ function ConfigTab() {
           </div>
         )}
       </div>
-
 
       {/* 4. Encrypted API Key Vault */}
       <div className="bg-card border border-border rounded-xl shadow-card overflow-hidden">
@@ -1496,14 +1573,20 @@ function AddApiKeyModal({ onClose }: { onClose: () => void }) {
             <Lock className="size-4 text-brand" />
             <h3 className="text-sm font-bold text-foreground">Add Encrypted API Key</h3>
           </div>
-          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground"
+          >
             <XCircle className="size-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
           <div>
-            <label className="text-xs font-semibold text-muted-foreground block mb-1">Provider</label>
+            <label className="text-xs font-semibold text-muted-foreground block mb-1">
+              Provider
+            </label>
             <select
               value={provider}
               onChange={(e) => setProvider(e.target.value)}
@@ -1517,7 +1600,9 @@ function AddApiKeyModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-muted-foreground block mb-1">Key Label / Identifier</label>
+            <label className="text-xs font-semibold text-muted-foreground block mb-1">
+              Key Label / Identifier
+            </label>
             <input
               type="text"
               placeholder="e.g. Gemini Production Primary Key"
@@ -1528,7 +1613,9 @@ function AddApiKeyModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-muted-foreground block mb-1">Secret Key Value</label>
+            <label className="text-xs font-semibold text-muted-foreground block mb-1">
+              Secret Key Value
+            </label>
             <input
               type="password"
               placeholder="AIzaSy..."
@@ -1703,7 +1790,8 @@ function NotificationsTab() {
         <div>
           <h3 className="text-sm font-bold text-foreground">Admin Alert Dispatch Engine</h3>
           <p className="text-xs text-muted-foreground">
-            Automatic emails are triggered on Scraper Failures, Repeated Retries, Anti-Bot Blocks, and Critical System Errors.
+            Automatic emails are triggered on Scraper Failures, Repeated Retries, Anti-Bot Blocks,
+            and Critical System Errors.
           </p>
         </div>
 
@@ -1723,7 +1811,9 @@ function NotificationsTab() {
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="flex items-center gap-2">
             <Mail className="size-4 text-brand" />
-            <h3 className="text-sm font-bold text-foreground">SMTP Mail Send Provider & Service Setup</h3>
+            <h3 className="text-sm font-bold text-foreground">
+              SMTP Mail Send Provider & Service Setup
+            </h3>
           </div>
           <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-foreground">
             <input
@@ -1776,10 +1866,15 @@ function NotificationsTab() {
 
           {/* SMTP Host */}
           <div>
-            <label className="text-xs font-semibold text-muted-foreground block mb-1">SMTP Host</label>
+            <label className="text-xs font-semibold text-muted-foreground block mb-1">
+              SMTP Host
+            </label>
             <input
               type="text"
-              value={notifConfig.smtp_host ?? (notifConfig.smtp_provider === "zoho" ? "smtp.zoho.com" : "smtp.gmail.com")}
+              value={
+                notifConfig.smtp_host ??
+                (notifConfig.smtp_provider === "zoho" ? "smtp.zoho.com" : "smtp.gmail.com")
+              }
               onChange={(e) => handleFieldChange("smtp_host", e.target.value, false)}
               onBlur={flushSave}
               placeholder="e.g. smtp.gmail.com"
@@ -1796,7 +1891,9 @@ function NotificationsTab() {
               <input
                 type="number"
                 value={notifConfig.smtp_port ?? (notifConfig.smtp_provider === "zoho" ? 465 : 587)}
-                onChange={(e) => handleFieldChange("smtp_port", parseInt(e.target.value) || 587, false)}
+                onChange={(e) =>
+                  handleFieldChange("smtp_port", parseInt(e.target.value) || 587, false)
+                }
                 onBlur={flushSave}
                 className="w-24 text-xs bg-surface border border-border rounded-lg px-3 py-2 text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-brand"
               />
@@ -1876,8 +1973,14 @@ function NotificationsTab() {
           <div>
             {(notifConfig.smtp_provider === "google" || !notifConfig.smtp_provider) && (
               <span>
-                <strong>Google (Gmail):</strong> Requires 2-Step Verification enabled. Generate a 16-character App Password at{" "}
-                <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" className="text-brand underline font-medium">
+                <strong>Google (Gmail):</strong> Requires 2-Step Verification enabled. Generate a
+                16-character App Password at{" "}
+                <a
+                  href="https://myaccount.google.com/apppasswords"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-brand underline font-medium"
+                >
                   myaccount.google.com/apppasswords
                 </a>
                 . Do not use your personal account password.
@@ -1885,8 +1988,14 @@ function NotificationsTab() {
             )}
             {notifConfig.smtp_provider === "zoho" && (
               <span>
-                <strong>Zoho Mail:</strong> Uses SSL port 465 or STARTTLS 587. Requires a Zoho App Password generated from{" "}
-                <a href="https://accounts.zoho.com" target="_blank" rel="noreferrer" className="text-brand underline font-medium">
+                <strong>Zoho Mail:</strong> Uses SSL port 465 or STARTTLS 587. Requires a Zoho App
+                Password generated from{" "}
+                <a
+                  href="https://accounts.zoho.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-brand underline font-medium"
+                >
                   Zoho Accounts &gt; Security &gt; App Passwords
                 </a>
                 .
@@ -1894,7 +2003,10 @@ function NotificationsTab() {
             )}
             {notifConfig.smtp_provider === "custom" && (
               <span>
-                <strong>Custom SMTP Relay:</strong> Configure any standard SMTP host, port, authentication credentials, and security mode. Also configurable via <code className="bg-surface px-1 py-0.5 rounded text-foreground">SMTP_*</code> in <code className="bg-surface px-1 py-0.5 rounded text-foreground">.env</code>.
+                <strong>Custom SMTP Relay:</strong> Configure any standard SMTP host, port,
+                authentication credentials, and security mode. Also configurable via{" "}
+                <code className="bg-surface px-1 py-0.5 rounded text-foreground">SMTP_*</code> in{" "}
+                <code className="bg-surface px-1 py-0.5 rounded text-foreground">.env</code>.
               </span>
             )}
           </div>
@@ -1903,8 +2015,9 @@ function NotificationsTab() {
 
       {/* Alert Event Toggles */}
       <div className="bg-card border border-border rounded-xl p-5 shadow-card space-y-4">
-
-        <h3 className="text-sm font-bold text-foreground border-b border-border pb-3">Alert Trigger Events</h3>
+        <h3 className="text-sm font-bold text-foreground border-b border-border pb-3">
+          Alert Trigger Events
+        </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="flex items-center gap-3 p-3 bg-surface rounded-xl border border-border cursor-pointer">
@@ -1916,7 +2029,9 @@ function NotificationsTab() {
             />
             <div>
               <div className="text-xs font-bold text-foreground">Scraper Permanent Failure</div>
-              <div className="text-[11px] text-muted-foreground">When a crawler exhausts all retries</div>
+              <div className="text-[11px] text-muted-foreground">
+                When a crawler exhausts all retries
+              </div>
             </div>
           </label>
 
@@ -1929,7 +2044,9 @@ function NotificationsTab() {
             />
             <div>
               <div className="text-xs font-bold text-foreground">Provider Anti-Bot Block / 429</div>
-              <div className="text-[11px] text-muted-foreground">Rate limit triggers 2-hour backoff alert</div>
+              <div className="text-[11px] text-muted-foreground">
+                Rate limit triggers 2-hour backoff alert
+              </div>
             </div>
           </label>
 
@@ -1942,7 +2059,9 @@ function NotificationsTab() {
             />
             <div>
               <div className="text-xs font-bold text-foreground">Repeated Retries</div>
-              <div className="text-[11px] text-muted-foreground">Multiple consecutive retry attempts</div>
+              <div className="text-[11px] text-muted-foreground">
+                Multiple consecutive retry attempts
+              </div>
             </div>
           </label>
 
@@ -1955,16 +2074,19 @@ function NotificationsTab() {
             />
             <div>
               <div className="text-xs font-bold text-foreground">Critical Pipeline Errors</div>
-              <div className="text-[11px] text-muted-foreground">Uncaught exceptions in workers or queues</div>
+              <div className="text-[11px] text-muted-foreground">
+                Uncaught exceptions in workers or queues
+              </div>
             </div>
           </label>
         </div>
       </div>
 
-
       {/* Recipient Emails Manager */}
       <div className="bg-card border border-border rounded-xl p-5 shadow-card space-y-4">
-        <h3 className="text-sm font-bold text-foreground border-b border-border pb-3">Admin Notification Recipients</h3>
+        <h3 className="text-sm font-bold text-foreground border-b border-border pb-3">
+          Admin Notification Recipients
+        </h3>
 
         <div className="flex gap-2">
           <input
@@ -2029,7 +2151,8 @@ function AuditTab() {
         <div>
           <h3 className="text-sm font-bold text-foreground">Administrative Audit Trail</h3>
           <p className="text-xs text-muted-foreground">
-            Immutable log recording configuration updates, scraper triggers, key management, and security events.
+            Immutable log recording configuration updates, scraper triggers, key management, and
+            security events.
           </p>
         </div>
 
@@ -2081,7 +2204,9 @@ function AuditTab() {
                         second: "2-digit",
                       })}
                     </td>
-                    <td className="p-3 font-semibold text-foreground">{l.user_email || "system"}</td>
+                    <td className="p-3 font-semibold text-foreground">
+                      {l.user_email || "system"}
+                    </td>
                     <td className="p-3">
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-brand/10 text-brand font-mono">
                         {l.action}
@@ -2090,7 +2215,9 @@ function AuditTab() {
                     <td className="p-3 font-mono text-muted-foreground">
                       {l.target_type}:{l.target_id || "all"}
                     </td>
-                    <td className="p-3 font-mono text-muted-foreground">{l.ip_address || "local"}</td>
+                    <td className="p-3 font-mono text-muted-foreground">
+                      {l.ip_address || "local"}
+                    </td>
                     <td className="p-3 font-mono text-[11px] text-muted-foreground">
                       {l.changes ? JSON.stringify(l.changes) : "—"}
                     </td>
