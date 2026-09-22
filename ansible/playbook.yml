@@ -1,0 +1,176 @@
+---
+- name: Deploy OpportuneAI Production Stack
+  hosts: all
+  become: true
+  vars_files:
+    - vars.yml.example
+
+  tasks:
+    # =========================================================================
+    # Phase 1: System Package & Docker Engine Setup
+    # =========================================================================
+    - name: Update apt cache and install base dependencies (Debian/Ubuntu)
+      when: ansible_os_family == "Debian"
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - rsync
+          - git
+        state: present
+        update_cache: true
+
+    - name: Add Docker official GPG key (Debian/Ubuntu)
+      when: ansible_os_family == "Debian"
+      ansible.builtin.shell: |
+        install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg -o /etc/apt/keyrings/docker.asc
+        chmod a+r /etc/apt/keyrings/docker.asc
+      args:
+        creates: /etc/apt/keyrings/docker.asc
+
+    - name: Add Docker repository to APT sources (Debian/Ubuntu)
+      when: ansible_os_family == "Debian"
+      ansible.builtin.apt_repository:
+        repo: "deb [arch={{ ansible_architecture | replace('x86_64', 'amd64') | replace('aarch64', 'arm64') }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable"
+        state: present
+        filename: docker
+
+    - name: Install Docker Engine and Docker Compose plugin (Debian/Ubuntu)
+      when: ansible_os_family == "Debian"
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Ensure Docker service is running and enabled on boot
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    # =========================================================================
+    # Phase 2: Directory Structure & File Deployment
+    # =========================================================================
+    - name: Create deployment directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
+        mode: "0755"
+      loop:
+        - "{{ deploy_dir }}"
+        - "{{ deploy_dir }}/backend"
+        - "{{ deploy_dir }}/frontend"
+        - "{{ deploy_dir }}/docker"
+        - "{{ deploy_dir }}/docker/nginx"
+        - "{{ deploy_dir }}/docker/nginx/conf.d"
+
+    - name: Synchronize project codebase to target server
+      when: deploy_method == "local_sync"
+      synchronize:
+        src: "{{ playbook_dir }}/../"
+        dest: "{{ deploy_dir }}/"
+        delete: false
+        rsync_opts:
+          - "--exclude=.git"
+          - "--exclude=backend/venv"
+          - "--exclude=backend/__pycache__"
+          - "--exclude=backend/.pytest_cache"
+          - "--exclude=backend/.ruff_cache"
+          - "--exclude=backend/logs"
+          - "--exclude=backend/certs"
+          - "--exclude=frontend/node_modules"
+          - "--exclude=frontend/.output"
+          - "--exclude=frontend/dist"
+          - "--exclude=.DS_Store"
+
+    - name: Ensure backend .env has secure file permissions
+      file:
+        path: "{{ deploy_dir }}/backend/.env"
+        mode: "0600"
+        owner: "{{ deploy_user }}"
+      ignore_errors: true
+
+    # =========================================================================
+    # Phase 3: Systemd Service for Automatic Compose Management
+    # =========================================================================
+    - name: Install OpportuneAI systemd service unit
+      copy:
+        dest: /etc/systemd/system/opportuneai.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=OpportuneAI Docker Compose Application Stack
+          Requires=docker.service
+          After=docker.service network-online.target
+          Wants=network-online.target
+
+          [Service]
+          Type=oneshot
+          RemainAfterExit=yes
+          WorkingDirectory={{ deploy_dir }}
+          ExecStart=/usr/bin/docker compose up -d --remove-orphans
+          ExecStop=/usr/bin/docker compose down
+          ExecReload=/usr/bin/docker compose restart
+          TimeoutStartSec=0
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: true
+
+    - name: Enable OpportuneAI systemd unit
+      systemd:
+        name: opportuneai
+        enabled: true
+
+    # =========================================================================
+    # Phase 4: Container Build & Stack Lifecycle
+    # =========================================================================
+    - name: Build Docker images
+      command: docker compose build
+      args:
+        chdir: "{{ deploy_dir }}"
+
+    - name: Start container stack via Docker Compose
+      command: docker compose up -d --remove-orphans
+      args:
+        chdir: "{{ deploy_dir }}"
+
+    - name: Run Alembic database migrations in backend container
+      when: run_migrations | bool
+      command: docker compose exec -T backend alembic upgrade head
+      args:
+        chdir: "{{ deploy_dir }}"
+      register: migration_result
+      retries: 3
+      delay: 5
+      until: migration_result.rc == 0
+
+    # =========================================================================
+    # Phase 5: Production Health Check Verification
+    # =========================================================================
+    - name: Verify application health check endpoint
+      uri:
+        url: "{{ healthcheck_url }}"
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: "{{ healthcheck_retries }}"
+      delay: "{{ healthcheck_delay }}"
+
+    - name: Display deployment success message
+      debug:
+        msg: "OpportuneAI production deployment completed successfully! Stack is healthy at {{ healthcheck_url }}."

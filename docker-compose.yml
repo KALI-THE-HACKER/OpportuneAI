@@ -1,0 +1,150 @@
+services:
+  # ============================================================================
+  # NGINX INGRESS REVERSE PROXY
+  # ONLY this service exposes a port to the external host network.
+  # All other services (backend, redis, workers, frontend) are private.
+  # ============================================================================
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: opportune_nginx
+    restart: unless-stopped
+    ports:
+      - "${PORT:-80}:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      - opportune_net
+
+  # ============================================================================
+  # FRONTEND (TanStack Start / React 19 / Nitro SSR)
+  # Multi-stage built Node.js container listening on internal port 3000.
+  # ============================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: "${VITE_API_URL:-}"
+        VITE_AUTH0_DOMAIN: "${VITE_AUTH0_DOMAIN:-}"
+        VITE_AUTH0_CLIENT_ID: "${VITE_AUTH0_CLIENT_ID:-}"
+        VITE_AUTH0_AUDIENCE: "${VITE_AUTH0_AUDIENCE:-}"
+        VITE_USE_SSL: "false"
+    container_name: opportune_frontend
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      PORT: 3000
+      HOST: "0.0.0.0"
+      NODE_ENV: production
+    networks:
+      - opportune_net
+
+  # ============================================================================
+  # BACKEND API (FastAPI / Python 3.11)
+  # Multi-stage built Python container listening on internal port 8000.
+  # ============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: opportune_backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+    expose:
+      - "8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - opportune_net
+
+  # ============================================================================
+  # RQ WORKER - AI JOB PROCESSING
+  # Consumes raw scraped jobs from the 'ai-processing' queue and runs Gemini LLM.
+  # ============================================================================
+  rq-worker-ai:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: opportune_rq_ai_worker
+    restart: unless-stopped
+    command: ["python", "-m", "workers.launch_ai_worker"]
+    env_file:
+      - ./backend/.env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    networks:
+      - opportune_net
+
+  # ============================================================================
+  # RQ WORKER - RESUME ANALYSIS
+  # Consumes candidate resumes from the 'resume-processing' queue.
+  # ============================================================================
+  rq-worker-resume:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: opportune_rq_resume_worker
+    restart: unless-stopped
+    command: ["python", "-m", "workers.launch_resume_worker"]
+    env_file:
+      - ./backend/.env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    networks:
+      - opportune_net
+
+  # ============================================================================
+  # REDIS CACHE & QUEUE BROKER
+  # In-memory broker with AOF persistence on an isolated internal volume.
+  # ============================================================================
+  redis:
+    image: redis:7.4-alpine
+    container_name: opportune_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis_data:/data
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - opportune_net
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  opportune_net:
+    driver: bridge

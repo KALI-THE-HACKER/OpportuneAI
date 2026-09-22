@@ -1,0 +1,23 @@
+# Node dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+.output/
+dist/
+.tanstack/
+.wrangler/
+
+# Environment and Secrets (CRITICAL: Do NOT bake private keys into image)
+.env
+.env.*
+!.env.example
+
+# IDE & OS files
+.DS_Store
+.idea/
+.vscode/
+*.local

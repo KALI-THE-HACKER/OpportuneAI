@@ -1,0 +1,40 @@
+# Python & Virtualenv
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+
+# Environment and Secrets (CRITICAL: Do NOT bake into Docker images)
+.env
+.env.*
+!.env.example
+certs/
+*.pem
+*.key
+
+# Testing & Linting caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local databases & dumps
+*.db
+*.sqlite3
+dump.rdb
+
+# Logs and runtime artifacts
+*.log
+logs/
+ingestion.log
+scratch/
+
+# IDE & OS files
+.DS_Store
+.idea/
+.vscode/

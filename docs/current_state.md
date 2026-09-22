@@ -384,19 +384,29 @@
 
 ---
 
-### 9. Admin Control Plane & Security Hardening
-**Backend** (`backend/routes/admin.py`, `backend/services/pipeline_orchestrator.py`, `backend/services/system_config_service.py`, `backend/services/email_notification_service.py`, `backend/utils/encryption.py`):
-- **Dynamic Configuration & Secret Masking**:
-  - `SystemConfigService.get_all_configs` dynamically traverses and masks sensitive values (`*_pass`, `*_secret`, `*_token`) as `"••••••••"`.
-  - `SystemConfigService.update_config` automatically preserves existing plaintext credentials when receiving masked placeholders from frontend updates.
-- **Scraper Invariant & Cancellation Fixes**:
-  - `PipelineOrchestrator` automatically clears lingering Redis cancellation keys (`cancel:scraper:{provider}`) when acquiring locks for new runs and in finally blocks, resolving 10-minute scraper lockout conditions.
-- **Alert Dispatch Security**:
-  - `EmailNotificationService` sanitizes subject lines (CRLF stripping) and escapes HTML bodies (`html.escape`) to prevent email injection and phishing vectors.
-- **Encryption Alerts**:
-  - `encryption.py` emits explicit security warnings when master encryption keys are not configured in production environments.
+### 10. Production Docker Containerization & Ansible Infrastructure
+**Infrastructure** (`docker-compose.yml`, `backend/Dockerfile`, `frontend/Dockerfile`, `docker/nginx/`, `ansible/`, `DOCKER.md`):
+- **Multi-Stage Backend Container**:
+  - Python 3.11-slim builder compiles wheels in virtualenv `/opt/venv`.
+  - Lean runner copies `/opt/venv`, installs runtime `libpq5`, `chromium`, and `chromium-driver` (for scrapers).
+  - Runs under unprivileged system user `opportune` (UID:GID 10001) with Docker `HEALTHCHECK` against `/health`.
+- **Multi-Stage Frontend Container**:
+  - Node 22-alpine deps stage caches `node_modules` via `npm install`.
+  - Builder stage compiles TanStack Start SSR via `NITRO_PRESET=node-server npm run build`.
+  - Runner stage executes `node .output/server/index.mjs` on port 3000 under unprivileged user `opportune`.
+- **Nginx Ingress Reverse Proxy & Network Isolation**:
+  - Nginx is the **only** service with host port exposure (`${PORT:-80}:80`).
+  - Backend (`8000`), Frontend (`3000`), and Redis (`6379`) do **not** expose ports to the host; all internal communication occurs over private bridge network `opportune_net`.
+  - Nginx handles gzip compression, 30MB client payload limits (for resumes), WebSocket connection upgrades, and security headers.
+- **RQ Worker Fleet**:
+  - Independent containers for `rq-worker-ai` and `rq-worker-resume` using the backend image with custom start commands.
+- **Ansible Automation**:
+  - Idempotent playbook (`ansible/playbook.yml`) installing Docker CE and Docker Compose v2 plugin on Debian/Ubuntu.
+  - Deploys application directory, synchronizes codebase, ensures `0600` permissions on `.env`.
+  - Installs `opportuneai.service` systemd unit for automatic restart on server reboot.
+  - Executes database migrations automatically via `alembic upgrade head`.
 
-**Status**: ✅ Audited, hardened, verified with automated test suite
+**Status**: ✅ Complete, validated via `docker compose config` and unit tests
 
 ---
 *Last updated: 2026-09-22*
