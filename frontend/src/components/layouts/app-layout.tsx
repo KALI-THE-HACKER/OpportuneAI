@@ -22,7 +22,7 @@ import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
 import { notificationsApi } from "@/lib/api";
 import { MobileBottomNav } from "@/components/layouts/mobile-bottom-nav";
-import { PwaInstallPrompt, InstallAppNavButton } from "@/components/pwa/pwa-install-prompt";
+import { InstallAppNavButton } from "@/components/pwa/pwa-install-prompt";
 import { OfflineIndicator } from "@/components/pwa/offline-indicator";
 
 const NAV = [
@@ -288,9 +288,6 @@ export function AppLayout() {
 
       {/* Mobile Bottom Tab Navigation */}
       <MobileBottomNav unreadCount={unreadCount} onMenuClick={() => setMobileOpen(true)} />
-
-      {/* PWA Install Promotion Banner & iOS Step-by-Step Modal */}
-      <PwaInstallPrompt />
     </div>
   );
 }

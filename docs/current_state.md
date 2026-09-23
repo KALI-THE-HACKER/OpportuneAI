@@ -434,6 +434,19 @@
 - **Applications Tracking Mobile Responsiveness**:
   - Converted `/app/applied` table view (previously overflowing 630px+ horizontally) into native responsive card layouts (`md:hidden`) with full touch controls: status selector, inline notes editing, and job actions. Preserved desktop table on `md:block`.
 
+### 15. Premium Mobile PWA Download Popup
+**Frontend** (`frontend/src/components/pwa/pwa-install-prompt.tsx`, `frontend/src/hooks/use-pwa-install.ts`, `frontend/src/routes/__root.tsx`):
+- **Dedicated Mobile PWA Popup**:
+  - Premium bottom-sheet modal built with Framer Motion spring physics, glassmorphic backdrop (`backdrop-blur-md`), ambient light glows, and mobile grab handle.
+  - Automatically targets mobile devices (`isMobile`) opening the site in a browser when not already in standalone PWA mode.
+  - **Landing Page Exclusion**: Strictly suppressed on `/` via route inspection (`pathname === "/"`). Only activates on internal routes (e.g. `/app/*`, `/auth/*`).
+  - **Smooth Timing**: Delayed by 1.2s post-mount to allow page paint and prevent abrupt layout shifting.
+  - **Full Value Proposition**: Showcases high-res app icon with glowing squircle, status badge ("Native App Experience"), and 3 feature cards (Instant Alerts, Distraction-Free Workspace, Offline Access).
+  - **Cross-Platform Install Flow**:
+    - Android/Chromium: 1-tap native installation triggering `beforeinstallprompt`.
+    - iOS Safari: Seamless in-modal step-by-step visual guidance (Share icon ➔ "Add to Home Screen" ➔ "Add").
+  - **Clean Dismissal**: Accessible top-right round `X` close button, backdrop tap, and "Continue in browser" action with 3-day dismissal cooldown stored in `localStorage`.
+
 **Status**: ✅ Complete, verified via Prettier, ESLint, and production build
 
 ---

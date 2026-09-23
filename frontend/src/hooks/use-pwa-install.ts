@@ -5,20 +5,21 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 }
 
-const DISMISS_KEY = "opportune.pwa.prompt_dismissed";
-const DISMISS_DURATION_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
+const DISMISS_KEY = "opportune.pwa.popup_dismissed";
+const DISMISS_DURATION_MS = 1000 * 60 * 60 * 24 * 3; // 3 days
 
 export function usePwaInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isStandalone, setIsStandalone] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [isDismissed, setIsDismissed] = useState(true); // default true until verified
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Check standalone
+    // Check standalone mode (PWA installed and running)
     const isStandaloneMode =
       window.matchMedia("(display-mode: standalone)").matches ||
       (navigator as unknown as { standalone?: boolean }).standalone === true ||
@@ -32,6 +33,14 @@ export function usePwaInstall() {
     const isAndroidDevice = /Android/i.test(ua);
     setIsIOS(isAppleMobile);
     setIsAndroid(isAndroidDevice);
+
+    const isMobileDevice =
+      isAppleMobile ||
+      isAndroidDevice ||
+      window.innerWidth <= 768 ||
+      window.matchMedia("(max-width: 768px)").matches ||
+      ("ontouchstart" in window && window.innerWidth <= 1024);
+    setIsMobile(isMobileDevice);
 
     // Check dismissal status
     const dismissedAt = localStorage.getItem(DISMISS_KEY);
@@ -88,10 +97,11 @@ export function usePwaInstall() {
     setIsDismissed(true);
   }, []);
 
-  const canInstall = !isStandalone && (Boolean(deferredPrompt) || isIOS);
+  const canInstall = !isStandalone && (Boolean(deferredPrompt) || isIOS || isAndroid || isMobile);
 
   return {
     isStandalone,
+    isMobile,
     canInstall,
     isInstallable: Boolean(deferredPrompt),
     isIOS,

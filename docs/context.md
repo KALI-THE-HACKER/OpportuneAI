@@ -116,6 +116,9 @@ The application runs a divided architecture:
 ### 5.7 Mobile Layout & Responsive Filters Invariant
 - Job listing and explorer views must keep filters non-intrusive on screens smaller than `lg`. Avoid stacking filter sidebars above the search input or feed. Use slide-over `Sheet` drawers triggered by an inline filter button with active count badge, coupled with dismissible filter chips for instantaneous 1-tap removals.
 
+### 5.8 PWA Mobile Install Popup Invariant
+- The PWA install popup must only target mobile browser users (`isMobile && !isStandalone`). It MUST NEVER render on the landing page (`/`). It must provide clean dismissal (`X`, backdrop, and text link) with a timestamped cooldown in localStorage.
+
 ---
 
 ## 6. Things Future Agents Must Know

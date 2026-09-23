@@ -16,6 +16,7 @@ import { AuthProvider } from "../hooks/use-auth";
 import { registerServiceWorker } from "../lib/pwa/register-sw";
 import { Auth0Provider } from "@auth0/auth0-react";
 import { Toaster } from "../components/ui/sonner";
+import { PwaInstallPrompt } from "../components/pwa/pwa-install-prompt";
 
 function NotFoundComponent() {
   return (
@@ -144,8 +145,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       {
         rel: "apple-touch-icon",
+        href: "/apple-touch-icon.png",
+      },
+      {
+        rel: "apple-touch-icon",
         sizes: "180x180",
         href: "/icons/apple-touch-icon.png",
+      },
+      {
+        rel: "apple-touch-icon-precomposed",
+        href: "/apple-touch-icon.png",
       },
       { rel: "manifest", href: "/manifest.webmanifest" },
     ],
@@ -218,6 +227,7 @@ function RootComponent() {
             {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
             <Outlet />
             <Toaster />
+            <PwaInstallPrompt />
           </AuthProvider>
         </ThemeProvider>
       </Auth0Provider>
