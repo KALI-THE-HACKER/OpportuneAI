@@ -21,6 +21,9 @@ import { Logo } from "@/components/shared/logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
 import { notificationsApi } from "@/lib/api";
+import { MobileBottomNav } from "@/components/layouts/mobile-bottom-nav";
+import { InstallAppNavButton } from "@/components/pwa/pwa-install-prompt";
+import { OfflineIndicator } from "@/components/pwa/offline-indicator";
 
 const NAV = [
   { to: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -163,6 +166,7 @@ export function AppLayout() {
             </div>
           </div>
         )}
+        <InstallAppNavButton className="mb-1" />
         <button
           onClick={handleSignOut}
           className="w-full flex items-center gap-2.5 px-3 h-8 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-surface transition-all duration-150 cursor-pointer"
@@ -176,6 +180,9 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen flex bg-background text-foreground">
+      {/* Offline Connectivity Notification */}
+      <OfflineIndicator />
+
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-60 shrink-0 border-r border-border flex-col bg-sidebar sticky top-0 h-screen">
         <SidebarContent />
@@ -190,9 +197,15 @@ export function AppLayout() {
             className="absolute inset-0 bg-foreground/30 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
-          {/* Drawer panel */}
-          <aside className="relative w-72 h-full bg-sidebar border-r border-border flex flex-col shadow-dropdown animate-in slide-in-from-left-4 duration-200">
-            <div className="absolute top-3 right-3">
+          {/* Drawer panel with safe area padding */}
+          <aside
+            className="relative w-72 h-full bg-sidebar border-r border-border flex flex-col shadow-dropdown animate-in slide-in-from-left-4 duration-200"
+            style={{
+              paddingTop: "env(safe-area-inset-top, 0px)",
+              paddingBottom: "env(safe-area-inset-bottom, 0px)",
+            }}
+          >
+            <div className="absolute top-3 right-3 z-10">
               <button
                 onClick={() => setMobileOpen(false)}
                 aria-label="Close menu"
@@ -208,9 +221,14 @@ export function AppLayout() {
 
       {/* Main content area */}
       <div className="flex-1 min-w-0 flex flex-col">
-        {/* Top header */}
-        <header className="h-14 border-b border-border bg-background/90 backdrop-blur-md sticky top-0 z-40 shadow-sm">
-          <div className="h-full px-4 sm:px-5 flex items-center justify-between gap-3">
+        {/* Top header with safe area padding */}
+        <header
+          className="border-b border-border bg-background/90 backdrop-blur-md sticky top-0 z-40 shadow-sm pwa-chrome"
+          style={{
+            paddingTop: "env(safe-area-inset-top, 0px)",
+          }}
+        >
+          <div className="h-14 px-4 sm:px-5 flex items-center justify-between gap-3">
             {/* Mobile menu button */}
             <button
               className="lg:hidden size-8 grid place-items-center rounded-lg border border-border bg-card hover:bg-surface text-muted-foreground hover:text-foreground transition-colors shadow-card"
@@ -262,11 +280,14 @@ export function AppLayout() {
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 px-4 sm:px-6 py-8 max-w-7xl w-full mx-auto">
+        {/* Page content with bottom spacing for Mobile Bottom Nav */}
+        <main className="flex-1 px-4 sm:px-6 py-6 sm:py-8 max-w-7xl w-full mx-auto pb-24 lg:pb-8">
           <Outlet />
         </main>
       </div>
+
+      {/* Mobile Bottom Tab Navigation */}
+      <MobileBottomNav unreadCount={unreadCount} onMenuClick={() => setMobileOpen(true)} />
     </div>
   );
 }

@@ -118,7 +118,7 @@ function LandingPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                  className="text-primary/70 text-xs sm:text-sm md:text-base leading-[1.2] text-left"
+                  className="text-[#E1E0CC]/70 text-xs sm:text-sm md:text-base leading-[1.2] text-left"
                 >
                   OpportuneAI matches your resume with relevant jobs, analyzes the company and job
                   description, and prepares personalized recruiter emails for you — ready to review
@@ -132,11 +132,11 @@ function LandingPage() {
                 >
                   <Link
                     to="/auth/sign-up"
-                    className="group flex items-center justify-between gap-2 pl-6 pr-2 py-2 bg-primary text-black rounded-full font-medium text-sm sm:text-base transition-all duration-300 hover:gap-3 cursor-pointer shrink-0"
+                    className="group flex items-center justify-between gap-2 pl-6 pr-2 py-2 bg-[#E1E0CC] hover:bg-[#DEDBC8] text-black rounded-full font-medium text-sm sm:text-base transition-all duration-300 hover:gap-3 cursor-pointer shrink-0"
                   >
                     <span>Start exploring</span>
                     <div className="flex items-center justify-center bg-black rounded-full w-9 h-9 sm:w-10 sm:h-10 transition-transform duration-300 group-hover:scale-110 shrink-0">
-                      <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                      <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-[#E1E0CC]" />
                     </div>
                   </Link>
                 </motion.div>
@@ -161,7 +161,7 @@ function LandingPage() {
           transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }}
           className="bg-[#101010] rounded-[2rem] w-full max-w-6xl p-8 sm:p-12 md:p-24 text-center relative z-10 overflow-hidden"
         >
-          <span className="text-primary text-[10px] sm:text-xs uppercase tracking-widest block mb-6">
+          <span className="text-[#E1E0CC] text-[10px] sm:text-xs uppercase tracking-widest block mb-6">
             YOUR AI CAREER COPILOT
           </span>
 
@@ -255,7 +255,7 @@ function LandingPage() {
                   "Relevant opportunities, not endless listings",
                 ].map((item, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-xs sm:text-sm">
-                    <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-[#E1E0CC] shrink-0 mt-0.5" />
                     <span className="text-gray-400">{item}</span>
                   </li>
                 ))}
@@ -299,7 +299,7 @@ function LandingPage() {
                   "Uncover gaps before you apply",
                 ].map((item, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-xs sm:text-sm">
-                    <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-[#E1E0CC] shrink-0 mt-0.5" />
                     <span className="text-gray-400">{item}</span>
                   </li>
                 ))}
@@ -343,7 +343,7 @@ function LandingPage() {
                   "Review, edit, and send when yourself",
                 ].map((item, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-xs sm:text-sm">
-                    <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-[#E1E0CC] shrink-0 mt-0.5" />
                     <span className="text-gray-400">{item}</span>
                   </li>
                 ))}

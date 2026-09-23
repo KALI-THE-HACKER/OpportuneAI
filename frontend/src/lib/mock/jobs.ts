@@ -35,7 +35,6 @@ export interface Job {
   lastDateToApply?: string | null;
 }
 
-
 const skillsPool = [
   "TypeScript",
   "React",

@@ -133,7 +133,9 @@ export const adminApi = {
     return apiCall<ScraperHealth[]>("/api/admin/scrapers");
   },
 
-  async triggerScraper(provider: string = "all"): Promise<{ success: boolean; message: string; run_ids: number[] }> {
+  async triggerScraper(
+    provider: string = "all",
+  ): Promise<{ success: boolean; message: string; run_ids: number[] }> {
     return apiCall("/api/admin/scrapers/trigger", {
       method: "POST",
       body: JSON.stringify({ provider }),
@@ -146,7 +148,9 @@ export const adminApi = {
     });
   },
 
-  async retryScraperRun(runId: number): Promise<{ success: boolean; message: string; new_run_ids: number[] }> {
+  async retryScraperRun(
+    runId: number,
+  ): Promise<{ success: boolean; message: string; new_run_ids: number[] }> {
     return apiCall(`/api/admin/scrapers/retry/${runId}`, {
       method: "POST",
     });
@@ -175,12 +179,16 @@ export const adminApi = {
     return apiCall<QueueTelemetry>("/api/admin/queue");
   },
 
-  async retryFailedQueue(queueName?: string): Promise<{ success: boolean; retried_count: number; message: string }> {
+  async retryFailedQueue(
+    queueName?: string,
+  ): Promise<{ success: boolean; retried_count: number; message: string }> {
     const url = `/api/admin/queue/retry-failed${queueName ? `?queue_name=${encodeURIComponent(queueName)}` : ""}`;
     return apiCall(url, { method: "POST" });
   },
 
-  async clearFailedQueue(queueName?: string): Promise<{ success: boolean; cleared_count: number; message: string }> {
+  async clearFailedQueue(
+    queueName?: string,
+  ): Promise<{ success: boolean; cleared_count: number; message: string }> {
     const url = `/api/admin/queue/clear-failed${queueName ? `?queue_name=${encodeURIComponent(queueName)}` : ""}`;
     return apiCall(url, { method: "POST" });
   },
@@ -223,7 +231,13 @@ export const adminApi = {
     provider: string;
     label: string;
     secret_key: string;
-  }): Promise<{ success: boolean; id: number; label: string; masked_key: string; message: string }> {
+  }): Promise<{
+    success: boolean;
+    id: number;
+    label: string;
+    masked_key: string;
+    message: string;
+  }> {
     return apiCall("/api/admin/api-keys", {
       method: "POST",
       body: JSON.stringify(payload),

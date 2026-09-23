@@ -29,6 +29,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.classList.toggle("dark", theme === "dark");
     try {
       localStorage.setItem(STORAGE_KEY, theme);
+      const themeColor = theme === "dark" ? "#0A0A0F" : "#FBFAF8";
+      let metaThemeColor = document.querySelector('meta[name="theme-color"]');
+      if (!metaThemeColor) {
+        metaThemeColor = document.createElement("meta");
+        metaThemeColor.setAttribute("name", "theme-color");
+        document.head.appendChild(metaThemeColor);
+      }
+      metaThemeColor.setAttribute("content", themeColor);
     } catch {
       // localStorage may be unavailable (private browsing, storage quota)
     }

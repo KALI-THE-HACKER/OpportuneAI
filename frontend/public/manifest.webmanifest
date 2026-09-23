@@ -1,13 +1,74 @@
 {
-  "name": "OpportuneAI",
+  "id": "/?source=pwa",
+  "name": "OpportuneAI — AI Career Copilot",
   "short_name": "OpportuneAI",
-  "description": "AI-powered job discovery and application copilot.",
-  "start_url": "/",
+  "description": "AI-powered job discovery and application tracking copilot.",
+  "start_url": "/app/dashboard?source=pwa",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#fbfbfb",
-  "theme_color": "#18181b",
+  "orientation": "portrait-primary",
+  "background_color": "#0A0A0F",
+  "theme_color": "#0A0A0F",
+  "categories": ["business", "productivity", "utilities"],
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your application dashboard and career metrics",
+      "url": "/app/dashboard?source=shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Explore Jobs",
+      "short_name": "Jobs",
+      "description": "Search curated job listings and opportunities",
+      "url": "/app/jobs?source=shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "AI Recommendations",
+      "short_name": "Matches",
+      "description": "Personalized AI job recommendations and match scores",
+      "url": "/app/recommendations?source=shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Saved Jobs",
+      "short_name": "Saved",
+      "description": "View your bookmarked opportunities",
+      "url": "/app/saved?source=shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
   ]
 }

@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Bookmark, MapPin, Clock, Calendar, ArrowUpRight, Loader2, CheckCircle2 } from "lucide-react";
+import {
+  Bookmark,
+  MapPin,
+  Clock,
+  Calendar,
+  ArrowUpRight,
+  Loader2,
+  CheckCircle2,
+} from "lucide-react";
 import type { JobWithDbId } from "@/lib/api";
 import { recordEvent } from "@/lib/api";
 import { formatSalary, timeAgo, formatApplyDeadline } from "@/lib/format";

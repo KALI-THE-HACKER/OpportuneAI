@@ -93,8 +93,7 @@ function DashboardPage() {
   const avgMatchRate =
     recs.data && recs.data.length > 0
       ? Math.round(
-          recs.data.reduce((acc, job) => acc + (job.matchScore || 0), 0) /
-            recs.data.length,
+          recs.data.reduce((acc, job) => acc + (job.matchScore || 0), 0) / recs.data.length,
         )
       : null;
 
@@ -249,9 +248,7 @@ function DashboardPage() {
                           >
                             {n.title}
                           </span>
-                          {!n.read && (
-                            <span className="size-1.5 rounded-full bg-accent shrink-0" />
-                          )}
+                          {!n.read && <span className="size-1.5 rounded-full bg-accent shrink-0" />}
                         </div>
                         {n.body && (
                           <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">

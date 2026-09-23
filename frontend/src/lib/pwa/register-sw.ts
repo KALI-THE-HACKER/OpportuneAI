@@ -13,6 +13,10 @@ const SW_URL = "/sw.js";
 
 function isRefusedContext(): boolean {
   if (typeof window === "undefined") return true;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("sw") === "off") return true;
+  // Allow explicit opt-in for SW in dev via ?sw=on
+  if (params.get("sw") === "on") return false;
   if (!import.meta.env.PROD) return true;
   try {
     if (window.self !== window.top) return true;
@@ -24,7 +28,6 @@ function isRefusedContext(): boolean {
   if (host === "lovableproject.com" || host.endsWith(".lovableproject.com")) return true;
   if (host === "lovableproject-dev.com" || host.endsWith(".lovableproject-dev.com")) return true;
   if (host === "beta.lovable.dev" || host.endsWith(".beta.lovable.dev")) return true;
-  if (new URLSearchParams(window.location.search).get("sw") === "off") return true;
   return false;
 }
 
@@ -52,7 +55,17 @@ export async function registerServiceWorker() {
     return;
   }
   try {
-    await navigator.serviceWorker.register(SW_URL, { scope: "/" });
+    const registration = await navigator.serviceWorker.register(SW_URL, { scope: "/" });
+    registration.addEventListener("updatefound", () => {
+      const newWorker = registration.installing;
+      if (!newWorker) return;
+      newWorker.addEventListener("statechange", () => {
+        if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+          // Notify app that an update is ready if needed
+          window.dispatchEvent(new CustomEvent("pwa-update-available"));
+        }
+      });
+    });
   } catch (err) {
     console.warn("[pwa] service worker registration failed", err);
   }

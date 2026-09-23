@@ -80,7 +80,9 @@ function JobDetailPage() {
     mutationFn: () => jobsApi.apply(jobId, "job_detail"),
     onSuccess: () => {
       // Optimistically update current job state to applied
-      qc.setQueryData(["job", jobId], (old: typeof q.data) => (old ? { ...old, applied: true } : old));
+      qc.setQueryData(["job", jobId], (old: typeof q.data) =>
+        old ? { ...old, applied: true } : old,
+      );
 
       // Optimistically filter applied job from cached feed / recommendations in memory
       qc.setQueriesData({ queryKey: ["feed"] }, (old: any) => {
@@ -309,7 +311,6 @@ function JobDetailPage() {
               </button>
             )}
 
-
             <button
               onClick={() => save.mutate()}
               disabled={save.isPending}
@@ -429,11 +430,7 @@ function ContactOutreach({ job }: { job: import("@/lib/mock/jobs").Job }) {
   async function handleGenerateEmail() {
     setIsGenerating(true);
     try {
-      const res = await jobsApi.generateOutreach(
-        job.id,
-        job.contactName,
-        job.contactRole,
-      );
+      const res = await jobsApi.generateOutreach(job.id, job.contactName, job.contactRole);
       setGeneratedSubject(res.subject);
       setGeneratedBody(res.body);
       setShowModal(true);
@@ -618,4 +615,3 @@ function ContactOutreach({ job }: { job: import("@/lib/mock/jobs").Job }) {
     </div>
   );
 }
-

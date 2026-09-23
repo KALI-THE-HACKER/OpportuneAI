@@ -84,31 +84,31 @@
   --radius: 0.5rem;
 
   /* Canvas & Surfaces */
-  --background: oklch(0.985 0.003 95);           /* Warm porcelain #FBFAF8 */
-  --foreground: oklch(0.145 0.01 275);            /* Deep graphite #111118 */
-  --surface: oklch(0.965 0.004 95);              /* Warm stone #F4F3F0 */
-  --surface-elevated: oklch(1 0 0);              /* Pure white */
+  --background: oklch(0.985 0.003 95); /* Warm porcelain #FBFAF8 */
+  --foreground: oklch(0.145 0.01 275); /* Deep graphite #111118 */
+  --surface: oklch(0.965 0.004 95); /* Warm stone #F4F3F0 */
+  --surface-elevated: oklch(1 0 0); /* Pure white */
 
   /* Cards & Popovers */
-  --card: oklch(1 0 0);                          /* Pure white cards */
-  --card-foreground: oklch(0.145 0.01 275);      /* Deep graphite */
+  --card: oklch(1 0 0); /* Pure white cards */
+  --card-foreground: oklch(0.145 0.01 275); /* Deep graphite */
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0.01 275);
 
   /* Brand / Primary — Obsidian for CTAs & brand marks */
-  --brand: oklch(0.18 0.01 275);                 /* Obsidian #18181B */
-  --brand-foreground: oklch(0.985 0.003 95);     /* Warm white */
-  --primary: oklch(0.18 0.01 275);               /* Obsidian for buttons */
+  --brand: oklch(0.18 0.01 275); /* Obsidian #18181B */
+  --brand-foreground: oklch(0.985 0.003 95); /* Warm white */
+  --primary: oklch(0.18 0.01 275); /* Obsidian for buttons */
   --primary-foreground: oklch(0.985 0.003 95);
 
   /* Secondary / Muted elements */
-  --secondary: oklch(0.955 0.004 95);            /* Warm stone secondary */
+  --secondary: oklch(0.955 0.004 95); /* Warm stone secondary */
   --secondary-foreground: oklch(0.18 0.01 275);
-  --muted: oklch(0.945 0.005 95);                /* Muted warm gray */
-  --muted-foreground: oklch(0.52 0.014 275);     /* Readable mid-gray */
+  --muted: oklch(0.945 0.005 95); /* Muted warm gray */
+  --muted-foreground: oklch(0.52 0.014 275); /* Readable mid-gray */
 
   /* Accent — Teal AI signature */
-  --accent: oklch(0.62 0.105 184);               /* Teal #0D9488 */
+  --accent: oklch(0.62 0.105 184); /* Teal #0D9488 */
   --accent-foreground: oklch(0.99 0 0);
 
   /* Destructive */
@@ -116,9 +116,9 @@
   --destructive-foreground: oklch(0.985 0 0);
 
   /* Borders & Inputs — fine hairline definition */
-  --border: oklch(0.88 0.006 95);               /* Warm hairline border */
+  --border: oklch(0.88 0.006 95); /* Warm hairline border */
   --input: oklch(0.88 0.006 95);
-  --ring: oklch(0.62 0.105 184);                 /* Teal focus ring */
+  --ring: oklch(0.62 0.105 184); /* Teal focus ring */
 
   /* Chart colors */
   --chart-1: oklch(0.646 0.222 41.116);
@@ -128,7 +128,7 @@
   --chart-5: oklch(0.769 0.188 70.08);
 
   /* Sidebar */
-  --sidebar: oklch(0.975 0.004 95);             /* Warm sidebar canvas */
+  --sidebar: oklch(0.975 0.004 95); /* Warm sidebar canvas */
   --sidebar-foreground: oklch(0.145 0.01 275);
   --sidebar-primary: oklch(0.18 0.01 275);
   --sidebar-primary-foreground: oklch(0.985 0.003 95);
@@ -154,17 +154,17 @@
    fine opacity borders, and luminous teal accent.
 ────────────────────────────────────────────────────────────── */
 .dark {
-  --background: oklch(0.10 0.005 275);           /* OLED obsidian #0A0A0F */
-  --foreground: oklch(0.96 0.003 95);            /* Warm ecru white */
-  --surface: oklch(0.17 0.007 275);              /* Elevated surface */
-  --surface-elevated: oklch(0.21 0.007 275);     /* Higher elevation */
+  --background: oklch(0.1 0.005 275); /* OLED obsidian #0A0A0F */
+  --foreground: oklch(0.96 0.003 95); /* Warm ecru white */
+  --surface: oklch(0.17 0.007 275); /* Elevated surface */
+  --surface-elevated: oklch(0.21 0.007 275); /* Higher elevation */
 
-  --card: oklch(0.16 0.007 275);                 /* Card surface */
+  --card: oklch(0.16 0.007 275); /* Card surface */
   --card-foreground: oklch(0.96 0.003 95);
   --popover: oklch(0.16 0.007 275);
   --popover-foreground: oklch(0.96 0.003 95);
 
-  --brand: oklch(0.96 0.003 95);                 /* Warm white for brand */
+  --brand: oklch(0.96 0.003 95); /* Warm white for brand */
   --brand-foreground: oklch(0.13 0.005 275);
   --primary: oklch(0.96 0.003 95);
   --primary-foreground: oklch(0.13 0.005 275);
@@ -174,13 +174,13 @@
   --muted: oklch(0.22 0.007 275);
   --muted-foreground: oklch(0.65 0.01 275);
 
-  --accent: oklch(0.68 0.12 184);               /* Luminous teal */
-  --accent-foreground: oklch(0.10 0.005 275);
+  --accent: oklch(0.68 0.12 184); /* Luminous teal */
+  --accent-foreground: oklch(0.1 0.005 275);
 
   --destructive: oklch(0.65 0.2 27);
   --destructive-foreground: oklch(0.985 0 0);
 
-  --border: oklch(1 0 0 / 9%);                  /* Fine opacity border */
+  --border: oklch(1 0 0 / 9%); /* Fine opacity border */
   --input: oklch(1 0 0 / 12%);
   --ring: oklch(0.68 0.12 184);
 
@@ -221,13 +221,22 @@
 }
 
 @keyframes pulse-glow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 @keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -320,4 +329,62 @@
 /* Pulse glow */
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   PWA & MOBILE SAFE AREA UTILITIES (iOS / Android)
+────────────────────────────────────────────────────────────── */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+.pt-safe {
+  padding-top: var(--sat);
+}
+
+.pb-safe {
+  padding-bottom: var(--sab);
+}
+
+.pl-safe {
+  padding-left: var(--sal);
+}
+
+.pr-safe {
+  padding-right: var(--sar);
+}
+
+.h-safe-screen {
+  min-height: calc(100vh - var(--sat) - var(--sab));
+}
+
+/* Mobile Touch & Tap Polish */
+button,
+a,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* App navigation and interactive chrome should not trigger iOS text selection */
+.pwa-chrome,
+nav,
+header {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Standalone PWA display mode styling */
+@media (display-mode: standalone) {
+  /* Prevent browser bounce/rubber-banding outside content boundaries */
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
 }

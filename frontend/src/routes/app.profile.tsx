@@ -195,11 +195,7 @@ function ProfilePage() {
                   }`}
                 >
                   {form.willingToRelocate && (
-                    <svg
-                      className="size-2.5 text-brand-foreground"
-                      viewBox="0 0 10 10"
-                      fill="none"
-                    >
+                    <svg className="size-2.5 text-brand-foreground" viewBox="0 0 10 10" fill="none">
                       <path
                         d="M1.5 5L4 7.5L8.5 2.5"
                         stroke="currentColor"
@@ -215,7 +211,8 @@ function ProfilePage() {
                 </span>
               </label>
               <p className="text-xs text-muted-foreground mt-0.5">
-                When enabled, feed ranking skips physical location filters, allowing matching jobs from any location.
+                When enabled, feed ranking skips physical location filters, allowing matching jobs
+                from any location.
               </p>
             </Row>
 
