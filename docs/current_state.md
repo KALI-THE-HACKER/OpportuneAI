@@ -451,3 +451,24 @@
 
 ---
 *Last updated: 2026-09-23*
+
+---
+
+### 16. Production Hardening + Intelligence Upgrade Foundations
+**Backend** (`backend/routes/saved.py`, `backend/database/models/saved_job.py`, `backend/database/models/user_job_event.py`, `backend/routes/events.py`, `backend/workers/ranking_worker.py`, `backend/workers/behavior_learning_worker.py`, `backend/app.py`, `backend/utils/middleware.py`, `backend/utils/logging_config.py`):
+- Added persistent **Saved Jobs** model + API endpoints: `GET /api/saved`, `POST /api/saved/{job_id}`.
+- Added persisted `user_job_events` stream and queued behavior-processing worker entrypoint for early behavioral learning milestones.
+- Added ranking recalculation trigger queue (`ranking-updates`) and worker to invalidate/rebuild feed pathways when profile/resume behavior changes.
+- Added standardized readiness/version endpoints: `/ready`, `/api/version`, `/api/v1/health`, `/api/v1/ready`, `/api/v1/version`.
+- Added Redis-backed API rate limiting middleware and request correlation IDs (`X-Request-ID`) propagated into logs.
+
+**Frontend** (`frontend/src/lib/api/jobs.ts`, `frontend/src/lib/api/notifications.ts`, `frontend/src/components/layouts/app-layout.tsx`):
+- Removed runtime mock dependency in saved-jobs flows by wiring directly to backend `saved` endpoints.
+- Added authenticated real-time notifications stream consumption and automatic notification-query invalidation.
+
+**CI/QA/Docs** (`.github/workflows/ci.yml`, `backend/tests/test_health.py`, `frontend/vitest.config.ts`, `frontend/playwright.config.ts`, `frontend/src/lib/format.test.ts`, `frontend/e2e/auth.spec.ts`, `docs/operations.md`):
+- Added unified CI workflow with backend lint/test/migration checks and frontend lint/unit/build/e2e checks.
+- Added smoke health endpoint test and frontend unit/e2e test scaffolding.
+- Added operations runbook for monitoring, alerting, backup/restore, and release safety gates.
+
+**Status**: ✅ Implemented (foundation phase)

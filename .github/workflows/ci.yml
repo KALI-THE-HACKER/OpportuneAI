@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      ENV: test
+      DEBUG: false
+      API_PORT: 8000
+      DATABASE_URL: sqlite+aiosqlite:///./test.db
+      ALEMBIC_DATABASE_URL: sqlite:///./test.db
+      FIRECRAWL_API_KEY: dummy
+      GEMINI_API_KEYS: '["dummy"]'
+      AUTH0_CLIENT_ID: mock_client_id
+      AUTH0_DOMAIN: dummy.auth0.com
+      AUTH0_API_AUDIENCE: dummy
+      AUTH0_CLIENT_SECRET: dummy
+      AUTH0_CONNECTION: Username-Password-Authentication
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Ruff check
+        run: ruff check .
+      - name: Ruff format check
+        run: ruff format --check .
+      - name: Migration upgrade check
+        run: alembic upgrade head
+      - name: Pytest
+        run: pytest -p no:warnings
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm run test:unit
+      - name: Build
+        run: npm run build
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: E2E tests
+        run: npm run test:e2e

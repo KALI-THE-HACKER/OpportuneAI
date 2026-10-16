@@ -4,6 +4,10 @@ OpportuneAI is an AI-powered job discovery and application copilot. This documen
 
 ---
 
+For operational procedures (monitoring, alerting, backup/restore, and release safety checks), see [`docs/operations.md`](docs/operations.md).
+
+---
+
 ### Flow Sequence
 1. **Scraping**: The [IngestionPipeline](backend/ingestion/pipeline.py) runs scrapers for active providers.
 2. **Deduplication**: Content hashes are computed using job metadata (title, company, date, location). Existing hashes in PostgreSQL are compared; new listings are saved as `pending` raw jobs.

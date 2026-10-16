@@ -146,3 +146,10 @@ The application runs a divided architecture:
 - **Why**: Scraper crawling is currently manually triggered; automated scheduled jobs keep listings fresh.
 - **Where to work**: Create a standalone scheduling script (e.g. `backend/scheduler.py`) using `apscheduler` to run `IngestionPipeline().run()` periodically.
 - **Possible Pitfalls**: Crawlers overlapping execution windows. Ensure mutex locks or status checks block execution if another crawling run is already active.
+
+## Update — Production Hardening + Intelligence Upgrade Foundation
+- Saved jobs are now first-class persisted records (`saved_jobs`) with dedicated API routes (`GET /api/saved`, `POST /api/saved/{job_id}`) and backend-integrated saved-state rendering in feed/job cards.
+- User-job interaction events are now persisted in `user_job_events` and queued to a behavior-learning worker pipeline (`behavior-learning`) as the initial stage for advanced reranking.
+- Profile and resume changes now trigger ranking recalculation queue jobs (`ranking-updates`) to keep feed relevance fresh.
+- API now exposes standardized readiness/version endpoints and applies Redis-backed rate limiting plus correlation-ID logging for operational resilience.
+- Frontend saved job flows now call real backend endpoints instead of runtime mock state, and notifications consume an authenticated SSE stream for live updates.
