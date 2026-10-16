@@ -103,6 +103,9 @@ class Settings(BaseSettings):
     r2_endpoint_url: str | None = None
 
     feed_cache_ttl: int = 3600
+    api_rate_limit_enabled: bool = True
+    api_rate_limit_requests: int = 120
+    api_rate_limit_window_seconds: int = 60
     encryption_master_key: str | None = None
 
     # SMTP & Alert Email Provider Settings (Google / Zoho / Custom)

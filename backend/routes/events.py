@@ -1,11 +1,3 @@
-"""
-POST /api/v1/events/jobs — no-op stub.
-
-Events are accepted and validated but NOT persisted. When the
-preference-update pipeline is implemented this module will be
-wired to an event repository and background worker.
-"""
-
 from typing import Any
 
 from fastapi import APIRouter, Depends, status
@@ -15,8 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.models.user import User
 from database.repositories.activity_repository import ActivityRepository
 from database.repositories.processed_job_repository import ProcessedJobRepository
+from database.repositories.user_job_event_repository import UserJobEventRepository
 from database.session import get_db
 from utils.auth import get_current_user
+from workers.behavior_learning_worker import process_user_event
+from workers.queue import behavior_learning_queue
 
 router = APIRouter(prefix="/api/v1/events", tags=["events"])
 
@@ -87,6 +82,7 @@ SIGNIFICANT_FEED_EVENTS = frozenset(
 class UserJobEventResponse(BaseModel):
     accepted: bool = True
     event_type: str
+    event_id: int | None = None
 
 
 @router.post(
@@ -100,8 +96,33 @@ async def create_job_event(
     _user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> UserJobEventResponse:
-    """Validate event, acknowledge, record user activity, and invalidate feed cache."""
+    """Validate event, persist it, and enqueue behavior processing."""
+    event_id: int | None = None
     if _user and _user.id:
+        job = await ProcessedJobRepository(db).get_by_id_with_raw(body.job_id)
+        if not job:
+            return UserJobEventResponse(accepted=False, event_type=body.event_type)
+
+        try:
+            event = await UserJobEventRepository(db).create(
+                user_id=_user.id,
+                job_id=body.job_id,
+                event_type=body.event_type,
+                source=body.source,
+                position=body.position,
+                session_id=body.session_id,
+                metadata=body.metadata,
+            )
+            event_id = event.id
+            behavior_learning_queue.enqueue(
+                process_user_event,
+                event.id,
+                job_timeout=180,
+                result_ttl=600,
+            )
+        except Exception:
+            pass
+
         if body.event_type in SIGNIFICANT_FEED_EVENTS:
             try:
                 from services.feed_service import get_redis_client
@@ -116,7 +137,6 @@ async def create_job_event(
 
         if body.event_type in {"save", "apply"}:
             try:
-                job = await ProcessedJobRepository(db).get_by_id_with_raw(body.job_id)
                 if job:
                     activity_repo = ActivityRepository(db)
                     if body.event_type == "save":
@@ -146,4 +166,8 @@ async def create_job_event(
             except Exception:
                 pass
 
-    return UserJobEventResponse(accepted=True, event_type=body.event_type)
+    return UserJobEventResponse(
+        accepted=True,
+        event_type=body.event_type,
+        event_id=event_id,
+    )

@@ -1,5 +1,5 @@
 import { Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   Sparkles,
@@ -83,6 +83,7 @@ export function AppLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -105,6 +106,13 @@ export function AppLayout() {
     queryFn: () => notificationsApi.list(),
   });
   const unreadCount = (notifs.data ?? []).filter((n) => !n.read).length;
+
+  useEffect(() => {
+    const unsubscribe = notificationsApi.stream(() => {
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    });
+    return unsubscribe;
+  }, [queryClient]);
 
   async function handleSignOut() {
     await signOut();

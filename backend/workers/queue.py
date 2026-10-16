@@ -27,3 +27,13 @@ resume_processing_queue = Queue(
     "resume-processing",
     connection=redis_connection,
 )
+
+ranking_updates_queue = Queue(
+    "ranking-updates",
+    connection=redis_connection,
+)
+
+behavior_learning_queue = Queue(
+    "behavior-learning",
+    connection=redis_connection,
+)

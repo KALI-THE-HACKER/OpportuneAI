@@ -3,9 +3,6 @@ import {
   type Job,
   type ApplicationRecord,
   type ApplicationStatus,
-  MOCK_APPLICATIONS,
-  APPLIED_JOB_IDS,
-  SAVED_JOB_IDS,
 } from "../mock/jobs";
 
 export interface FeedParams {
@@ -31,9 +28,6 @@ export interface JobsQuery {
 }
 
 export type JobWithDbId = Job & { dbId?: number };
-
-const savedSet = new Set(SAVED_JOB_IDS);
-const appliedSet = new Set(APPLIED_JOB_IDS);
 
 function applyFilters(jobs: Job[], q: JobsQuery): Job[] {
   let out = [...jobs];
@@ -80,20 +74,19 @@ export const jobsApi = {
     const queryString = query.toString();
     const path = `/api/feed${queryString ? `?${queryString}` : ""}`;
     const res = await apiCall<FeedResponse>(path);
-    const filteredItems = res.items.filter((j) => !appliedSet.has(j.id) && !j.applied);
 
     return {
-      items: filteredItems.map((j) => {
+      items: res.items.map((j) => {
         const parsedId = Number(j.id.replace(/^job-/, ""));
         return {
           ...j,
           dbId: !isNaN(parsedId) ? parsedId : undefined,
-          saved: savedSet.has(j.id),
-          applied: appliedSet.has(j.id) || Boolean(j.applied),
+          saved: Boolean(j.saved),
+          applied: Boolean(j.applied),
         };
       }),
       next_cursor: res.next_cursor,
-      total: Math.max(0, res.total - (res.items.length - filteredItems.length)),
+      total: res.total,
     };
   },
 
@@ -107,8 +100,8 @@ export const jobsApi = {
       return {
         ...res,
         dbId: !isNaN(parsedId) ? parsedId : undefined,
-        saved: savedSet.has(res.id),
-        applied: appliedSet.has(res.id) || Boolean(res.applied),
+        saved: Boolean(res.saved),
+        applied: Boolean(res.applied),
       };
     } catch {
       return null;
@@ -138,8 +131,8 @@ export const jobsApi = {
     return {
       items: filtered.slice(start, start + pageSize).map((j) => ({
         ...j,
-        saved: savedSet.has(j.id),
-        applied: appliedSet.has(j.id) || Boolean(j.applied),
+        saved: Boolean(j.saved),
+        applied: Boolean(j.applied),
       })),
       total: filtered.length,
       page,
@@ -148,42 +141,31 @@ export const jobsApi = {
   },
 
   async saved(): Promise<JobWithDbId[]> {
-    const feedRes = await this.feed({ limit: 100 });
-    return feedRes.items
-      .filter((j) => savedSet.has(j.id))
-      .map((j) => ({
-        ...j,
-        saved: true,
-        applied: appliedSet.has(j.id) || Boolean(j.applied),
-      }));
+    const res = await apiCall<Job[]>("/api/saved");
+    return res.map((j) => ({
+      ...j,
+      dbId: Number(j.id.replace(/^job-/, "")) || undefined,
+      saved: true,
+      applied: Boolean(j.applied),
+    }));
   },
 
   async toggleSave(id: string, source = "feed"): Promise<boolean> {
-    const isNowSaved = !savedSet.has(id);
-    if (isNowSaved) {
-      savedSet.add(id);
-    } else {
-      savedSet.delete(id);
+    const res = await apiCall<{ saved: boolean }>(`/api/saved/${id}`, {
+      method: "POST",
+    });
+    const numId = parseInt(id.replace("job-", ""), 10);
+    if (!isNaN(numId)) {
+      await apiCall("/api/v1/events/jobs", {
+        method: "POST",
+        body: JSON.stringify({
+          job_id: numId,
+          event_type: res.saved ? "save" : "unsave",
+          source,
+        }),
+      }).catch(() => undefined);
     }
-
-    // Send user event to record interaction & invalidate feed
-    try {
-      const numId = parseInt(id.replace("job-", ""), 10);
-      if (!isNaN(numId)) {
-        await apiCall("/api/v1/events/jobs", {
-          method: "POST",
-          body: JSON.stringify({
-            job_id: numId,
-            event_type: isNowSaved ? "save" : "unsave",
-            source,
-          }),
-        });
-      }
-    } catch {
-      // Ignore background event delivery errors
-    }
-
-    return isNowSaved;
+    return res.saved;
   },
 
   async applications(status?: string): Promise<(ApplicationRecord & { job: JobWithDbId })[]> {
@@ -215,16 +197,13 @@ export const jobsApi = {
           ...a.job,
           dbId: !isNaN(parsedId) ? parsedId : undefined,
           applied: true,
-          saved: savedSet.has(a.job.id),
+          saved: Boolean(a.job.saved),
         },
       };
     });
   },
 
   async apply(jobId: string, source = "job_detail"): Promise<ApplicationRecord> {
-    appliedSet.add(jobId);
-    if (!APPLIED_JOB_IDS.includes(jobId)) APPLIED_JOB_IDS.push(jobId);
-
     const res = await apiCall<ApplicationRecord>("/api/applications", {
       method: "POST",
       body: JSON.stringify({

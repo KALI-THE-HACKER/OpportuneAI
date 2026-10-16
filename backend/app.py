@@ -11,9 +11,11 @@ from routes.feed import router as feed_router
 from routes.notifications import router as notifications_router
 from routes.outreach import router as outreach_router
 from routes.resume import router as resume_router
+from routes.saved import router as saved_router
 from services.log_stream_service import LogStreamService
 from services.scheduler import SchedulerService
 from utils.logging_config import configure_logging, get_feature_logger
+from utils.middleware import RateLimitMiddleware, RequestContextMiddleware
 
 configure_logging()
 LogStreamService.attach_root_logger()
@@ -58,6 +60,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RequestContextMiddleware)
+app.add_middleware(RateLimitMiddleware)
 
 app.include_router(auth_router)
 app.include_router(resume_router)
@@ -67,6 +71,7 @@ app.include_router(feed_router)
 app.include_router(notifications_router)
 app.include_router(outreach_router)
 app.include_router(applications_router)
+app.include_router(saved_router)
 logger.info("OpportuneAI API configured with Admin Control Plane")
 
 
@@ -78,7 +83,32 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy"}
+    return {"status": "healthy", "version": app.version}
+
+
+@app.get("/ready")
+def readiness_check():
+    return {"status": "ready", "version": app.version}
+
+
+@app.get("/api/v1/health")
+def health_check_v1():
+    return {"status": "healthy", "version": app.version}
+
+
+@app.get("/api/v1/ready")
+def readiness_check_v1():
+    return {"status": "ready", "version": app.version}
+
+
+@app.get("/api/version")
+def api_version():
+    return {"api_version": app.version}
+
+
+@app.get("/api/v1/version")
+def api_version_v1():
+    return {"api_version": app.version}
 
 
 if __name__ == "__main__":

@@ -1,8 +1,11 @@
 from datetime import datetime
+import asyncio
+import json
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import StreamingResponse
 
 from database.models.user import User
 from database.repositories.activity_repository import ActivityRepository
@@ -85,3 +88,39 @@ async def mark_all_notifications_read(
     repo = ActivityRepository(db)
     count = await repo.mark_all_read(user.id)
     return {"updated": count}
+
+
+@router.get("/stream")
+async def notifications_stream(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    async def event_generator():
+        repo = ActivityRepository(db)
+        last_seen_id = 0
+        while True:
+            activities = await repo.list_by_user(user.id, limit=25)
+            if activities:
+                latest_id = max(a.id for a in activities)
+                if latest_id > last_seen_id:
+                    payload = [
+                        {
+                            "id": str(a.id),
+                            "type": a.activity_type,
+                            "title": a.title,
+                            "body": a.body,
+                            "createdAt": _to_iso(a.created_at),
+                            "read": a.read,
+                        }
+                        for a in activities
+                    ]
+                    yield f"data: {json.dumps(payload)}\n\n"
+                    last_seen_id = latest_id
+            yield ": keepalive\n\n"
+            await asyncio.sleep(5)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+    )

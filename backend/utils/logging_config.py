@@ -7,11 +7,18 @@ from logging.handlers import RotatingFileHandler
 from typing import Any
 
 from config.settings import BASE_DIR, settings
+from utils.request_context import get_request_id
 
 LOG_DIR = BASE_DIR / "logs"
 _FORMATTER = logging.Formatter(
-    "%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    "%(asctime)s %(levelname)s [%(name)s] [request_id=%(request_id)s] %(message)s",
 )
+
+
+class RequestIdFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.request_id = get_request_id()
+        return True
 
 
 def get_feature_logger(feature: str) -> logging.Logger:
@@ -33,11 +40,13 @@ def get_feature_logger(feature: str) -> logging.Logger:
             backupCount=5,
             encoding="utf-8",
         )
+        handler.addFilter(RequestIdFilter())
         handler.setFormatter(_FORMATTER)
         logger.addHandler(handler)
 
         if settings.env == "development" or settings.debug:
             stream_handler = logging.StreamHandler()
+            stream_handler.addFilter(RequestIdFilter())
             stream_handler.setFormatter(_FORMATTER)
             logger.addHandler(stream_handler)
 

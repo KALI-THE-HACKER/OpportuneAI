@@ -29,6 +29,8 @@ from database.repositories.activity_repository import ActivityRepository
 from database.repositories.user_repository import UserRepository
 from database.session import AsyncSessionLocal
 from utils.logging_config import configure_logging, get_feature_logger
+from workers.queue import ranking_updates_queue
+from workers.ranking_worker import recalculate_user_match
 
 configure_logging()
 logger = get_feature_logger("worker")
@@ -100,6 +102,15 @@ async def _process_resume(user_id: Any) -> None:
                 from services.user_embedding_service import UserEmbeddingService
 
                 await UserEmbeddingService(db).sync_user_preference_embedding(user)
+            except Exception:
+                pass
+            try:
+                ranking_updates_queue.enqueue(
+                    recalculate_user_match,
+                    user.id,
+                    job_timeout=120,
+                    result_ttl=600,
+                )
             except Exception:
                 pass
 

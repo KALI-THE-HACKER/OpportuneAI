@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models.user import User
 from database.repositories.processed_job_repository import ProcessedJobRepository
+from database.repositories.saved_job_repository import SavedJobRepository
 from database.session import get_db
 from services.feed_service import FeedService
 from utils.auth import get_current_user
@@ -57,6 +58,13 @@ async def get_feed(
     """Retrieve the personalized, cached feed of job recommendations for the user."""
     feed_service = FeedService(db)
     feed_data = await feed_service.get_feed(user=user, limit=limit, cursor=cursor)
+    saved_ids = await SavedJobRepository(db).get_saved_job_ids(user.id)
+    for item in feed_data["items"]:
+        try:
+            numeric_id = int(str(item["id"]).replace("job-", ""))
+        except ValueError:
+            numeric_id = 0
+        item["saved"] = numeric_id in saved_ids
     return FeedResponseSchema(**feed_data)
 
 
@@ -86,6 +94,9 @@ async def get_job_detail(
     feed_service = FeedService(db)
     applied_ids = await feed_service.get_applied_job_ids(user)
     is_applied = numeric_id in applied_ids
+    is_saved = await SavedJobRepository(db).is_saved(user.id, numeric_id)
 
-    job_card = FeedService.format_job_card(job, user=user, is_applied=is_applied)
+    job_card = FeedService.format_job_card(
+        job, user=user, is_saved=is_saved, is_applied=is_applied
+    )
     return JobCardSchema(**job_card)

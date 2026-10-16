@@ -29,7 +29,9 @@ from storage.r2 import R2StorageError, resume_storage
 from utils.auth import get_current_user
 from utils.logging_config import get_feature_logger, log_dev
 from workers.queue import resume_processing_queue
+from workers.queue import ranking_updates_queue
 from workers.resume_worker import _process_resume, process_resume
+from workers.ranking_worker import recalculate_user_match
 
 logger = get_feature_logger("resume")
 
@@ -327,6 +329,15 @@ async def delete_resume(
         from services.user_embedding_service import UserEmbeddingService
 
         await UserEmbeddingService(db).sync_user_preference_embedding(user)
+    except Exception:
+        pass
+    try:
+        ranking_updates_queue.enqueue(
+            recalculate_user_match,
+            user.id,
+            job_timeout=120,
+            result_ttl=600,
+        )
     except Exception:
         pass
     logger.info("Resume deleted for user_id=%s", user.id)

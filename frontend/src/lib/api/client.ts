@@ -32,6 +32,10 @@ export function setApiAuthToken(token: string | null) {
   authToken = token;
 }
 
+export function getApiAuthToken() {
+  return authToken;
+}
+
 // Local development (including a local production preview) runs FastAPI on
 // port 8000. Deployments must set VITE_API_URL to their public API origin.
 // Using an empty production fallback would send `/api/*` back to the frontend

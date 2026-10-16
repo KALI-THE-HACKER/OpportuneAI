@@ -11,6 +11,8 @@ from database.repositories.activity_repository import ActivityRepository
 from database.repositories.user_repository import UserRepository
 from database.session import get_db
 from utils.auth import determine_user_role, get_current_user
+from workers.queue import ranking_updates_queue
+from workers.ranking_worker import recalculate_user_match
 
 router = APIRouter()
 
@@ -190,6 +192,15 @@ async def update_me(
             from services.user_embedding_service import UserEmbeddingService
 
             await UserEmbeddingService(db).sync_user_preference_embedding(updated_user)
+        except Exception:
+            pass
+        try:
+            ranking_updates_queue.enqueue(
+                recalculate_user_match,
+                updated_user.id,
+                job_timeout=120,
+                result_ttl=600,
+            )
         except Exception:
             pass
 
