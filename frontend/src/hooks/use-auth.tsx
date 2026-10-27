@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { setApiAuthToken } from "@/lib/api/client";
 import {
@@ -46,6 +46,78 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [localSession, setLocalSession] = useState<Session | null>(null);
   const [isProfileLoading, setProfileLoading] = useState(true);
 
+  // Refs for token refresh timer
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isRefreshingRef = useRef(false);
+
+  // Clear refresh timer on unmount
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
+    };
+  }, []);
+
+  function clearOnboardingRedirect() {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("onboarding_redirected");
+    }
+  }
+
+  function clearRefreshTimer() {
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
+  }
+
+  function scheduleTokenRefresh(token: string) {
+    clearRefreshTimer();
+    
+    const exp = parseJwtExp(token);
+    if (!exp) return;
+
+    const now = Date.now();
+    const timeUntilExpiry = exp - now;
+    
+    // Refresh 5 minutes before expiry, or immediately if less than 5 min remaining
+    const refreshIn = Math.max(timeUntilExpiry - 5 * 60 * 1000, 30 * 1000);
+    
+    if (refreshIn <= 0) return;
+
+    refreshTimerRef.current = setTimeout(async () => {
+      if (isRefreshingRef.current) return;
+      isRefreshingRef.current = true;
+
+      try {
+        const newToken = await getAccessTokenSilently();
+        if (newToken) {
+          setApiAuthToken(newToken);
+          
+          // Update session with new token
+          const exp = parseJwtExp(newToken);
+          const expiresAt = exp || Date.now() + 1000 * 60 * 60 * 24 * 7;
+          
+          if (localSession) {
+            const updatedSession = {
+              ...localSession,
+              token: newToken,
+              expiresAt,
+            };
+            persistSession(updatedSession);
+            setLocalSession(updatedSession);
+          }
+        }
+      } catch (error) {
+        console.error("Token refresh failed:", error);
+        // Token refresh failed - user will need to re-authenticate on next action
+      } finally {
+        isRefreshingRef.current = false;
+      }
+    }, refreshIn);
+  }
+
   // Initialize from local storage on mount
   useEffect(() => {
     const session = getStoredSession();
@@ -53,6 +125,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLocalSession(session);
       setUser(session.user);
       setApiAuthToken(session.token);
+      // Schedule refresh for existing session
+      scheduleTokenRefresh(session.token);
     }
     setProfileLoading(false);
   }, []);
@@ -108,6 +182,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             };
             persistSession(session);
             setLocalSession(session);
+            
+            // Schedule automatic token refresh
+            scheduleTokenRefresh(token);
           } else {
             setUser(initialUser);
           }
@@ -140,6 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLocalSession(session);
         setUser(session.user);
         setApiAuthToken(session.token);
+        scheduleTokenRefresh(session.token);
       } finally {
         setProfileLoading(false);
       }
@@ -153,6 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLocalSession(session);
           setUser(session.user);
           setApiAuthToken(session.token);
+          scheduleTokenRefresh(session.token);
         } else {
           persistSession(null);
           setLocalSession(null);
@@ -196,6 +275,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     async signOut() {
       clearOnboardingRedirect();
+      clearRefreshTimer();
       persistSession(null);
       setLocalSession(null);
       setUser(null);
