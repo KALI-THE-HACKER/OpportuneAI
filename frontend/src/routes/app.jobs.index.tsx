@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router"
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { Search, ChevronLeft, ChevronRight, SlidersHorizontal, X } from "lucide-react";
+import { safeToLocaleString } from "@/lib/utils";
 import { jobsApi } from "@/lib/api";
 import { PageHeader } from "@/components/shared/page-header";
 import { JobCard } from "@/components/shared/job-card";
@@ -289,7 +290,7 @@ function JobExplorer() {
                   onClick={() => update({ minSalary: undefined })}
                   className="inline-flex items-center gap-1 h-6 px-2.5 rounded-full bg-accent/15 text-accent border border-accent/25 text-xs font-medium hover:bg-accent/25 transition-colors cursor-pointer"
                 >
-                  <span>≥ ${search.minSalary.toLocaleString()}</span>
+                  <span>≥ ${safeToLocaleString(search.minSalary)}</span>
                   <X className="size-3" />
                 </button>
               )}
@@ -331,7 +332,7 @@ function JobExplorer() {
           ) : (
             <>
               <div className="text-xs text-muted-foreground mb-4 font-medium">
-                {query.data!.total.toLocaleString()} results
+                {safeToLocaleString(query.data!.total)} results
               </div>
               <div className="space-y-3.5">
                 {query.data!.items.map((j, idx) => (

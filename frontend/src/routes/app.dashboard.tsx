@@ -20,6 +20,7 @@ import { StatCard } from "@/components/shared/stat-card";
 import { JobCard } from "@/components/shared/job-card";
 import { LoadingState, ErrorState } from "@/components/shared/state-views";
 import { timeAgo } from "@/lib/format";
+import { safeNumber, safeRound } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard · OpportuneAI" }] }),
@@ -92,8 +93,8 @@ function DashboardPage() {
 
   const avgMatchRate =
     recs.data && recs.data.length > 0
-      ? Math.round(
-          recs.data.reduce((acc, job) => acc + (job.matchScore || 0), 0) / recs.data.length,
+      ? safeRound(
+          recs.data.reduce((acc, job) => acc + safeNumber(job.matchScore), 0) / recs.data.length,
         )
       : null;
 
