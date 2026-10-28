@@ -11,7 +11,7 @@ setuptools
 sqlalchemy[asyncio]
 asyncpg
 alembic
-psycopg2
+psycopg[binary]
 pytest
 redis
 rq
