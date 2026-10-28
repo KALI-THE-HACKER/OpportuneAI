@@ -1,10 +1,15 @@
+import { safeNumber } from "@/lib/utils";
+
 export function formatSalary(min: number, max: number, currency = "USD") {
+  const safeMin = safeNumber(min);
+  const safeMax = safeNumber(max);
   const fmt = (n: number) => `$${Math.round(n / 1000)}k`;
-  return `${fmt(min)}–${fmt(max)} ${currency}`;
+  return `${fmt(safeMin)}–${fmt(safeMax)} ${currency}`;
 }
 
 export function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(diff)) return "unknown";
   const m = Math.floor(diff / 60000);
   if (m < 1) return "just now";
   if (m < 60) return `${m}m ago`;
@@ -19,10 +24,11 @@ export function timeAgo(iso: string): string {
 export function formatApplyDeadline(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const date = new Date(iso);
-  if (isNaN(date.getTime())) return null;
+  if (Number.isNaN(date.getTime())) return null;
 
   const now = new Date();
   const diffMs = date.getTime() - now.getTime();
+  if (Number.isNaN(diffMs)) return null;
   const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
   if (diffDays < 0) return "Expired";
