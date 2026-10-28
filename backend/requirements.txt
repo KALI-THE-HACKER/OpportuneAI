@@ -8,7 +8,7 @@ firecrawl-py
 beautifulsoup4
 undetected-chromedriver
 setuptools
-sqlalchemy
+sqlalchemy[asyncio]
 asyncpg
 alembic
 psycopg2
